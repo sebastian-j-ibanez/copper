@@ -2,14 +2,14 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
-use crate::eval::Symbol;
+use crate::types::Type;
 
 /// Parse a line into a vector of symbols.
-pub fn parse_line(line: &str) -> Option<Vec<Symbol>> {
-    let mut symbols: Vec<Symbol> = Vec::new();
+pub fn parse_line(line: &str) -> Option<Vec<Type>> {
+    let mut symbols: Vec<Type> = Vec::new();
     let mut split_line = line.split_whitespace();
     while let Some(symbol_str) = split_line.next() {
-        match Symbol::from_str(symbol_str) {
+        match Type::from_str(symbol_str) {
             Some(symbol) => {
                 symbols.push(symbol);
             },
