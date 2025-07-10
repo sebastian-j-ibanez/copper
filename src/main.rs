@@ -3,14 +3,13 @@
 // Created: 2025-07-10
 
 pub mod error;
-pub mod eval;
+pub mod types;
 pub mod parser;
 pub mod ui;
 
 use std::io::{self, stdout, BufRead, Write};
 use std::process;
 
-use crate::eval::Symbol;
 use crate::parser::parse_line;
 
 fn main() {
@@ -32,25 +31,22 @@ fn main() {
             eprintln!("error: {}", e.to_string());
         }
 
-        if let Some(symbols) = parse_line(&buf) {
-            if symbols.len() >= 3 {
-                match (&symbols[0], &symbols[1], &symbols[2]) {
-                    (Symbol::Operator(op), Symbol::DataType(a), Symbol::DataType(b)) => {
-                        match op.eval_operator(a, b) {
-                            Ok(result) => {
-                                println!("{}", result);
-                            },
-                            Err(e) => {
-                                eprintln!("{}", e.to_string());
-                            }
-                        }
-                    },
-                    (_, _, _) => {
-                        eprintln!("expected [operator] [number] [number]");
-                    },
-
+        if let Some(line_objects) = parse_line(&buf) {
+            print!("[");
+            for (index, object) in line_objects.iter().enumerate() {
+                print!("{}", object.get_type_name());
+                if index != line_objects.len() - 1 {
+                    print!(" ");
                 }
-            } 
+            }
+            println!("]");
+            for (index, object) in line_objects.iter().enumerate() {
+                print!("{}", object.to_str());
+                if index != line_objects.len() - 1 {
+                    print!(" ");
+                }
+            }
+            println!();
         }
     }
 }
