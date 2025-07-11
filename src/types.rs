@@ -2,72 +2,93 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+use std::collections::HashMap;
+use std::fmt::{self};
+
+use crate::error::Error;
+
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
-#[derive(Debug, PartialEq)]
-pub enum Type{
+#[derive(Debug, Clone)]
+pub enum Expr {
     Number(i32),
-    Boolean(String),
-    String(String),
     Symbol(String),
+    List(Vec<Expr>),
+    Func(fn(&[Expr]) -> Result<Expr, Error>),
 }
 
-impl Type {
-    /// Create Type from &str, returns None if there is no match.
-    pub fn from_str(s: &str) -> Option<Type> {
-        if let Ok(num) = s.parse::<i32>() {
-            return Some(Type::Number(num))
-        }
-
-        if Type::is_boolean(s) {
-            return Some(Type::Boolean(s.to_string()))
-        } 
-
-        if Type::is_string(s) {
-            return Some(Type::String(s.to_string()))
-        }
-
-        if Type::is_symbol(s) {
-            return Some(Type::Symbol(s.to_string()))
-        }
-
-        None
-    }
-
-    pub fn to_str(&self) -> String {
-        match self {
-            Type::Number(n) => n.to_string(),
-            Type::Boolean(b) => b.to_string(),
-            Type::String(s) => s.to_string(),
-            Type::Symbol(s) => s.to_string(),
-        }
-    }
-
-    pub fn get_type_name(&self) -> &'static str {
-        match self {
-            Type::Number(_) => "Number",
-            Type::Boolean(_) => "Boolean",
-            Type::String(_) => "String",
-            Type::Symbol(_) => "Symbol",
-        }
-    }
-
-    pub fn is_number(s: &str) -> bool {
-        s.parse::<i32>().is_ok()
-    }
-
-    pub fn is_boolean(s: &str) -> bool {
-            s == BOOLEAN_TRUE_STR || s == BOOLEAN_FALSE_STR
-    }
-
-    pub fn is_string(s: &str) -> bool {
-        s.starts_with("\"") && s.ends_with("\"")
-    }
-
-    pub fn is_symbol(s: &str) -> bool {
-        !Type::is_number(s) && !Type::is_string(s)
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Expr::Symbol(s) => s.clone(),
+            Expr::Number(n) => n.to_string(),
+            Expr::List(list) => {
+                let xs: Vec<String> = list
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect();
+                format!("({})", xs.join(","))
+            },
+            Expr::Func(_) => "Function {}".to_string(),
+        };
+        write!(f, "{}", s)
     }
 }
 
+#[derive(Debug)]
+pub struct Env {
+    pub data: HashMap<String, Expr>
+}
 
+impl Env {
+    pub fn default_env() -> Env {
+        let mut data: HashMap<String, Expr> = HashMap::new();
+        data.insert(
+            "+".to_string(), 
+            Expr::Func(
+                |args: &[Expr]| -> Result<Expr, Error> {
+                    let numbers = parse_number_list(args)?;
+                    let sum: i32 = numbers
+                        .iter()
+                        .fold(0, |sum, a| sum + a);
+                    Ok(Expr::Number(sum))
+                }
+            )
+        );
+        data.insert(
+            "-".to_string(), 
+            Expr::Func(
+                |args: &[Expr]| -> Result<Expr, Error> {
+                    let numbers = parse_number_list(args)?; 
+
+                    let first = *numbers
+                        .first()
+                        .ok_or(
+                            Error::Message("expected at least one number".to_string())
+                        )?;
+
+                    let sum_of_rest = numbers[1..].iter().fold(0, |sum, a| sum + a);
+
+                    Ok(Expr::Number(first - sum_of_rest))
+                }
+            )
+        );
+
+        Env {data}
+    }
+}
+
+fn parse_number_list(expressions: &[Expr]) -> Result<Vec<i32>, Error> {
+    expressions
+        .iter()
+        .map(|e| parse_number(e))
+        .collect()
+}
+
+fn parse_number(expr: &Expr) -> Result<i32, Error> {
+    match expr {
+        Expr::Number(num) => Ok(*num),
+        _ => Err(Error::Message("expected a number".to_string()))
+    } 
+}

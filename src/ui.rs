@@ -5,6 +5,6 @@
 pub const REPL_PROMPT: &str = "> ";
 
 pub fn print_greeting() {
-    println!("copper Version 0.0.1");
+    println!("copper version 0.1.0");
     println!("Press Ctrl+C to exit!\n");
 }

@@ -10,10 +10,13 @@ pub mod ui;
 use std::io::{self, stdout, BufRead, Write};
 use std::process;
 
-use crate::parser::parse_line;
+use crate::error::Error;
+use crate::parser::{parse_eval};
+use crate::types::Env;
 
 fn main() {
-    ui::print_greeting();    
+    ui::print_greeting(); 
+    let env = &mut Env::default_env();
 
     loop {
         print!("{}", ui::REPL_PROMPT);
@@ -31,22 +34,11 @@ fn main() {
             eprintln!("error: {}", e.to_string());
         }
 
-        if let Some(line_objects) = parse_line(&buf) {
-            print!("[");
-            for (index, object) in line_objects.iter().enumerate() {
-                print!("{}", object.get_type_name());
-                if index != line_objects.len() - 1 {
-                    print!(" ");
-                }
-            }
-            println!("]");
-            for (index, object) in line_objects.iter().enumerate() {
-                print!("{}", object.to_str());
-                if index != line_objects.len() - 1 {
-                    print!(" ");
-                }
-            }
-            println!();
+        match parse_eval(buf, env) {
+            Ok(result) => println!("{}", result),
+            Err(e) => match e {
+                Error::Message(msg) => println!("error: {}", msg),
+            },
         }
     }
 }
