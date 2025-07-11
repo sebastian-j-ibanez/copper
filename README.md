@@ -1,6 +1,7 @@
 # copper
 [![Rust](https://img.shields.io/badge/Rust-orange.svg?e&logo=rust&logoColor=white)](#)
 ![GitHub License](https://img.shields.io/github/license/sebastian-j-ibanez/shash?color=blue)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/sebastian-j-ibanez/copper/rust.yml)
 
 A Lisp interpreter written in Rust.
 
