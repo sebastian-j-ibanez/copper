@@ -3,19 +3,20 @@
 // Created: 2025-07-10
 
 pub mod error;
-pub mod types;
 pub mod parser;
+pub mod tests;
+pub mod types;
 pub mod ui;
 
-use std::io::{self, stdout, BufRead, Write};
+use std::io::{self, BufRead, Write, stdout};
 use std::process;
 
 use crate::error::Error;
-use crate::parser::{parse_eval};
+use crate::parser::parse_eval;
 use crate::types::Env;
 
 fn main() {
-    ui::print_greeting(); 
+    ui::print_greeting();
     let env = &mut Env::default_env();
 
     loop {
@@ -29,7 +30,7 @@ fn main() {
         let mut buf = String::new();
         let stdin = io::stdin();
         let mut handle = stdin.lock();
-        
+
         if let Err(e) = handle.read_line(&mut buf) {
             eprintln!("error: {}", e.to_string());
         }
@@ -42,4 +43,3 @@ fn main() {
         }
     }
 }
-
