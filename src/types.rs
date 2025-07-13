@@ -2,7 +2,6 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
-use std::collections::HashMap;
 use std::fmt::{self};
 
 use crate::error::Error;
@@ -33,76 +32,3 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(Debug)]
-pub struct Env {
-    pub data: HashMap<String, Expr>,
-}
-
-impl Env {
-    pub fn default_env() -> Env {
-        let mut data: HashMap<String, Expr> = HashMap::new();
-        data.insert(
-            "+".to_string(),
-            Expr::Func(|args: &[Expr]| -> Result<Expr, Error> {
-                let numbers = parse_number_list(args)?;
-                let sum: i32 = numbers.iter().fold(0, |sum, a| sum + a);
-                Ok(Expr::Number(sum))
-            }),
-        );
-        data.insert(
-            "-".to_string(),
-            Expr::Func(|args: &[Expr]| -> Result<Expr, Error> {
-                let numbers = parse_number_list(args)?;
-
-                let first = *numbers
-                    .first()
-                    .ok_or(Error::Message("expected at least one number".to_string()))?;
-
-                let sum_of_rest = numbers[1..].iter().fold(0, |sum, a| sum + a);
-
-                Ok(Expr::Number(first - sum_of_rest))
-            }),
-        );
-        data.insert(
-            "*".to_string(),
-            Expr::Func(|args: &[Expr]| -> Result<Expr, Error> {
-                let numbers = parse_number_list(args)?;
-
-                let first = *numbers
-                    .first()
-                    .ok_or(Error::Message("expected at least one number".to_string()))?;
-
-                let sum_of_rest = numbers[1..].iter().fold(0, |sum, a| sum + a);
-
-                Ok(Expr::Number(first * sum_of_rest))
-            }),
-        );
-        data.insert(
-            "/".to_string(),
-            Expr::Func(|args: &[Expr]| -> Result<Expr, Error> {
-                let numbers = parse_number_list(args)?;
-
-                let first = *numbers
-                    .first()
-                    .ok_or(Error::Message("expected at least one number".to_string()))?;
-
-                let sum_of_rest = numbers[1..].iter().fold(0, |sum, a| sum + a);
-
-                Ok(Expr::Number(first / sum_of_rest))
-            }),
-        );
-
-        Env { data }
-    }
-}
-
-fn parse_number_list(expressions: &[Expr]) -> Result<Vec<i32>, Error> {
-    expressions.iter().map(|e| parse_number(e)).collect()
-}
-
-fn parse_number(expr: &Expr) -> Result<i32, Error> {
-    match expr {
-        Expr::Number(num) => Ok(*num),
-        _ => Err(Error::Message("expected a number".to_string())),
-    }
-}

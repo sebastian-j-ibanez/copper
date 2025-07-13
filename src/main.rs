@@ -2,6 +2,7 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+pub mod env;
 pub mod error;
 pub mod parser;
 pub mod tests;
@@ -13,7 +14,7 @@ use std::process;
 
 use crate::error::Error;
 use crate::parser::parse_eval;
-use crate::types::Env;
+use crate::env::Env;
 
 fn main() {
     ui::print_greeting();

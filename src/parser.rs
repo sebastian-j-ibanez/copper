@@ -4,8 +4,9 @@
 
 use std::num::ParseIntError;
 
+use crate::env::Env;
 use crate::error::Error;
-use crate::types::{Env, Expr};
+use crate::types::Expr;
 
 /// Parse s-expression, evaluate it, return result.
 pub fn parse_eval(expr: String, env: &mut Env) -> Result<Expr, Error> {
@@ -80,6 +81,18 @@ pub fn eval_atom(token: &str) -> Expr {
     match num {
         Ok(num) => Expr::Number(num),
         Err(_) => Expr::Symbol(token.to_string()),
+    }
+}
+
+pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<i32>, Error> {
+    expressions.iter().map(|e| parse_number(e)).collect()
+}
+
+/// 
+pub fn parse_number(expr: &Expr) -> Result<i32, Error> {
+    match expr {
+        Expr::Number(num) => Ok(*num),
+        _ => Err(Error::Message("expected a number".to_string())),
     }
 }
 
