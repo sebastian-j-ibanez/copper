@@ -96,11 +96,9 @@ pub fn tokenize(expression: String) -> Vec<String> {
 /// Check if s-expression has been closed with a parenthesis.
 pub fn expression_closed(buf: &str) -> bool {
     let expression = buf.trim();
-    let list_started = expression.starts_with('(');
-    let list_ended = expression.ends_with(')');
-
     let mut open_paren = 0;
     let mut close_paren = 0;
+
     for e in expression.chars() {
         match e {
             '(' => open_paren += 1,
@@ -109,5 +107,5 @@ pub fn expression_closed(buf: &str) -> bool {
         }
     }
 
-    (open_paren == close_paren) || (!list_started && !list_ended)
+    (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
 }
