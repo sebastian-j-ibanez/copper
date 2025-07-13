@@ -6,8 +6,9 @@
 #[test]
 fn test_add_valid_input() {
     use crate::{
+        env::Env,
         parser::parse_eval,
-        types::{Env, Expr},
+        types::Expr,
     };
     let env = &mut Env::default_env();
     let input = "(+ 1 1)".to_string();
@@ -19,8 +20,9 @@ fn test_add_valid_input() {
 #[test]
 fn test_sub_valid_input() {
     use crate::{
+        env::Env,
         parser::parse_eval,
-        types::{Env, Expr},
+        types::Expr,
     };
     let env = &mut Env::default_env();
     let input = "(- 1 1)".to_string();
@@ -32,8 +34,9 @@ fn test_sub_valid_input() {
 #[test]
 fn test_mult_valid_input() {
     use crate::{
+        env::Env,
         parser::parse_eval,
-        types::{Env, Expr},
+        types::Expr,
     };
     let env = &mut Env::default_env();
     let input = "(* 1 2)".to_string();
@@ -45,8 +48,9 @@ fn test_mult_valid_input() {
 #[test]
 fn test_div_valid_input() {
     use crate::{
+        env::Env,
         parser::parse_eval,
-        types::{Env, Expr},
+        types::Expr,
     };
     let env = &mut Env::default_env();
     let input = "(/ 4 2)".to_string();
@@ -58,8 +62,9 @@ fn test_div_valid_input() {
 #[test]
 fn test_multiline_nested_expression() {
     use crate::{
+        env::Env,
         parser::parse_eval,
-        types::{Env, Expr},
+        types::Expr,
     };
     let env = &mut Env::default_env();
     let input = "(+ 1\n  (* 2\n     2)\n)".to_string();
