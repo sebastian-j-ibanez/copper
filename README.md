@@ -10,7 +10,7 @@ A Lisp interpreter written in Rust.
 As of 0.1.0 features include:
 - Abstract syntax tree parsing
 - Basic type checking
-- `+` & `-` functions
+- `+`, `-`, `*`, `/` functions
 
 ### Influences
 - [risp](https://github.com/stopachka/risp?tab=readme-ov-file), a fellow Lisp project in Rust.
