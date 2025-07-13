@@ -28,11 +28,16 @@ fn main() {
         }
 
         let mut buf = String::new();
-        let stdin = io::stdin();
-        let mut handle = stdin.lock();
+        let mut handle = io::stdin().lock();
 
         if let Err(e) = handle.read_line(&mut buf) {
             eprintln!("error: {}", e.to_string());
+        }
+
+        while !parser::expression_closed(&buf) {
+            if let Err(e) = handle.read_line(&mut buf) {
+                eprintln!("error: {}", e.to_string());
+            }
         }
 
         match parse_eval(buf, env) {
