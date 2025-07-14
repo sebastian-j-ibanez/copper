@@ -6,21 +6,22 @@
 
 A Lisp interpreter written in Rust.
 
-### Status 🚧
+### Goals
 
-Copper is in active development and is not `R7RS-small` compliant yet. 
+Create a `R7RS` compliant Lisp interpreter to learn more about interpreters, Lisp, and Rust.
 
-As of 0.1.0 features include:
+Our goal is to have `v1.0.0` be fully `R7RS` compliant.
+
+### Status
+
+As of `v0.1.1` features include:
 - Abstract syntax tree parsing
 - Basic type checking
 - `+`, `-`, `*`, `/` functions
+- `R7RS` numeric types
 
 ### Influences
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
 - [risp](https://github.com/stopachka/risp?tab=readme-ov-file), another Lisp project in Rust.
   - The author wrote a fantastic article about it [here](https://stopa.io/post/222).
 - [Build your own Lisp](https://www.buildyourownlisp.com/)
-
-### Goals
-
-Create a `R7RS-small` compliant Lisp interpreter to learn more about Lisp, interpreters, and Rust.
