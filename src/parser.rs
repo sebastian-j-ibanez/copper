@@ -2,11 +2,9 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
-use std::num::ParseIntError;
-
 use crate::env::Env;
 use crate::error::Error;
-use crate::types::Expr;
+use crate::types::{Expr, Number};
 
 /// Parse s-expression, evaluate it, return result.
 pub fn parse_eval(expr: String, env: &mut Env) -> Result<Expr, Error> {
@@ -59,7 +57,7 @@ pub fn parse<'a>(tokens: &'a [String]) -> Result<(Expr, &'a [String]), Error> {
 }
 
 /// Recursively parse remaining s-expressions.
-pub fn parse_right_expr<'a>(tokens: &'a [String]) -> Result<(Expr, &'a [String]), Error> {
+pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     let mut expressions: Vec<Expr> = vec![];
     let mut tokens_copy = tokens;
     loop {
@@ -77,21 +75,21 @@ pub fn parse_right_expr<'a>(tokens: &'a [String]) -> Result<(Expr, &'a [String])
 
 /// Create an Expr from a &str.
 pub fn eval_atom(token: &str) -> Expr {
-    let num: Result<i32, ParseIntError> = token.parse();
-    match num {
+    // let num: Result<i32, ParseIntError> = token.parse();
+    match Number::from_token(token) {
         Ok(num) => Expr::Number(num),
         Err(_) => Expr::Symbol(token.to_string()),
     }
 }
 
-pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<i32>, Error> {
+pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<Number>, Error> {
     expressions.iter().map(|e| parse_number(e)).collect()
 }
 
 /// 
-pub fn parse_number(expr: &Expr) -> Result<i32, Error> {
+pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     match expr {
-        Expr::Number(num) => Ok(*num),
+        Expr::Number(num) => Ok(num.clone()),
         _ => Err(Error::Message("expected a number".to_string())),
     }
 }
@@ -120,5 +118,6 @@ pub fn expression_closed(buf: &str) -> bool {
         }
     }
 
-    (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
+    (open_paren == close_paren) ||
+        (!expression.starts_with('(') && !expression.ends_with(')'))
 }
