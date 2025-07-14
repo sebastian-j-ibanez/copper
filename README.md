@@ -14,6 +14,7 @@ As of 0.1.0 features include:
 - Abstract syntax tree parsing
 - Basic type checking
 - `+`, `-`, `*`, `/` functions
+- R7RS numeric types
 
 ### Influences
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
