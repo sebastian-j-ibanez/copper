@@ -2,9 +2,12 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-11
 
+use num_traits::ToPrimitive;
+use crate::types::Number;
+
 #[allow(dead_code)]
 #[test]
-fn test_add_valid_input() {
+fn test_add_string_result() {
     use crate::{
         env::Env,
         parser::parse_eval,
@@ -12,13 +15,31 @@ fn test_add_valid_input() {
     };
     let env = &mut Env::default_env();
     let input = "(+ 1 1)".to_string();
-    let result = parse_eval(input, env);
-    assert!(matches!(result, Ok(Expr::Number(2))));
+    if let Ok(result) = parse_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(2));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
 }
 
 #[allow(dead_code)]
 #[test]
-fn test_sub_valid_input() {
+fn test_add_number_result() {
+    use crate::{
+        error::Error,
+        env::Env,
+        parser::parse_eval,
+        types::Expr,
+    };
+    let env = &mut Env::default_env();
+    let input = "(+ 1 1)".to_string();
+    let result = parse_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
+    assert!(matches!(result, _expected));
+}
+
+#[allow(dead_code)]
+#[test]
+fn test_sub_string_result() {
     use crate::{
         env::Env,
         parser::parse_eval,
@@ -26,13 +47,31 @@ fn test_sub_valid_input() {
     };
     let env = &mut Env::default_env();
     let input = "(- 1 1)".to_string();
-    let result = parse_eval(input, env);
-    assert!(matches!(result, Ok(Expr::Number(0))));
+    if let Ok(result) = parse_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(0));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
 }
 
 #[allow(dead_code)]
 #[test]
-fn test_mult_valid_input() {
+fn test_sub_number_result() {
+    use crate::{
+        error::Error,
+        env::Env,
+        parser::parse_eval,
+        types::Expr,
+    };
+    let env = &mut Env::default_env();
+    let input = "(- 1 1)".to_string();
+    let result = parse_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(0)));
+    assert!(matches!(result, _expected));
+}
+
+#[allow(dead_code)]
+#[test]
+fn test_mult_string_result() {
     use crate::{
         env::Env,
         parser::parse_eval,
@@ -40,13 +79,31 @@ fn test_mult_valid_input() {
     };
     let env = &mut Env::default_env();
     let input = "(* 1 2)".to_string();
-    let result = parse_eval(input, env);
-    assert!(matches!(result, Ok(Expr::Number(2))));
+    if let Ok(result) = parse_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(2));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
 }
 
 #[allow(dead_code)]
 #[test]
-fn test_div_valid_input() {
+fn test_mult_number_result() {
+    use crate::{
+        error::Error,
+        env::Env,
+        parser::parse_eval,
+        types::Expr,
+    };
+    let env = &mut Env::default_env();
+    let input = "(* 1 2)".to_string();
+    let result = parse_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
+    assert!(matches!(result, _expected));
+}
+
+#[allow(dead_code)]
+#[test]
+fn test_div_string_result() {
     use crate::{
         env::Env,
         parser::parse_eval,
@@ -54,13 +111,31 @@ fn test_div_valid_input() {
     };
     let env = &mut Env::default_env();
     let input = "(/ 4 2)".to_string();
-    let result = parse_eval(input, env);
-    assert!(matches!(result, Ok(Expr::Number(2))));
+    if let Ok(result) = parse_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(2));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
 }
 
 #[allow(dead_code)]
 #[test]
-fn test_multiline_nested_expression() {
+fn test_div_number_result() {
+    use crate::{
+        error::Error,
+        env::Env,
+        parser::parse_eval,
+        types::Expr,
+    };
+    let env = &mut Env::default_env();
+    let input = "(/ 4 2)".to_string();
+    let result = parse_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
+    assert!(matches!(result, _expected));
+}
+
+#[allow(dead_code)]
+#[test]
+fn test_multiline_nested_string_result() {
     use crate::{
         env::Env,
         parser::parse_eval,
@@ -68,6 +143,24 @@ fn test_multiline_nested_expression() {
     };
     let env = &mut Env::default_env();
     let input = "(+ 1\n  (* 2\n     2)\n)".to_string();
+    if let Ok(result) = parse_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(5));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
+}
+
+#[allow(dead_code)]
+#[test]
+fn test_multiline_nested_number_result() {
+    use crate::{
+        error::Error,
+        env::Env,
+        parser::parse_eval,
+        types::Expr,
+    };
+    let env = &mut Env::default_env();
+    let input = "(+ 1\n  (* 2\n     2)\n)".to_string();
     let result = parse_eval(input, env);
-    assert!(matches!(result, Ok(Expr::Number(5))));
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(5)));
+    assert!(matches!(result, _expected));
 }
