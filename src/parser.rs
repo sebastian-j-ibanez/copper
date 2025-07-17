@@ -16,12 +16,13 @@ pub fn parse_eval(expr: String, env: &mut Env) -> Result<Expr, Error> {
 /// Evaluate an s-expression.
 pub fn eval(expr: &Expr, env: &mut Env) -> Result<Expr, Error> {
     match expr {
+        Expr::Number(_a) => Ok(expr.clone()),
         Expr::Symbol(k) => env
             .data
             .get(k)
             .ok_or(Error::Message(format!("unexpected symbol '{}'", k)))
             .map(|x| x.clone()),
-        Expr::Number(_a) => Ok(expr.clone()),
+        Expr::String(s) => Ok(Expr::String(s.clone())),
         Expr::List(list) => {
             let first_form = list
                 .first()
@@ -44,7 +45,7 @@ pub fn eval(expr: &Expr, env: &mut Env) -> Result<Expr, Error> {
 }
 
 /// Parse tokenized s-expressions.
-pub fn parse<'a>(tokens: &'a [String]) -> Result<(Expr, &'a [String]), Error> {
+pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     let (token, right_expr) = tokens
         .split_first()
         .ok_or(Error::Message("could not parse first token".to_string()))?;
@@ -75,7 +76,11 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
 
 /// Create an Expr from a &str.
 pub fn eval_atom(token: &str) -> Expr {
-    // let num: Result<i32, ParseIntError> = token.parse();
+    if token.starts_with('"') && token.ends_with('"') && token.len() >= 2 {
+        let inner_string = &token[1..token.len() - 1];
+        return Expr::String(inner_string.to_string());
+    }
+    
     match Number::from_token(token) {
         Ok(num) => Expr::Number(num),
         Err(_) => Expr::Symbol(token.to_string()),
@@ -86,7 +91,6 @@ pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<Number>, Error> {
     expressions.iter().map(|e| parse_number(e)).collect()
 }
 
-/// 
 pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     match expr {
         Expr::Number(num) => Ok(num.clone()),
