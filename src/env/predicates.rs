@@ -71,6 +71,17 @@ pub fn is_string(args: &[Expr]) -> Result<Expr, Error> {
     Err(Error::Message(msg))
 }
 
+pub fn is_boolean(args: &[Expr]) -> Result<Expr, Error> {
+    if let Some(arg) = args.first() {
+        match arg {
+            Expr::Boolean(_) => return Ok(Expr::Boolean(true)),
+            _ => return Ok(Expr::Boolean(false)),
+        }
+    }
+    let msg = format!("expected 1 argument, got {}", args.len());
+    Err(Error::Message(msg))
+}
+
 pub fn is_list(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         match arg {

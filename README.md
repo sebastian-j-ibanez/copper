@@ -19,6 +19,7 @@ As of `v0.1.1` features include:
 - Basic type checking
 - `+`, `-`, `*`, `/` functions
 - `R7RS` numeric types
+- Predicates like `number?`, `complex?`, `string?`, and `boolean?`
 
 ### Influences
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
