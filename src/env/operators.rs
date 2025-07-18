@@ -1,27 +1,14 @@
-use std::collections::HashMap;
+// Copyright (c) 2025 Sebastian Ibanez
+// Author: Sebastian Ibanez
+// Created: 2025-07-17
+
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::error::Error;
 use crate::parser;
 use crate::types::{Expr, Number};
 
-#[derive(Debug)]
-pub struct Env {
-    pub data: HashMap<String, Expr>,
-}
-
-impl Env {
-    pub fn default_env() -> Env {
-        let mut data: HashMap<String, Expr> = HashMap::new();
-        data.insert("+".to_string(), Expr::Func(add));
-        data.insert("-".to_string(), Expr::Func(sub));
-        data.insert("*".to_string(), Expr::Func(mult));
-        data.insert("/".to_string(), Expr::Func(div));
-        Env { data }
-    }
-}
-
-fn add(args: &[Expr]) -> Result<Expr, Error> {
+pub fn add(args: &[Expr]) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     let initial_sum = Number::from_i64(0);
     let sum = numbers
@@ -30,7 +17,7 @@ fn add(args: &[Expr]) -> Result<Expr, Error> {
     Ok(Expr::Number(sum))
 }
 
-fn sub(args: &[Expr]) -> Result<Expr, Error> {
+pub fn sub(args: &[Expr]) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
         return Ok(Expr::Number(Number::from_i64(0)));
@@ -51,7 +38,7 @@ fn sub(args: &[Expr]) -> Result<Expr, Error> {
     }
 }
 
-fn mult(args: &[Expr]) -> Result<Expr, Error> {
+pub fn mult(args: &[Expr]) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
         return Err(Error::Message("expected at least one number".to_string()));
@@ -65,7 +52,7 @@ fn mult(args: &[Expr]) -> Result<Expr, Error> {
     Ok(Expr::Number(product))
 }
 
-fn div(args: &[Expr]) -> Result<Expr, Error> {
+pub fn div(args: &[Expr]) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
         return Err(Error::Message("expected at least one number".to_string()));

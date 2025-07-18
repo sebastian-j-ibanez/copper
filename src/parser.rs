@@ -23,6 +23,7 @@ pub fn eval(expr: &Expr, env: &mut Env) -> Result<Expr, Error> {
             .ok_or(Error::Message(format!("unexpected symbol '{}'", k)))
             .map(|x| x.clone()),
         Expr::String(s) => Ok(Expr::String(s.clone())),
+        Expr::Boolean(b) => Ok(Expr::Boolean(*b)),
         Expr::List(list) => {
             let first_form = list
                 .first()
@@ -80,7 +81,7 @@ pub fn eval_atom(token: &str) -> Expr {
         let inner_string = &token[1..token.len() - 1];
         return Expr::String(inner_string.to_string());
     }
-    
+
     match Number::from_token(token) {
         Ok(num) => Expr::Number(num),
         Err(_) => Expr::Symbol(token.to_string()),
@@ -122,6 +123,5 @@ pub fn expression_closed(buf: &str) -> bool {
         }
     }
 
-    (open_paren == close_paren) ||
-        (!expression.starts_with('(') && !expression.ends_with(')'))
+    (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
 }

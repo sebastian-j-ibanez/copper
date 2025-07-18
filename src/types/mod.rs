@@ -15,6 +15,7 @@ pub const BOOLEAN_FALSE_STR: &str = "#f";
 pub enum Expr {
     Number(Number),
     String(String),
+    Boolean(bool),
     Symbol(String),
     List(Vec<Expr>),
     Func(fn(&[Expr]) -> Result<Expr, Error>),
@@ -22,9 +23,10 @@ pub enum Expr {
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = match self {
+        let s: String = match self {
             Expr::Number(n) => n.to_string(),
             Expr::String(s) => format_string(s),
+            Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::List(list) => {
                 let xs: Vec<String> = list.iter().map(|x| x.to_string()).collect();
@@ -38,4 +40,11 @@ impl fmt::Display for Expr {
 
 fn format_string(s: &String) -> String {
     "\"".to_string() + s + "\""
+}
+
+fn format_boolean(b: &bool) -> String {
+    match *b {
+        true => BOOLEAN_TRUE_STR.to_string(),
+        false => BOOLEAN_FALSE_STR.to_string(),
+    }
 }
