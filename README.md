@@ -1,10 +1,10 @@
 # copper
-[![Rust](https://img.shields.io/badge/Rust-orange.svg?e&logo=rust&logoColor=white)](#)
-[![Lisp](https://img.shields.io/badge/R7RS-1f6cb0.svg?e&logo=commonlisp&logoColor=white&labelColor=1f6cb0)](#)
-![GitHub License](https://img.shields.io/github/license/sebastian-j-ibanez/copper?color=brown)
+[![Rust](https://img.shields.io/badge/Rust-%23000000.svg?e&logo=rust&logoColor=white)](#)
+[![Lisp](https://img.shields.io/badge/R7RS-02569B.svg?e&logo=commonlisp&logoColor=white)](#)
+![GitHub License](https://img.shields.io/github/license/sebastian-j-ibanez/copper?color=orange)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/sebastian-j-ibanez/copper/rust.yml)
 
-A Lisp interpreter written in Rust.
+A Scheme interpreter written in Rust.
 
 ### Goals
 
