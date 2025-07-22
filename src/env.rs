@@ -4,7 +4,9 @@
 
 pub mod operators;
 pub mod predicates;
+pub mod math;
 
+use crate::env::math::modulo;
 use crate::env::predicates::{
     is_boolean,
     is_complex,
@@ -35,6 +37,7 @@ impl Env {
         data.insert("-".to_string(), Expr::Func(sub));
         data.insert("*".to_string(), Expr::Func(mult));
         data.insert("/".to_string(), Expr::Func(div));
+        data.insert("modulo".to_string(), Expr::Func(modulo));
         data.insert("number?".to_string(), Expr::Func(is_number));
         data.insert("real?".to_string(), Expr::Func(is_real));
         data.insert("rational?".to_string(), Expr::Func(is_rational));
