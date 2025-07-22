@@ -2,12 +2,12 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-17
 
+//! Functions for R7RS predicates.
+
 use crate::error::Error;
 use crate::parser::parse_number;
 use crate::types::{Expr, Number};
 use crate::types::number::IntegerVariable::Fixnum;
-
-// Types
 
 pub fn is_number(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
@@ -108,7 +108,6 @@ pub fn is_procedure(args: &[Expr]) -> Result<Expr, Error> {
     Err(Error::Message(msg))
 }
 
-// Values
 pub fn is_even(args: &[Expr]) -> Result<Expr, Error> {
     args.first()
         .ok_or_else(|| Error::Message("expected one argument".to_string()))

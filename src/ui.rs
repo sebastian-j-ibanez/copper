@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+//! Functions for the REPL interfact.
+
 pub const REPL_PROMPT: &str = "> ";
 
 pub fn print_greeting() {

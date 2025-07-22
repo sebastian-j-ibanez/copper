@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-11
 
+//! Unit test module.
+
 #[test]
 fn test_add_string_result() {
     use crate::{

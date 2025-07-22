@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+//! Functions that parse text and convert s-expressions to data types.
+
 use crate::env::Env;
 use crate::error::Error;
 use crate::types::{Expr, Number};

@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-17
 
+//! Functions for basic operators.
+
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::error::Error;

@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+//! Copper data types.
+
 pub mod number;
 
 use crate::error::Error;

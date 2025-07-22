@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-16
 
+//! A flexible Number type for integers, real, rational, and complex numbers.
+
 use crate::error::Error;
 use num_bigint::BigInt;
 use num_complex::Complex64;
