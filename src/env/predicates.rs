@@ -3,7 +3,11 @@
 // Created: 2025-07-17
 
 use crate::error::Error;
+use crate::parser::parse_number;
 use crate::types::{Expr, Number};
+use crate::types::number::IntegerVariable::Fixnum;
+
+// Types
 
 pub fn is_number(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
@@ -102,4 +106,21 @@ pub fn is_procedure(args: &[Expr]) -> Result<Expr, Error> {
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
+}
+
+// Values
+pub fn is_even(args: &[Expr]) -> Result<Expr, Error> {
+    args.first()
+        .ok_or_else(|| Error::Message("expected one argument".to_string()))
+        .and_then(|arg| parse_number(arg))
+        .and_then(|num| num % Number::Integer(Fixnum(2)))
+        .map(|result| Expr::Boolean(result == Number::Integer(Fixnum(0))))
+}
+
+pub fn is_odd(args: &[Expr]) -> Result<Expr, Error> {
+    args.first()
+        .ok_or_else(|| Error::Message("expected one argument".to_string()))
+        .and_then(|arg| parse_number(arg))
+        .and_then(|num| num % Number::Integer(Fixnum(2)))
+        .map(|result| Expr::Boolean(result == Number::Integer(Fixnum(1))))
 }

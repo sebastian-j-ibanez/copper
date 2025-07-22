@@ -9,6 +9,7 @@ use num_integer::Integer;
 use num_rational::Rational64;
 use num_traits::{Num, ToPrimitive, Zero};
 use std::num::ParseFloatError;
+use std::ops::Rem;
 use std::{
     fmt::{self},
     ops::Add,
@@ -549,6 +550,21 @@ impl Div for Number {
                 }
             },
         }
+    }
+}
+
+impl Rem for Number {
+    type Output = Result<Number, Error>;
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
+                (IntegerVariable::Fixnum(i1), IntegerVariable::Fixnum(i2)) => Ok(Number::Integer(IntegerVariable::Fixnum(i1 % i2))),
+                (IntegerVariable::Bignum(i1), IntegerVariable::Bignum(i2)) => Ok(Number::Integer(IntegerVariable::Bignum(i1 % i2))),
+                (IntegerVariable::Fixnum(i1), IntegerVariable::Bignum(i2)) => Ok(Number::Integer(IntegerVariable::Bignum(i1 % i2))),
+                (IntegerVariable::Bignum(i1), IntegerVariable::Fixnum(i2)) => Ok(Number::Integer(IntegerVariable::Bignum(i1 % i2))),
+            },
+            (_,_) => Err(Error::Message("expected integer".to_string())),
+        } 
     }
 }
 

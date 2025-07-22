@@ -88,25 +88,20 @@ pub fn eval_atom(token: &str) -> Expr {
     }
 }
 
+/// Get vec of numbers from an s-expression.
 pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<Number>, Error> {
-    expressions.iter().map(|e| parse_number(e)).collect()
+    expressions
+        .iter()
+        .map(|e| parse_number(e))
+        .collect()
 }
 
+/// Get a single number from an s-expression.
 pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     match expr {
         Expr::Number(num) => Ok(num.clone()),
         _ => Err(Error::Message("expected a number".to_string())),
     }
-}
-
-/// Tokenize a string s-expression.
-pub fn tokenize(expression: String) -> Vec<String> {
-    expression
-        .replace("(", " ( ")
-        .replace(")", " ) ")
-        .split_whitespace()
-        .map(|x| x.to_string())
-        .collect()
 }
 
 /// Check if s-expression has been closed with a parenthesis.
@@ -125,3 +120,14 @@ pub fn expression_closed(buf: &str) -> bool {
 
     (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
 }
+
+/// Tokenize a string s-expression.
+pub fn tokenize(expression: String) -> Vec<String> {
+    expression
+        .replace("(", " ( ")
+        .replace(")", " ) ")
+        .split_whitespace()
+        .map(|x| x.to_string())
+        .collect()
+}
+
