@@ -22,7 +22,7 @@ use std::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Number {
-    Integer(IntegerVariable),
+    Integer(IntegerVariant),
     Real(f64),
     Complex(Complex64),
     Rational(Rational64),
@@ -128,7 +128,7 @@ impl Number {
     }
 
     pub fn from_i64(value: i64) -> Self {
-        Number::Integer(IntegerVariable::Fixnum(value))
+        Number::Integer(IntegerVariant::Fixnum(value))
     }
 
     pub fn from_f64(value: f64) -> Self {
@@ -142,7 +142,7 @@ impl Number {
             let rational = Rational64::new(num_val, den_val); // Rational64 itself simplifies
             if rational.denom() == &1 {
                 // Check if it simplified to an integer
-                Number::Integer(IntegerVariable::Fixnum(*rational.numer()))
+                Number::Integer(IntegerVariant::Fixnum(*rational.numer()))
             } else {
                 Number::Rational(rational)
             }
@@ -151,9 +151,9 @@ impl Number {
 
     pub fn from_bigint(value: BigInt) -> Self {
         if let Some(i64_val) = value.to_i64() {
-            Number::Integer(IntegerVariable::Fixnum(i64_val))
+            Number::Integer(IntegerVariant::Fixnum(i64_val))
         } else {
-            Number::Integer(IntegerVariable::Bignum(value))
+            Number::Integer(IntegerVariant::Bignum(value))
         }
     }
 }
@@ -190,8 +190,8 @@ impl Add for Number {
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 + r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
@@ -209,8 +209,8 @@ impl Add for Number {
             (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() + r2)),
             (Number::Integer(i1), Number::Rational(r2)) => {
                 let i1_rational = match i1 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
@@ -221,10 +221,10 @@ impl Add for Number {
                 Ok(Number::Rational(i1_rational + r2))
             }
             (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariable::Fixnum(f1), IntegerVariable::Fixnum(f2)) => {
+                (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
                     let sum = f1.checked_add(f2);
                     match sum {
-                        Some(s) => Ok(Number::Integer(IntegerVariable::Fixnum(s))),
+                        Some(s) => Ok(Number::Integer(IntegerVariant::Fixnum(s))),
                         None => {
                             let b1 = BigInt::from(f1);
                             let b2 = BigInt::from(f2);
@@ -232,14 +232,14 @@ impl Add for Number {
                         }
                     }
                 }
-                (IntegerVariable::Bignum(b1), IntegerVariable::Bignum(b2)) => {
+                (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
                     Ok(Number::from_bigint(b1 + b2))
                 }
-                (IntegerVariable::Fixnum(f1), IntegerVariable::Bignum(b2)) => {
+                (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
                     let b1 = BigInt::from(f1);
                     Ok(Number::from_bigint(b1 + b2))
                 }
-                (IntegerVariable::Bignum(b1), IntegerVariable::Fixnum(f2)) => {
+                (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
                     let b2 = BigInt::from(f2);
                     Ok(Number::from_bigint(b1 + b2))
                 }
@@ -280,8 +280,8 @@ impl Sub for Number {
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 - r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
@@ -300,8 +300,8 @@ impl Sub for Number {
             (Number::Integer(i1), Number::Rational(r2)) => {
                 // Promote integer to rational
                 let i1_rational = match i1 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
@@ -313,10 +313,10 @@ impl Sub for Number {
             }
             (Number::Integer(i1), Number::Integer(i2)) => {
                 match (i1, i2) {
-                    (IntegerVariable::Fixnum(f1), IntegerVariable::Fixnum(f2)) => {
+                    (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
                         let diff = f1.checked_sub(f2);
                         match diff {
-                            Some(s) => Ok(Number::Integer(IntegerVariable::Fixnum(s))),
+                            Some(s) => Ok(Number::Integer(IntegerVariant::Fixnum(s))),
                             None => {
                                 // Overflow: promote to Bignum
                                 let b1 = BigInt::from(f1);
@@ -325,14 +325,14 @@ impl Sub for Number {
                             }
                         }
                     }
-                    (IntegerVariable::Bignum(b1), IntegerVariable::Bignum(b2)) => {
+                    (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
                         Ok(Number::from_bigint(b1 - b2))
                     }
-                    (IntegerVariable::Fixnum(f1), IntegerVariable::Bignum(b2)) => {
+                    (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
                         let b1 = BigInt::from(f1);
                         Ok(Number::from_bigint(b1 - b2))
                     }
-                    (IntegerVariable::Bignum(b1), IntegerVariable::Fixnum(f2)) => {
+                    (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
                         let b2 = BigInt::from(f2);
                         Ok(Number::from_bigint(b1 - b2))
                     }
@@ -373,8 +373,8 @@ impl Mul for Number {
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 * r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -392,8 +392,8 @@ impl Mul for Number {
             (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() * r2)),
             (Number::Integer(i1), Number::Rational(r2)) => {
                 let i1_rational = match i1 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -404,20 +404,20 @@ impl Mul for Number {
                 Ok(Number::Rational(i1_rational * r2))
             }
             (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariable::Fixnum(f1), IntegerVariable::Fixnum(f2)) => {
+                (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
                     let prod = f1.checked_mul(f2);
                     match prod {
-                        Some(s) => Ok(Number::Integer(IntegerVariable::Fixnum(s))),
+                        Some(s) => Ok(Number::Integer(IntegerVariant::Fixnum(s))),
                         None => Ok(Number::from_bigint(BigInt::from(f1) * BigInt::from(f2))),
                     }
                 }
-                (IntegerVariable::Bignum(b1), IntegerVariable::Bignum(b2)) => {
+                (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
                     Ok(Number::from_bigint(b1 * b2))
                 }
-                (IntegerVariable::Fixnum(f1), IntegerVariable::Bignum(b2)) => {
+                (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
                     Ok(Number::from_bigint(BigInt::from(f1) * b2))
                 }
-                (IntegerVariable::Bignum(b1), IntegerVariable::Fixnum(f2)) => {
+                (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
                     Ok(Number::from_bigint(b1 * BigInt::from(f2)))
                 }
             },
@@ -430,10 +430,10 @@ impl Div for Number {
     fn div(self, other: Number) -> Self::Output {
         // Pre-check for division by exact zero
         match &other {
-            Number::Integer(IntegerVariable::Fixnum(0)) => {
+            Number::Integer(IntegerVariant::Fixnum(0)) => {
                 return Err(Error::Message("unable to divide by 0".to_string()));
             }
-            Number::Integer(IntegerVariable::Bignum(b)) if b == &BigInt::from(0) => {
+            Number::Integer(IntegerVariant::Bignum(b)) if b == &BigInt::from(0) => {
                 return Err(Error::Message("unable to divide by 0".to_string()));
             }
             Number::Rational(r) if r.is_zero() => {
@@ -471,8 +471,8 @@ impl Div for Number {
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 / r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -490,8 +490,8 @@ impl Div for Number {
             (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() / r2)),
             (Number::Integer(i1), Number::Rational(r2)) => {
                 let i1_rational = match i1 {
-                    IntegerVariable::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariable::Bignum(b) => {
+                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
+                    IntegerVariant::Bignum(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -502,14 +502,14 @@ impl Div for Number {
                 Ok(Number::Rational(i1_rational / r2))
             }
             (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariable::Fixnum(f1), IntegerVariable::Fixnum(f2)) => {
+                (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
                     if f1 % f2 == 0 {
                         Ok(Number::from_i64(f1 / f2))
                     } else {
                         Ok(Number::Rational(Rational64::new(f1, f2)))
                     }
                 }
-                (IntegerVariable::Bignum(b1), IntegerVariable::Bignum(b2)) => {
+                (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
                     if b1.is_multiple_of(&b2) {
                         Ok(Number::from_bigint(b1 / b2))
                     } else {
@@ -522,7 +522,7 @@ impl Div for Number {
                         Ok(Number::Rational(Rational64::new(r_num, r_den)))
                     }
                 }
-                (IntegerVariable::Fixnum(f1), IntegerVariable::Bignum(b2)) => {
+                (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
                     let b1 = BigInt::from(f1);
                     if b1.is_multiple_of(&b2) {
                         Ok(Number::from_bigint(b1 / b2))
@@ -536,7 +536,7 @@ impl Div for Number {
                         Ok(Number::Rational(Rational64::new(r_num, r_den)))
                     }
                 }
-                (IntegerVariable::Bignum(b1), IntegerVariable::Fixnum(f2)) => {
+                (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
                     let b2 = BigInt::from(f2);
                     if b1.is_multiple_of(&b2) {
                         Ok(Number::from_bigint(b1 / b2))
@@ -560,10 +560,10 @@ impl Rem for Number {
     fn rem(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariable::Fixnum(i1), IntegerVariable::Fixnum(i2)) => Ok(Number::Integer(IntegerVariable::Fixnum(i1 % i2))),
-                (IntegerVariable::Bignum(i1), IntegerVariable::Bignum(i2)) => Ok(Number::Integer(IntegerVariable::Bignum(i1 % i2))),
-                (IntegerVariable::Fixnum(i1), IntegerVariable::Bignum(i2)) => Ok(Number::Integer(IntegerVariable::Bignum(i1 % i2))),
-                (IntegerVariable::Bignum(i1), IntegerVariable::Fixnum(i2)) => Ok(Number::Integer(IntegerVariable::Bignum(i1 % i2))),
+                (IntegerVariant::Fixnum(i1), IntegerVariant::Fixnum(i2)) => Ok(Number::Integer(IntegerVariant::Fixnum(i1 % i2))),
+                (IntegerVariant::Bignum(i1), IntegerVariant::Bignum(i2)) => Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2))),
+                (IntegerVariant::Fixnum(i1), IntegerVariant::Bignum(i2)) => Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2))),
+                (IntegerVariant::Bignum(i1), IntegerVariant::Fixnum(i2)) => Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2))),
             },
             (_,_) => Err(Error::Message("expected integer".to_string())),
         } 
@@ -573,8 +573,8 @@ impl Rem for Number {
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Number::Integer(IntegerVariable::Fixnum(i)) => write!(f, "{}", i),
-            Number::Integer(IntegerVariable::Bignum(b)) => write!(f, "{}", b),
+            Number::Integer(IntegerVariant::Fixnum(i)) => write!(f, "{}", i),
+            Number::Integer(IntegerVariant::Bignum(b)) => write!(f, "{}", b),
             Number::Rational(r) => write!(f, "{}", r),
             Number::Real(r) => write!(f, "{}", r),
             Number::Complex(c) => write!(f, "{}", c),
@@ -585,29 +585,29 @@ impl fmt::Display for Number {
 pub type Fixnum = i64;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum IntegerVariable {
+pub enum IntegerVariant {
     Fixnum(Fixnum),
     Bignum(BigInt),
 }
 
-impl ToPrimitive for IntegerVariable {
+impl ToPrimitive for IntegerVariant {
     fn to_i64(&self) -> Option<i64> {
         match self {
-            IntegerVariable::Fixnum(f) => Some(*f),
-            IntegerVariable::Bignum(b) => b.to_i64(),
+            IntegerVariant::Fixnum(f) => Some(*f),
+            IntegerVariant::Bignum(b) => b.to_i64(),
         }
     }
     fn to_u64(&self) -> Option<u64> {
         match self {
-            IntegerVariable::Fixnum(f) => Some(*f as u64),
-            IntegerVariable::Bignum(b) => b.to_u64(),
+            IntegerVariant::Fixnum(f) => Some(*f as u64),
+            IntegerVariant::Bignum(b) => b.to_u64(),
         }
     }
 
     fn to_f64(&self) -> Option<f64> {
         match self {
-            IntegerVariable::Fixnum(f) => Some(*f as f64),
-            IntegerVariable::Bignum(b) => b.to_f64(),
+            IntegerVariant::Fixnum(f) => Some(*f as f64),
+            IntegerVariant::Bignum(b) => b.to_f64(),
         }
     }
 }

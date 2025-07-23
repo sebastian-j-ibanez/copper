@@ -7,7 +7,7 @@
 use crate::error::Error;
 use crate::parser::parse_number;
 use crate::types::{Expr, Number};
-use crate::types::number::IntegerVariable::Fixnum;
+use crate::types::number::IntegerVariant::Fixnum;
 
 pub fn is_number(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {

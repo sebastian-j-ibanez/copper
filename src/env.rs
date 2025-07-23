@@ -2,7 +2,7 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-17
 
-//! Types and functions for the Copper runtime environment. 
+//! Types and functions for the Copper runtime environment.
 
 pub mod operators;
 pub mod predicates;
