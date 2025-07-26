@@ -125,11 +125,41 @@ pub fn expression_closed(buf: &str) -> bool {
 
 /// Tokenize a string s-expression.
 pub fn tokenize(expression: String) -> Vec<String> {
-    expression
-        .replace("(", " ( ")
-        .replace(")", " ) ")
-        .split_whitespace()
-        .map(|x| x.to_string())
-        .collect()
-}
+    let mut tokens: Vec<String> = Vec::new();
+    let chars: Vec<char> = expression.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        match chars[i] {
+            // Skip whitespace.
+            ' ' | '\t' | '\r' | '\n' => {
+                i += 1;
+            },
+            '(' | ')' => {
+                tokens.push(chars[i].to_string());
+                i += 1;
+            },
+            '"' => {
+                let start = i;
+                i += 1;
+                while i < chars.len() && chars[i] != '"' {
+                    i += 1;
+                }
+                if i < chars.len() {
+                    i += 1;
+                }
+                let string: String = chars[start..i].iter().collect();
+                tokens.push(string);
+            },
+            _ => {
+                let start = i;
+                while i < chars.len() && !chars[i].is_whitespace() && chars[i] != '(' && chars[i] != ')' {
+                    i += 1;
+                }
+                let atom: String = chars[start..i].iter().collect();
+                tokens.push(atom);
+            },
+        }
+    }
 
+    tokens
+}
