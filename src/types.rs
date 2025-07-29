@@ -27,7 +27,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s: String = match self {
             Expr::Number(n) => n.to_string(),
-            Expr::String(s) => format_string(s),
+            Expr::String(s) => s.to_string(),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::List(list) => {
@@ -38,10 +38,6 @@ impl fmt::Display for Expr {
         };
         write!(f, "{}", s)
     }
-}
-
-fn format_string(s: &String) -> String {
-    "\"".to_string() + s + "\""
 }
 
 fn format_boolean(b: &bool) -> String {
