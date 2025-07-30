@@ -12,9 +12,9 @@ pub mod ui;
 use std::io::{self, BufRead, Write, stdout};
 use std::process;
 
+use crate::env::Env;
 use crate::error::Error;
 use crate::parser::parse_eval;
-use crate::env::Env;
 
 fn main() {
     ui::print_greeting();

@@ -560,13 +560,21 @@ impl Rem for Number {
     fn rem(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariant::Fixnum(i1), IntegerVariant::Fixnum(i2)) => Ok(Number::Integer(IntegerVariant::Fixnum(i1 % i2))),
-                (IntegerVariant::Bignum(i1), IntegerVariant::Bignum(i2)) => Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2))),
-                (IntegerVariant::Fixnum(i1), IntegerVariant::Bignum(i2)) => Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2))),
-                (IntegerVariant::Bignum(i1), IntegerVariant::Fixnum(i2)) => Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2))),
+                (IntegerVariant::Fixnum(i1), IntegerVariant::Fixnum(i2)) => {
+                    Ok(Number::Integer(IntegerVariant::Fixnum(i1 % i2)))
+                }
+                (IntegerVariant::Bignum(i1), IntegerVariant::Bignum(i2)) => {
+                    Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2)))
+                }
+                (IntegerVariant::Fixnum(i1), IntegerVariant::Bignum(i2)) => {
+                    Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2)))
+                }
+                (IntegerVariant::Bignum(i1), IntegerVariant::Fixnum(i2)) => {
+                    Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2)))
+                }
             },
-            (_,_) => Err(Error::Message("expected integer".to_string())),
-        } 
+            (_, _) => Err(Error::Message("expected integer".to_string())),
+        }
     }
 }
 

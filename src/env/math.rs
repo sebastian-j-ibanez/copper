@@ -4,7 +4,7 @@
 
 //! Functions related to math operations.
 
-use crate::{error::Error, types::{Expr}};
+use crate::{error::Error, types::Expr};
 
 pub fn modulo(args: &[Expr]) -> Result<Expr, Error> {
     match args {
@@ -12,7 +12,7 @@ pub fn modulo(args: &[Expr]) -> Result<Expr, Error> {
             let a = a.clone();
             let b = b.clone();
             Ok(Expr::Number((a % b)?))
-        },
-        _ => Err(Error::Message("expected exactly 2 arguments".to_string()))
+        }
+        _ => Err(Error::Message("expected exactly 2 arguments".to_string())),
     }
 }

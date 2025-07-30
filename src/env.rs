@@ -4,30 +4,21 @@
 
 //! Types and functions for the Copper runtime environment.
 
+mod io;
+pub mod math;
 pub mod operators;
 pub mod predicates;
-pub mod math;
-mod io;
 
 use crate::env::math::modulo;
 use crate::env::predicates::{
-    is_boolean,
-    is_complex,
-    is_even,
-    is_integer,
-    is_list,
-    is_number,
-    is_odd,
-    is_procedure,
-    is_rational,
-    is_real,
-    is_string
+    is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
+    is_rational, is_real, is_string,
 };
 use crate::types::Expr;
 pub(crate) use operators::{add, div, mult, sub};
 
-use std::collections::HashMap;
 use crate::env::io::{display, newline};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Env {

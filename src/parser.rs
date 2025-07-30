@@ -92,10 +92,7 @@ pub fn eval_atom(token: &str) -> Expr {
 
 /// Get vec of numbers from an s-expression.
 pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<Number>, Error> {
-    expressions
-        .iter()
-        .map(|e| parse_number(e))
-        .collect()
+    expressions.iter().map(|e| parse_number(e)).collect()
 }
 
 /// Get a single number from an s-expression.
@@ -133,11 +130,11 @@ pub fn tokenize(expression: String) -> Vec<String> {
             // Skip whitespace.
             ' ' | '\t' | '\r' | '\n' => {
                 i += 1;
-            },
+            }
             '(' | ')' => {
                 tokens.push(chars[i].to_string());
                 i += 1;
-            },
+            }
             '"' => {
                 let start = i;
                 i += 1;
@@ -149,15 +146,19 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 }
                 let string: String = chars[start..i].iter().collect();
                 tokens.push(string);
-            },
+            }
             _ => {
                 let start = i;
-                while i < chars.len() && !chars[i].is_whitespace() && chars[i] != '(' && chars[i] != ')' {
+                while i < chars.len()
+                    && !chars[i].is_whitespace()
+                    && chars[i] != '('
+                    && chars[i] != ')'
+                {
                     i += 1;
                 }
                 let atom: String = chars[start..i].iter().collect();
                 tokens.push(atom);
-            },
+            }
         }
     }
 

@@ -6,15 +6,15 @@
 
 use crate::error::Error;
 use crate::parser::parse_number;
-use crate::types::{Expr, Number};
 use crate::types::number::IntegerVariant::Fixnum;
+use crate::types::{Expr, Number};
 
 pub fn is_number(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         return match arg {
             Expr::Number(_) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -25,7 +25,7 @@ pub fn is_real(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::Number(Number::Real(_)) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -36,7 +36,7 @@ pub fn is_rational(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::Number(Number::Rational(_)) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -47,7 +47,7 @@ pub fn is_complex(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::Number(Number::Complex(_)) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -58,7 +58,7 @@ pub fn is_integer(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::Number(Number::Integer(_)) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -69,7 +69,7 @@ pub fn is_string(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::String(_) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -80,7 +80,7 @@ pub fn is_boolean(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::Boolean(_) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -91,7 +91,7 @@ pub fn is_list(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::List(_) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
@@ -102,7 +102,7 @@ pub fn is_procedure(args: &[Expr]) -> Result<Expr, Error> {
         return match arg {
             Expr::Func(_) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
-        }
+        };
     }
     let msg = format!("expected 1 argument, got {}", args.len());
     Err(Error::Message(msg))
