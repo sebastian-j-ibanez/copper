@@ -7,6 +7,7 @@
 pub mod operators;
 pub mod predicates;
 pub mod math;
+mod io;
 
 use crate::env::math::modulo;
 use crate::env::predicates::{
@@ -26,6 +27,7 @@ use crate::types::Expr;
 pub(crate) use operators::{add, div, mult, sub};
 
 use std::collections::HashMap;
+use crate::env::io::{display, newline};
 
 #[derive(Debug)]
 pub struct Env {
@@ -51,6 +53,8 @@ impl Env {
         data.insert("procedure?".to_string(), Expr::Func(is_procedure));
         data.insert("even?".to_string(), Expr::Func(is_even));
         data.insert("odd?".to_string(), Expr::Func(is_odd));
+        data.insert("display".to_string(), Expr::Func(display));
+        data.insert("newline".to_string(), Expr::Func(newline));
         Env { data }
     }
 }
