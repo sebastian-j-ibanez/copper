@@ -43,6 +43,7 @@ pub fn eval(expr: &Expr, env: &mut Env) -> Result<Expr, Error> {
                 _ => Err(Error::Message("first form must be a function".to_string())),
             }
         }
+        Expr::Void() => Ok(Expr::Void()),
         Expr::Func(_) => Err(Error::Message("unexpected form".to_string())),
     }
 }

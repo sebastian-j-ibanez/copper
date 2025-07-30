@@ -10,14 +10,14 @@ pub mod operators;
 pub mod predicates;
 
 use crate::env::math::modulo;
+pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
     is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
     is_rational, is_real, is_string,
 };
 use crate::types::Expr;
-pub(crate) use operators::{add, div, mult, sub};
 
-use crate::env::io::{display, newline};
+use crate::env::io::{display, newline, print, println};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -46,6 +46,8 @@ impl Env {
         data.insert("odd?".to_string(), Expr::Func(is_odd));
         data.insert("display".to_string(), Expr::Func(display));
         data.insert("newline".to_string(), Expr::Func(newline));
+        data.insert("print".to_string(), Expr::Func(print));
+        data.insert("println".to_string(), Expr::Func(println));
         Env { data }
     }
 }

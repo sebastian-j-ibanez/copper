@@ -20,6 +20,7 @@ pub enum Expr {
     Boolean(bool),
     Symbol(String),
     List(Vec<Expr>),
+    Void(),
     Func(fn(&[Expr]) -> Result<Expr, Error>),
 }
 
@@ -34,7 +35,8 @@ impl fmt::Display for Expr {
                 let xs: Vec<String> = list.iter().map(|x| x.to_string()).collect();
                 format!("({})", xs.join(","))
             }
-            Expr::Func(_) => "Function {}".to_string(),
+            Expr::Void() => return Ok(()),
+            Expr::Func(_) => "#<function {}".to_string(),
         };
         write!(f, "{}", s)
     }

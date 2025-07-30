@@ -15,11 +15,13 @@ use std::process;
 use crate::env::Env;
 use crate::error::Error;
 use crate::parser::parse_eval;
+use crate::types::Expr;
 
 fn main() {
     ui::print_greeting();
     let env = &mut Env::default_env();
 
+    // Read, eval, print loop
     loop {
         print!("{}", ui::REPL_PROMPT);
 
@@ -42,6 +44,7 @@ fn main() {
         }
 
         match parse_eval(buf, env) {
+            Ok(Expr::Void()) => continue,
             Ok(result) => println!("{}", result),
             Err(e) => match e {
                 Error::Message(msg) => println!("error: {}", msg),
