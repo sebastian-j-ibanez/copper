@@ -8,6 +8,7 @@ mod io;
 pub mod math;
 pub mod operators;
 pub mod predicates;
+mod strings;
 
 use crate::env::math::modulo;
 pub use crate::env::operators::{add, div, mult, sub};
@@ -48,6 +49,10 @@ impl Env {
         data.insert("newline".to_string(), Expr::Func(newline));
         data.insert("print".to_string(), Expr::Func(print));
         data.insert("println".to_string(), Expr::Func(println));
+        data.insert(
+            "string-length".to_string(),
+            Expr::Func(strings::string_length),
+        );
         Env { data }
     }
 }

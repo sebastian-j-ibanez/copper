@@ -156,6 +156,10 @@ impl Number {
             Number::Integer(IntegerVariant::Bignum(value))
         }
     }
+
+    pub fn from_usize(size: usize) -> Self {
+        Number::Integer(IntegerVariant::Fixnum(size as i64))
+    }
 }
 
 impl Add for Number {
