@@ -5,9 +5,9 @@
 //! Types and functions for the Copper runtime environment.
 
 mod io;
-pub mod math;
-pub mod operators;
-pub mod predicates;
+mod math;
+mod operators;
+mod predicates;
 mod strings;
 
 use crate::env::math::modulo;
@@ -29,11 +29,14 @@ pub struct Env {
 impl Env {
     pub fn default_env() -> Env {
         let mut data: HashMap<String, Expr> = HashMap::new();
+        // Operators
         data.insert("+".to_string(), Expr::Func(add));
         data.insert("-".to_string(), Expr::Func(sub));
         data.insert("*".to_string(), Expr::Func(mult));
         data.insert("/".to_string(), Expr::Func(div));
+        // Math
         data.insert("modulo".to_string(), Expr::Func(modulo));
+        // Predicates
         data.insert("number?".to_string(), Expr::Func(is_number));
         data.insert("real?".to_string(), Expr::Func(is_real));
         data.insert("rational?".to_string(), Expr::Func(is_rational));
@@ -45,6 +48,7 @@ impl Env {
         data.insert("procedure?".to_string(), Expr::Func(is_procedure));
         data.insert("even?".to_string(), Expr::Func(is_even));
         data.insert("odd?".to_string(), Expr::Func(is_odd));
+        // IO
         data.insert("display".to_string(), Expr::Func(display));
         data.insert("newline".to_string(), Expr::Func(newline));
         data.insert("print".to_string(), Expr::Func(print));

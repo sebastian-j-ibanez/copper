@@ -23,7 +23,7 @@ use std::{
 #[derive(Debug, Clone, PartialEq)]
 pub enum Number {
     Integer(IntegerVariant),
-    Real(f64),
+    Float(f64),
     Complex(Complex64),
     Rational(Rational64),
 }
@@ -109,7 +109,7 @@ impl Number {
         // Real number
         if s.contains('.') {
             if let Ok(f) = s.parse::<f64>() {
-                return Ok(Number::Real(f));
+                return Ok(Number::Float(f));
             }
         }
 
@@ -132,12 +132,12 @@ impl Number {
     }
 
     pub fn from_f64(value: f64) -> Self {
-        Number::Real(value)
+        Number::Float(value)
     }
 
     pub fn from_rational(num_val: i64, den_val: i64) -> Self {
         if den_val == 0 {
-            Number::Real(f64::NAN)
+            Number::Float(f64::NAN)
         } else {
             let rational = Rational64::new(num_val, den_val); // Rational64 itself simplifies
             if rational.denom() == &1 {
@@ -168,7 +168,7 @@ impl Add for Number {
         match (self, other) {
             // Case 1: Complex + Any
             (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 + c2)),
-            (Number::Complex(c1), Number::Real(r2)) => {
+            (Number::Complex(c1), Number::Float(r2)) => {
                 Ok(Number::Complex(c1 + Complex64::new(r2, 0.0)))
             }
             (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
@@ -179,18 +179,24 @@ impl Add for Number {
             )),
 
             // Case 2: Real + Any (that hasn't been handled by Complex + Any)
-            (Number::Real(r1), Number::Complex(c2)) => {
+            (Number::Float(r1), Number::Complex(c2)) => {
                 Ok(Number::Complex(Complex64::new(r1, 0.0) + c2))
             }
-            (Number::Real(r1), Number::Real(r2)) => Ok(Number::Real(r1 + r2)),
-            (Number::Real(r1), Number::Rational(r2)) => Ok(Number::Real(r1 + r2.to_f64().unwrap())),
-            (Number::Real(r1), Number::Integer(i2)) => Ok(Number::Real(r1 + i2.to_f64().unwrap())),
+            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 + r2)),
+            (Number::Float(r1), Number::Rational(r2)) => {
+                Ok(Number::Float(r1 + r2.to_f64().unwrap()))
+            }
+            (Number::Float(r1), Number::Integer(i2)) => {
+                Ok(Number::Float(r1 + i2.to_f64().unwrap()))
+            }
 
             // Case 3: Rational + Any (that hasn't been handled by Complex/Real + Any)
             (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) + c2,
             )),
-            (Number::Rational(r1), Number::Real(r2)) => Ok(Number::Real(r1.to_f64().unwrap() + r2)),
+            (Number::Rational(r1), Number::Float(r2)) => {
+                Ok(Number::Float(r1.to_f64().unwrap() + r2))
+            }
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 + r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
@@ -199,7 +205,7 @@ impl Add for Number {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Real(r1.to_f64().unwrap() + b.to_f64().unwrap()));
+                            return Ok(Number::Float(r1.to_f64().unwrap() + b.to_f64().unwrap()));
                         }
                     }
                 };
@@ -210,7 +216,9 @@ impl Add for Number {
             (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) + c2,
             )),
-            (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() + r2)),
+            (Number::Integer(i1), Number::Float(r2)) => {
+                Ok(Number::Float(i1.to_f64().unwrap() + r2))
+            }
             (Number::Integer(i1), Number::Rational(r2)) => {
                 let i1_rational = match i1 {
                     IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
@@ -218,7 +226,7 @@ impl Add for Number {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Real(b.to_f64().unwrap() + r2.to_f64().unwrap()));
+                            return Ok(Number::Float(b.to_f64().unwrap() + r2.to_f64().unwrap()));
                         }
                     }
                 };
@@ -258,7 +266,7 @@ impl Sub for Number {
         match (self, other) {
             // Complex - Any
             (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 - c2)),
-            (Number::Complex(c1), Number::Real(r2)) => {
+            (Number::Complex(c1), Number::Float(r2)) => {
                 Ok(Number::Complex(c1 - Complex64::new(r2, 0.0)))
             }
             (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
@@ -269,18 +277,24 @@ impl Sub for Number {
             )),
 
             // Real - Any
-            (Number::Real(r1), Number::Complex(c2)) => {
+            (Number::Float(r1), Number::Complex(c2)) => {
                 Ok(Number::Complex(Complex64::new(r1, 0.0) - c2))
             }
-            (Number::Real(r1), Number::Real(r2)) => Ok(Number::Real(r1 - r2)),
-            (Number::Real(r1), Number::Rational(r2)) => Ok(Number::Real(r1 - r2.to_f64().unwrap())),
-            (Number::Real(r1), Number::Integer(i2)) => Ok(Number::Real(r1 - i2.to_f64().unwrap())),
+            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 - r2)),
+            (Number::Float(r1), Number::Rational(r2)) => {
+                Ok(Number::Float(r1 - r2.to_f64().unwrap()))
+            }
+            (Number::Float(r1), Number::Integer(i2)) => {
+                Ok(Number::Float(r1 - i2.to_f64().unwrap()))
+            }
 
             //Rational - Any
             (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) - c2,
             )),
-            (Number::Rational(r1), Number::Real(r2)) => Ok(Number::Real(r1.to_f64().unwrap() - r2)),
+            (Number::Rational(r1), Number::Float(r2)) => {
+                Ok(Number::Float(r1.to_f64().unwrap() - r2))
+            }
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 - r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
@@ -289,7 +303,7 @@ impl Sub for Number {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Real(r1.to_f64().unwrap() - b.to_f64().unwrap()));
+                            return Ok(Number::Float(r1.to_f64().unwrap() - b.to_f64().unwrap()));
                         }
                     }
                 };
@@ -300,7 +314,9 @@ impl Sub for Number {
             (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) - c2,
             )),
-            (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() - r2)),
+            (Number::Integer(i1), Number::Float(r2)) => {
+                Ok(Number::Float(i1.to_f64().unwrap() - r2))
+            }
             (Number::Integer(i1), Number::Rational(r2)) => {
                 // Promote integer to rational
                 let i1_rational = match i1 {
@@ -309,7 +325,7 @@ impl Sub for Number {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Real(b.to_f64().unwrap() - r2.to_f64().unwrap()));
+                            return Ok(Number::Float(b.to_f64().unwrap() - r2.to_f64().unwrap()));
                         }
                     }
                 };
@@ -351,7 +367,7 @@ impl Mul for Number {
         match (self, other) {
             // Complex * Any
             (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 * c2)),
-            (Number::Complex(c1), Number::Real(r2)) => {
+            (Number::Complex(c1), Number::Float(r2)) => {
                 Ok(Number::Complex(c1 * Complex64::new(r2, 0.0)))
             }
             (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
@@ -362,18 +378,24 @@ impl Mul for Number {
             )),
 
             // Real * Any
-            (Number::Real(r1), Number::Complex(c2)) => {
+            (Number::Float(r1), Number::Complex(c2)) => {
                 Ok(Number::Complex(Complex64::new(r1, 0.0) * c2))
             }
-            (Number::Real(r1), Number::Real(r2)) => Ok(Number::Real(r1 * r2)),
-            (Number::Real(r1), Number::Rational(r2)) => Ok(Number::Real(r1 * r2.to_f64().unwrap())),
-            (Number::Real(r1), Number::Integer(i2)) => Ok(Number::Real(r1 * i2.to_f64().unwrap())),
+            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 * r2)),
+            (Number::Float(r1), Number::Rational(r2)) => {
+                Ok(Number::Float(r1 * r2.to_f64().unwrap()))
+            }
+            (Number::Float(r1), Number::Integer(i2)) => {
+                Ok(Number::Float(r1 * i2.to_f64().unwrap()))
+            }
 
             // Rational * Any
             (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) * c2,
             )),
-            (Number::Rational(r1), Number::Real(r2)) => Ok(Number::Real(r1.to_f64().unwrap() * r2)),
+            (Number::Rational(r1), Number::Float(r2)) => {
+                Ok(Number::Float(r1.to_f64().unwrap() * r2))
+            }
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 * r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
@@ -393,7 +415,9 @@ impl Mul for Number {
             (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) * c2,
             )),
-            (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() * r2)),
+            (Number::Integer(i1), Number::Float(r2)) => {
+                Ok(Number::Float(i1.to_f64().unwrap() * r2))
+            }
             (Number::Integer(i1), Number::Rational(r2)) => {
                 let i1_rational = match i1 {
                     IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
@@ -449,7 +473,7 @@ impl Div for Number {
         match (self, other) {
             // Complex / Any
             (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 / c2)),
-            (Number::Complex(c1), Number::Real(r2)) => {
+            (Number::Complex(c1), Number::Float(r2)) => {
                 Ok(Number::Complex(c1 / Complex64::new(r2, 0.0)))
             }
             (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
@@ -460,18 +484,24 @@ impl Div for Number {
             )),
 
             // Real / Any
-            (Number::Real(r1), Number::Complex(c2)) => {
+            (Number::Float(r1), Number::Complex(c2)) => {
                 Ok(Number::Complex(Complex64::new(r1, 0.0) / c2))
             }
-            (Number::Real(r1), Number::Real(r2)) => Ok(Number::Real(r1 / r2)),
-            (Number::Real(r1), Number::Rational(r2)) => Ok(Number::Real(r1 / r2.to_f64().unwrap())),
-            (Number::Real(r1), Number::Integer(i2)) => Ok(Number::Real(r1 / i2.to_f64().unwrap())),
+            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 / r2)),
+            (Number::Float(r1), Number::Rational(r2)) => {
+                Ok(Number::Float(r1 / r2.to_f64().unwrap()))
+            }
+            (Number::Float(r1), Number::Integer(i2)) => {
+                Ok(Number::Float(r1 / i2.to_f64().unwrap()))
+            }
 
             // Rational / Any
             (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) / c2,
             )),
-            (Number::Rational(r1), Number::Real(r2)) => Ok(Number::Real(r1.to_f64().unwrap() / r2)),
+            (Number::Rational(r1), Number::Float(r2)) => {
+                Ok(Number::Float(r1.to_f64().unwrap() / r2))
+            }
             (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 / r2)),
             (Number::Rational(r1), Number::Integer(i2)) => {
                 let i2_rational = match i2 {
@@ -491,7 +521,9 @@ impl Div for Number {
             (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) / c2,
             )),
-            (Number::Integer(i1), Number::Real(r2)) => Ok(Number::Real(i1.to_f64().unwrap() / r2)),
+            (Number::Integer(i1), Number::Float(r2)) => {
+                Ok(Number::Float(i1.to_f64().unwrap() / r2))
+            }
             (Number::Integer(i1), Number::Rational(r2)) => {
                 let i1_rational = match i1 {
                     IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
@@ -588,7 +620,7 @@ impl fmt::Display for Number {
             Number::Integer(IntegerVariant::Fixnum(i)) => write!(f, "{}", i),
             Number::Integer(IntegerVariant::Bignum(b)) => write!(f, "{}", b),
             Number::Rational(r) => write!(f, "{}", r),
-            Number::Real(r) => write!(f, "{}", r),
+            Number::Float(r) => write!(f, "{}", r),
             Number::Complex(c) => write!(f, "{}", c),
         }
     }

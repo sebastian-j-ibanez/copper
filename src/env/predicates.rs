@@ -23,7 +23,7 @@ pub fn is_number(args: &[Expr]) -> Result<Expr, Error> {
 pub fn is_real(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         return match arg {
-            Expr::Number(Number::Real(_)) => Ok(Expr::Boolean(true)),
+            Expr::Number(Number::Float(_)) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
         };
     }
