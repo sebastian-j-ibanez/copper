@@ -9,7 +9,7 @@ use num_bigint::BigInt;
 use num_complex::Complex64;
 use num_integer::Integer;
 use num_rational::Rational64;
-use num_traits::{Num, ToPrimitive, Zero};
+use num_traits::{FromPrimitive, Num, Pow, ToPrimitive, Zero};
 use std::num::ParseFloatError;
 use std::ops::Rem;
 use std::{
@@ -29,6 +29,7 @@ pub enum Number {
 }
 
 impl Number {
+    /// Convert a string to a number.
     pub fn from_token(s: &str) -> Result<Self, Error> {
         // Complex number
         if let Some(i_pos) = s.find('i') {
@@ -131,17 +132,52 @@ impl Number {
         Number::Integer(IntegerVariant::Fixnum(value))
     }
 
+    pub fn to_i64(&self) -> Option<i64> {
+        match self {
+            Number::Integer(int_var) => match int_var {
+                IntegerVariant::Fixnum(i) => Some(*i),
+                IntegerVariant::Bignum(b) => b.to_i64(),
+            },
+            Number::Float(f) => {
+                if f.fract() == 0.0 && *f >= i64::MIN as f64 && *f <= i64::MAX as f64 {
+                    Some(*f as i64)
+                } else {
+                    None
+                }
+            }
+            Number::Rational(r) => {
+                if r.is_integer() {
+                    r.to_i64()
+                } else {
+                    None
+                }
+            }
+            Number::Complex(_) => None,
+        }
+    }
+
     pub fn from_f64(value: f64) -> Self {
         Number::Float(value)
+    }
+
+    pub fn to_f64(&self) -> Option<f64> {
+        match self {
+            Number::Integer(int_var) => match int_var {
+                IntegerVariant::Fixnum(i) => Some(*i as f64),
+                IntegerVariant::Bignum(b) => b.to_f64(),
+            },
+            Number::Float(f) => Some(*f),
+            Number::Rational(r) => r.to_f64(),
+            Number::Complex(_) => None,
+        }
     }
 
     pub fn from_rational(num_val: i64, den_val: i64) -> Self {
         if den_val == 0 {
             Number::Float(f64::NAN)
         } else {
-            let rational = Rational64::new(num_val, den_val); // Rational64 itself simplifies
+            let rational = Rational64::new(num_val, den_val);
             if rational.denom() == &1 {
-                // Check if it simplified to an integer
                 Number::Integer(IntegerVariant::Fixnum(*rational.numer()))
             } else {
                 Number::Rational(rational)
@@ -159,6 +195,135 @@ impl Number {
 
     pub fn from_usize(size: usize) -> Self {
         Number::Integer(IntegerVariant::Fixnum(size as i64))
+    }
+
+    /// Check if float can be simplified as an integer.
+    fn rationalize_float(value: f64) -> Number {
+        if value.fract() == 0.0 && value.is_finite() {
+            if value >= i64::MIN as f64 && value <= i64::MAX as f64 {
+                Number::from_i64(value as i64)
+            } else {
+                Number::Integer(IntegerVariant::Bignum(
+                    BigInt::from_f64(value).unwrap_or_else(|| BigInt::from(0)),
+                ))
+            }
+        } else {
+            Number::Float(value)
+        }
+    }
+
+    /// Raise a number to the exponent of another number. Complex numbers are unsupported.
+    pub fn pow(&self, exponent: &Number) -> Result<Number, Error> {
+        match (self, exponent) {
+            // Integer base
+            (Number::Integer(base), Number::Integer(exponent)) => {
+                let result = base.clone().pow(exponent.clone())?;
+                Ok(Number::Integer(result))
+            }
+            (Number::Integer(base), Number::Rational(exponent)) => {
+                let base_float = match base {
+                    IntegerVariant::Fixnum(i) => *i as f64,
+                    IntegerVariant::Bignum(b) => b
+                        .to_f64()
+                        .ok_or(Error::Message("unable to convert base to f64".to_string()))?,
+                };
+                let exp_float = exponent.to_f64().ok_or(Error::Message(
+                    "unable to convert exponent to f64".to_string(),
+                ))?;
+                let result = base_float.powf(exp_float);
+
+                Ok(Number::rationalize_float(result))
+            }
+            (Number::Integer(base), Number::Float(exponent)) => {
+                let base_float = match base {
+                    IntegerVariant::Fixnum(i) => *i as f64,
+                    IntegerVariant::Bignum(b) => b
+                        .to_f64()
+                        .ok_or(Error::Message("unable to convert base to f64".to_string()))?,
+                };
+                let result = base_float.powf(*exponent);
+                Ok(Number::rationalize_float(result))
+            }
+            // Rational base
+            (Number::Rational(base), Number::Integer(exponent)) => {
+                let exp_i64 = match exponent {
+                    IntegerVariant::Fixnum(i) => *i,
+                    IntegerVariant::Bignum(_) => {
+                        return self.pow_via_float(&Number::Integer(exponent.clone()));
+                    }
+                };
+
+                if exp_i64 == 0 {
+                    return Ok(Number::from_i64(1));
+                }
+
+                let result = if exp_i64 < 0 {
+                    let inverted = Rational64::new(*base.denom(), *base.numer());
+                    inverted.pow((-exp_i64) as u32)
+                } else {
+                    base.pow(exp_i64 as i32)
+                };
+
+                if result.is_integer() {
+                    Ok(Number::from_i64(*result.numer()))
+                } else {
+                    Ok(Number::Rational(result))
+                }
+            }
+            (Number::Rational(base), Number::Rational(exponent)) => {
+                let base_float = base
+                    .to_f64()
+                    .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
+                let exp_float = exponent.to_f64().ok_or(Error::Message(
+                    "unable to convert exponent to f64".to_string(),
+                ))?;
+                let result = base_float.powf(exp_float);
+                Ok(Number::rationalize_float(result))
+            }
+            (Number::Rational(base), Number::Float(exponent)) => {
+                let base_float = base
+                    .to_f64()
+                    .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
+                let result = base_float.powf(*exponent);
+                Ok(Number::rationalize_float(result))
+            }
+            // Float base
+            (Number::Float(base), Number::Integer(exponent)) => {
+                let exp_float = match exponent {
+                    IntegerVariant::Fixnum(i) => *i as f64,
+                    IntegerVariant::Bignum(b) => b.to_f64().ok_or(Error::Message(
+                        "unable to convert exponent to f64".to_string(),
+                    ))?,
+                };
+                let result = base.powf(exp_float);
+                Ok(Number::rationalize_float(result))
+            }
+            (Number::Float(base), Number::Rational(exponent)) => {
+                let exp_float = exponent.to_f64().ok_or(Error::Message(
+                    "unable to convert exponent to f64".to_string(),
+                ))?;
+                let result = base.powf(exp_float);
+                Ok(Number::rationalize_float(result))
+            }
+            (Number::Float(base), Number::Float(exponent)) => {
+                let result = base.powf(*exponent);
+                Ok(Number::rationalize_float(result))
+            }
+            _ => Err(Error::Message(
+                "pow is not implemented for this number type".to_string(),
+            )),
+        }
+    }
+
+    fn pow_via_float(&self, exponent: &Number) -> Result<Number, Error> {
+        let base_float = self
+            .to_f64()
+            .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
+        let exp_float = exponent.to_f64().ok_or(Error::Message(
+            "unable to convert exponent to f64".to_string(),
+        ))?;
+        let result = base_float.powf(exp_float);
+        Ok(Number::rationalize_float(result))
     }
 }
 
@@ -626,11 +791,9 @@ impl fmt::Display for Number {
     }
 }
 
-pub type Fixnum = i64;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum IntegerVariant {
-    Fixnum(Fixnum),
+    Fixnum(i64),
     Bignum(BigInt),
 }
 
@@ -652,6 +815,48 @@ impl ToPrimitive for IntegerVariant {
         match self {
             IntegerVariant::Fixnum(f) => Some(*f as f64),
             IntegerVariant::Bignum(b) => b.to_f64(),
+        }
+    }
+}
+
+impl Pow<IntegerVariant> for IntegerVariant {
+    type Output = Result<IntegerVariant, Error>;
+    fn pow(self, rhs: IntegerVariant) -> Self::Output {
+        match (self, rhs) {
+            (IntegerVariant::Fixnum(f), IntegerVariant::Fixnum(r)) => {
+                let mut result = 1;
+                for _ in 0..r {
+                    result *= f;
+                }
+                Ok(IntegerVariant::Fixnum(result as i64))
+            }
+            (IntegerVariant::Bignum(b), IntegerVariant::Fixnum(r)) => {
+                let mut result = BigInt::from(1);
+                for _ in 0..r {
+                    result *= b.clone();
+                }
+                Ok(IntegerVariant::Bignum(result))
+            }
+            (IntegerVariant::Fixnum(f), IntegerVariant::Bignum(r)) => {
+                let r = r.to_u64().ok_or(Error::Message(
+                    "number too large for rational conversion".to_string(),
+                ))?;
+                let mut result = BigInt::from(1);
+                for _ in 0..r {
+                    result *= BigInt::from(f);
+                }
+                Ok(IntegerVariant::Bignum(result))
+            }
+            (IntegerVariant::Bignum(b), IntegerVariant::Bignum(r)) => {
+                let r = r.to_u64().ok_or(Error::Message(
+                    "number too large for rational conversion".to_string(),
+                ))?;
+                let mut result = BigInt::from(1);
+                for _ in 0..r {
+                    result *= b.clone();
+                }
+                Ok(IntegerVariant::Bignum(result))
+            }
         }
     }
 }

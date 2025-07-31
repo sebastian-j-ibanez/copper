@@ -10,7 +10,7 @@ mod operators;
 mod predicates;
 mod strings;
 
-use crate::env::math::modulo;
+use crate::env::math::{exponent, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
     is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
@@ -36,6 +36,7 @@ impl Env {
         data.insert("/".to_string(), Expr::Func(div));
         // Math
         data.insert("modulo".to_string(), Expr::Func(modulo));
+        data.insert("expt".to_string(), Expr::Func(exponent));
         // Predicates
         data.insert("number?".to_string(), Expr::Func(is_number));
         data.insert("real?".to_string(), Expr::Func(is_real));

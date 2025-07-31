@@ -16,3 +16,10 @@ pub fn modulo(args: &[Expr]) -> Result<Expr, Error> {
         _ => Err(Error::Message("expected exactly 2 arguments".to_string())),
     }
 }
+
+pub fn exponent(args: &[Expr]) -> Result<Expr, Error> {
+    match args {
+        [Expr::Number(a), Expr::Number(b)] => Ok(Expr::Number(a.pow(b)?)),
+        _ => Err(Error::Message("expected exactly 2 arguments".to_string())),
+    }
+}
