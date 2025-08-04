@@ -2,10 +2,11 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-29
 
+use crate::env::Env;
 use crate::error::Error;
 use crate::types::{Expr, Number};
 
-pub fn string_length(args: &[Expr]) -> Result<Expr, Error> {
+pub fn string_length(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         return match arg {
             Expr::String(s) => Ok(Expr::Number(Number::from_usize(s.len()))),

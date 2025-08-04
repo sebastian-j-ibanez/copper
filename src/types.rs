@@ -9,6 +9,7 @@ pub mod number;
 use crate::error::Error;
 pub(crate) use number::Number;
 use std::fmt;
+use crate::env::Env;
 
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
@@ -21,7 +22,7 @@ pub enum Expr {
     Symbol(String),
     List(Vec<Expr>),
     Void(),
-    Func(fn(&[Expr]) -> Result<Expr, Error>),
+    Func(fn(&[Expr], &mut Env) -> Result<Expr, Error>),
 }
 
 impl fmt::Display for Expr {

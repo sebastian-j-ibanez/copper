@@ -4,12 +4,14 @@
 
 //! Types and functions for the Copper runtime environment.
 
+pub mod define;
 mod io;
 mod math;
 mod operators;
 mod predicates;
 mod strings;
 
+use crate::env::define::define;
 use crate::env::math::{exponent, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
@@ -58,6 +60,8 @@ impl Env {
             "string-length".to_string(),
             Expr::Func(strings::string_length),
         );
+        // Misc
+        data.insert("define".to_string(), Expr::Func(define));
         Env { data }
     }
 }

@@ -7,6 +7,7 @@
 use crate::env::Env;
 use crate::error::Error;
 use crate::types::{Expr, Number};
+use crate::env::define::define;
 
 /// Parse s-expression, evaluate it, return result.
 pub fn parse_eval(expr: String, env: &mut Env) -> Result<Expr, Error> {
@@ -19,29 +20,37 @@ pub fn parse_eval(expr: String, env: &mut Env) -> Result<Expr, Error> {
 pub fn eval(expr: &Expr, env: &mut Env) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_a) => Ok(expr.clone()),
-        Expr::Symbol(k) => env
-            .data
-            .get(k)
-            .ok_or(Error::Message(format!("unexpected symbol '{}'", k)))
-            .map(|x| x.clone()),
+        Expr::Symbol(k) => match env.data.get(k) {
+            Some(v) => Ok(v.clone()),
+            None => Ok(Expr::Symbol(k.clone())),
+        },
         Expr::String(s) => Ok(Expr::String(s.clone())),
         Expr::Boolean(b) => Ok(Expr::Boolean(*b)),
         Expr::List(list) => {
-            let first_form = list
-                .first()
-                .ok_or(Error::Message("expected a non-empty list".to_string()))?;
-            let arg_forms = &list[1..];
-            let first_eval = eval(first_form, env)?;
-            match first_eval {
-                Expr::Func(f) => {
-                    let args_eval = arg_forms
-                        .iter()
-                        .map(|x| eval(x, env))
-                        .collect::<Result<Vec<Expr>, Error>>();
-                    f(&args_eval?)
+            let [first, args @ ..] = list.as_slice() else {
+                return Err(Error::Message("empty list".to_string()));
+            };
+
+            // Check for special forms (like define)
+            if let Expr::Symbol(s) = first {
+                match s.as_str() {
+                    "define" => return define(args, env),
+                    _ => {},
+                    }
                 }
-                _ => Err(Error::Message("first form must be a function".to_string())),
-            }
+
+            // Otherwise, evaluate function
+            let func_val = eval(first, env)?;
+            let Expr::Func(f) = func_val else {
+                return Err(Error::Message("not a function".to_string()));
+            };
+
+            let arg_vals = args
+                .iter()
+                .map(|x| eval(x, env))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            f(&arg_vals, env)
         }
         Expr::Void() => Ok(Expr::Void()),
         Expr::Func(_) => Err(Error::Message("unexpected form".to_string())),
