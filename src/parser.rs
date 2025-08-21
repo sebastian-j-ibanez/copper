@@ -4,65 +4,47 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::env::Env;
 use crate::error::Error;
 use crate::types::{Expr, Number};
-use crate::macros::{define, lambda, apply_lambda};
 
 /// Parse s-expression, evaluate it, return result.
-pub fn parse_eval(expr: String, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn parse_eval(expr: String, env: &mut Env) -> Result<Expr, Error> {
     let (parsed_exp, _) = parse(&tokenize(expr))?;
     let evaled_exp = eval(&parsed_exp, env)?;
     Ok(evaled_exp)
 }
 
 /// Evaluate an s-expression.
-pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn eval(expr: &Expr, env: &mut Env) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_a) => Ok(expr.clone()),
-        Expr::Symbol(k) => {
-            match env.borrow_mut().find_var(k) {
-                Some(v) => Ok(v.clone()),
-                None => Ok(Expr::Symbol(k.clone())),
-            }
-        }
+        Expr::Symbol(k) => env
+            .data
+            .get(k)
+            .ok_or(Error::Message(format!("unexpected symbol '{}'", k)))
+            .map(|x| x.clone()),
         Expr::String(s) => Ok(Expr::String(s.clone())),
         Expr::Boolean(b) => Ok(Expr::Boolean(*b)),
         Expr::List(list) => {
-            let [first, args @ ..] = list.as_slice() else {
-                return Err(Error::Message("empty list".to_string()));
-            };
-
-            // Check for special forms (like define)
-            if let Expr::Symbol(s) = first {
-                match s.as_str() {
-                    "define" => return define(args, env),
-                    "lambda" => return lambda(args, env),
-                    _ => {},
-                    }
+            let first_form = list
+                .first()
+                .ok_or(Error::Message("expected a non-empty list".to_string()))?;
+            let arg_forms = &list[1..];
+            let first_eval = eval(first_form, env)?;
+            match first_eval {
+                Expr::Func(f) => {
+                    let args_eval = arg_forms
+                        .iter()
+                        .map(|x| eval(x, env))
+                        .collect::<Result<Vec<Expr>, Error>>();
+                    f(&args_eval?)
                 }
-
-            let func_val = eval(first, env.clone())?;
-
-            let arg_vals = args
-                .iter()
-                .map(|x| eval(x, env.clone()))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            match func_val {
-                Expr::Func(f) => f(&arg_vals, env),
-                Expr::Closure(c) => apply_lambda(&c, arg_vals),
-                e => {
-                    let msg = format!("not a function: {}", e);
-                    Err(Error::Message(msg))
-                },
+                _ => Err(Error::Message("first form must be a function".to_string())),
             }
         }
         Expr::Void() => Ok(Expr::Void()),
-        _ => Err(Error::Message("unexpected form".to_string())),
+        Expr::Func(_) => Err(Error::Message("unexpected form".to_string())),
     }
 }
 

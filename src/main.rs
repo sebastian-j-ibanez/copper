@@ -4,7 +4,6 @@
 
 pub mod env;
 pub mod error;
-pub mod macros;
 pub mod parser;
 pub mod tests;
 pub mod types;
@@ -20,7 +19,7 @@ use crate::types::Expr;
 
 fn main() {
     ui::print_greeting();
-    let env = Env::standard_env();
+    let env = &mut Env::default_env();
 
     // Read, eval, print loop
     loop {
@@ -44,7 +43,7 @@ fn main() {
             }
         }
 
-        match parse_eval(buf, env.clone()) {
+        match parse_eval(buf, env) {
             Ok(Expr::Void()) => continue,
             Ok(result) => println!("{}", result),
             Err(e) => match e {

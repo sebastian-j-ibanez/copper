@@ -4,15 +4,11 @@
 
 //! Functions related to IO.
 
-use crate::env::Env;
 use crate::error::Error;
 use crate::types::Expr;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 /// Display raw expression in stdout.
-pub fn display(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn display(args: &[Expr]) -> Result<Expr, Error> {
     match args.first() {
         Some(arg) => {
             print!("{}", arg);
@@ -23,13 +19,13 @@ pub fn display(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Return newline character.
-pub fn newline(_: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn newline(_: &[Expr]) -> Result<Expr, Error> {
     println!();
     Ok(Expr::Void())
 }
 
 /// Print formatted value of expression in stdout.
-pub fn print(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn print(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         match arg {
             Expr::String(s) => print!("\"{}\"", s),
@@ -42,7 +38,7 @@ pub fn print(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Print formatted value of expression in stdout with a newline.
-pub fn println(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn println(args: &[Expr]) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         match arg {
             Expr::String(s) => println!("\"{}\"", s),
