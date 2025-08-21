@@ -8,9 +8,11 @@ use crate::env::Env;
 use crate::error::Error;
 use crate::parser;
 use crate::types::{Expr, Number};
+use std::cell::RefCell;
 use std::ops::{Add, Div, Mul, Sub};
+use std::rc::Rc;
 
-pub fn add(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
+pub fn add(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     let initial_sum = Number::from_i64(0);
     let sum = numbers
@@ -19,7 +21,7 @@ pub fn add(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
     Ok(Expr::Number(sum))
 }
 
-pub fn sub(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
+pub fn sub(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
         return Ok(Expr::Number(Number::from_i64(0)));
@@ -40,7 +42,7 @@ pub fn sub(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
     }
 }
 
-pub fn mult(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
+pub fn mult(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
         return Err(Error::Message("expected at least one number".to_string()));
@@ -54,7 +56,7 @@ pub fn mult(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
     Ok(Expr::Number(product))
 }
 
-pub fn div(args: &[Expr], _: &mut Env) -> Result<Expr, Error> {
+pub fn div(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
         return Err(Error::Message("expected at least one number".to_string()));
