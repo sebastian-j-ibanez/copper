@@ -65,9 +65,10 @@ pub fn lambda(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     Ok(Expr::Closure(closure))
 }
 
+/// Evaluate lambda with arguments.
 pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
     if args.len() != closure.parameters.len() {
-        return Err(Error::Message("arity mismatch".to_string()));
+        return Err(Error::Message(format!("wrong number of arguments passed to procedure")));
     }
 
     // new environment extends the closure’s captured env
