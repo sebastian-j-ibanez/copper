@@ -12,6 +12,7 @@ use std::rc::Rc;
 use std::cell::RefCell; 
 
 
+/// Associate a symbol with a value in an environment.
 pub fn define(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     let mut iter = args.iter();
     let name = match iter.next() {

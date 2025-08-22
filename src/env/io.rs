@@ -32,7 +32,7 @@ pub fn newline(_: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 pub fn print(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         match arg {
-            Expr::String(s) => print!("\"{}\"", s),
+            Expr::String(s) => print!("{}", s),
             _ => print!("{}", arg),
         }
         return Ok(Expr::Void());
@@ -45,7 +45,7 @@ pub fn print(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 pub fn println(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         match arg {
-            Expr::String(s) => println!("\"{}\"", s),
+            Expr::String(s) => println!("{}", s),
             _ => println!("{}", arg),
         }
         return Ok(Expr::Void());

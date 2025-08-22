@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::env::Env;
 use crate::error::Error;
-use crate::types::{Expr, Number};
+use crate::types::{Expr, Number, BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR};
 use crate::macros::{define, lambda, apply_lambda};
 
 /// Parse s-expression, evaluate it, return result.
@@ -22,15 +22,12 @@ pub fn parse_eval(expr: String, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 /// Evaluate an s-expression.
 pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     match expr {
-        Expr::Number(_a) => Ok(expr.clone()),
+        Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) => Ok(expr.clone()),
         Expr::Symbol(k) => {
-            match env.borrow_mut().find_var(k) {
-                Some(v) => Ok(v.clone()),
-                None => Ok(Expr::Symbol(k.clone())),
-            }
+            env.borrow()
+                .find_var(k)
+                .ok_or(Error::Message(format!("unbound symbol '{}'", k)))
         }
-        Expr::String(s) => Ok(Expr::String(s.clone())),
-        Expr::Boolean(b) => Ok(Expr::Boolean(*b)),
         Expr::List(list) => {
             let [first, args @ ..] = list.as_slice() else {
                 return Err(Error::Message("empty list".to_string()));
@@ -98,15 +95,25 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
 
 /// Create an Expr from a &str.
 pub fn eval_atom(token: &str) -> Expr {
+    // String
     if token.starts_with('"') && token.ends_with('"') && token.len() >= 2 {
-        let inner_string = &token[1..token.len() - 1];
+        let inner_string = &token[1..token.len() - 1];  // Remove quotes. 
         return Expr::String(inner_string.to_string());
     }
 
-    match Number::from_token(token) {
-        Ok(num) => Expr::Number(num),
-        Err(_) => Expr::Symbol(token.to_string()),
+    // Boolean
+    if token == BOOLEAN_TRUE_STR {
+        return Expr::Boolean(true);
+    } else if token == BOOLEAN_FALSE_STR {
+        return Expr::Boolean(false);
+    } 
+
+    // Number
+    if let Ok(num) = Number::from_token(token) {
+        return Expr::Number(num);
     }
+
+    return Expr::Symbol(token.to_string());
 }
 
 /// Get vec of numbers from an s-expression.
