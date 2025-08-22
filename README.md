@@ -1,6 +1,4 @@
 # copper
-[![Rust](https://img.shields.io/badge/Rust-%23000000.svg?e&logo=rust&logoColor=white)](#)
-[![Lisp](https://img.shields.io/badge/R7RS-02569B.svg?e&logo=commonlisp&logoColor=white)](#)
 ![GitHub License](https://img.shields.io/github/license/sebastian-j-ibanez/copper?color=orange)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/sebastian-j-ibanez/copper/rust.yml)
 
@@ -23,6 +21,6 @@ As of `v0.1.1` features include:
 
 ### Influences
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
-- [risp](https://github.com/stopachka/risp?tab=readme-ov-file), another Lisp project in Rust.
+- [risp](https://github.com/stopachka/risp?tab=readme-ov-file), a small Lisp project in Rust.
   - The author wrote a fantastic article about it [here](https://stopa.io/post/222).
 - [Build your own Lisp](https://www.buildyourownlisp.com/)
