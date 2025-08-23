@@ -17,6 +17,7 @@ use crate::env::predicates::{
     is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
     is_rational, is_real, is_string,
 };
+use crate::env::strings::{str_append, str_length};
 use crate::types::Expr;
 
 use std::cell::RefCell;
@@ -57,10 +58,9 @@ impl Env {
         data.insert("newline".to_string(), Expr::Func(newline));
         data.insert("print".to_string(), Expr::Func(print));
         data.insert("println".to_string(), Expr::Func(println));
-        data.insert(
-            "string-length".to_string(),
-            Expr::Func(strings::string_length),
-        );
+        // Strings
+        data.insert("string-append".to_string(), Expr::Func(str_append));
+        data.insert("string-length".to_string(),Expr::Func(str_length));
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 

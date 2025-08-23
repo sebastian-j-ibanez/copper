@@ -192,3 +192,13 @@ fn test_expt_nested_number_result() {
     let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(8)));
     assert!(matches!(result, _expected));
 }
+
+#[test]
+fn test_string_append() {
+    use crate::{env::Env, error::Error, parser::parse_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(string-append \"hello \" \" world!\")".to_string();
+    let result = parse_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::String("hello world!".to_string()));
+    assert!(matches!(result, _expected));
+}
