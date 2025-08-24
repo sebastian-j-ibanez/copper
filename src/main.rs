@@ -5,7 +5,6 @@
 pub mod cli;
 pub mod env;
 pub mod error;
-pub mod files;
 pub mod io;
 pub mod macros;
 pub mod parser;
