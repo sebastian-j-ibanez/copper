@@ -64,6 +64,11 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 
 /// Parse tokenized s-expressions.
 pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
+    // If `tokens` is empty, return void.
+    if tokens.is_empty() {
+        return Ok((Expr::Void(), &[]));
+    }
+
     let (token, right_expr) = tokens
         .split_first()
         .ok_or(Error::Message("could not parse first token".to_string()))?;

@@ -4,30 +4,21 @@
 
 //! Functions for REPL IO.
 
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::{self, BufRead, Write, stdout};
 use std::process;
+use std::rc::Rc;
 
+use crate::env::Env;
+use crate::error::Error;
 use crate::parser;
+use crate::types::Expr;
 
 pub const COPPER_VERSION: &str = "0.2.0";
 
-#[derive(Clone)]
-pub enum InputType {
-    Stdin,
-    File(String),
-}
-
-/// Read unparsed expression from stdout or a file.
-pub fn read_expression(input: InputType) -> String {
-    match input {
-        InputType::Stdin => stdin_input(),
-        InputType::File(path) => file_input(path),
-    }
-}
-
 /// Get expression from stdin.
-fn stdin_input() -> String {
+pub fn stdin_input() -> String {
     if let Err(e) = stdout().flush() {
         eprintln!("error: {}", e.to_string());
         process::exit(1);
@@ -49,32 +40,47 @@ fn stdin_input() -> String {
     buf
 }
 
-/// Get expression from file.
-fn file_input(path: String) -> String {
+/// Get expressions from file.
+pub fn file_input(path: String) -> Vec<String> {
     let file = match File::open(&path) {
         Ok(file) => file,
-        Err(e) => panic!("error: unable to open file: {}", e),
+        Err(e) => panic!("error: {}", e),
     };
 
-    let mut lines = io::BufReader::new(file).lines();
+    let lines = io::BufReader::new(file).lines();
     let mut buf = String::new();
+    let mut expressions = Vec::new();
 
-    while !parser::expression_closed(&buf) {
-        match lines.next() {
-            Some(Ok(line)) => {
+    for line in lines {
+        match line {
+            Ok(line) => {
                 buf.push_str(&line);
+                buf.push_str("\n");
+
+                if parser::expression_closed(&buf) {
+                    expressions.push(buf.trim().to_string());
+                    buf.clear();
+                }
             }
-            Some(Err(e)) => {
-                eprintln!("error: unable to read line: {e}");
+            Err(e) => {
+                eprintln!("error: {e}");
                 process::exit(1);
-            }
-            None => {
-                break;
             }
         }
     }
 
-    buf
+    expressions
+}
+
+/// Process file input in an environment.
+pub fn process_file_input(expressions: Vec<String>, env: Rc<RefCell<Env>>) {
+    for expr in expressions {
+        match parser::parse_and_eval(expr, env.clone()) {
+            Ok(Expr::Void()) => continue,
+            Ok(result) => println!("{}", result),
+            Err(Error::Message(e)) => println!("error: {}", e),
+        }
+    }
 }
 
 /// Print REPL greeting.

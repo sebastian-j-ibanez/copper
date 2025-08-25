@@ -18,10 +18,16 @@ use crate::parser::parse_and_eval;
 use crate::types::Expr;
 
 fn main() {
+    let env = Env::standard_env();
+
+    // Process CLI args.
     let args = std::env::args().skip(1).collect();
-    let mut input_type = io::InputType::Stdin;
     match parse_args(args) {
-        Some(Flag::File(f)) => input_type = io::InputType::File(f),
+        Some(Flag::File(f)) => {
+            let expressions = io::file_input(f.clone());
+            io::process_file_input(expressions, env);
+            std::process::exit(0);
+        }
         Some(Flag::Help) => {
             io::print_help();
             std::process::exit(0);
@@ -30,17 +36,14 @@ fn main() {
             io::print_version();
             std::process::exit(0);
         }
-        None => {}
+        None => io::print_greeting(),
     }
 
-    io::print_greeting();
-    let env = Env::standard_env();
-
-    // Read, eval, print loop
+    // REPL.
     loop {
         io::print_repl_prompt();
 
-        let input = io::read_expression(input_type.clone());
+        let input = io::stdin_input();
 
         match parse_and_eval(input, env.clone()) {
             Ok(Expr::Void()) => continue,
