@@ -13,10 +13,14 @@ Our goal is to have `v1.0.0` be fully `R7RS` compliant.
 ### Status
 
 As of `v0.2.1` features include:
-- Abstract syntax tree parsing.
+- `define` and `lambda` macros.
 - File parsing and loading.
-- `R7RS` numeric types (implicit conversion between them).
-- Basic std lib procedures and predicates.
+- Basic standard library procedures and functions.
+- Implicit conversion between numeric types (Integer, Real, Rational, Complex).
+
+### Example
+
+<img width="500" height="auto" alt="copper-example" src="https://github.com/user-attachments/assets/55b2d998-3e01-4215-a6c1-601415c1a550" />
 
 ### Influences
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
