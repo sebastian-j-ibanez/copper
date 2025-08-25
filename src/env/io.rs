@@ -6,6 +6,7 @@
 
 use crate::env::Env;
 use crate::error::Error;
+use crate::io;
 use crate::types::Expr;
 
 use std::cell::RefCell;
@@ -52,4 +53,22 @@ pub fn println(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     }
 
     Err(Error::Message("expected 1 valid expression".to_string()))
+}
+
+/// Evaluate the contents of a file.
+pub fn load_file(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    let file = match args.first() {
+        Some(Expr::String(f)) => f,
+        _ => return Err(Error::Message("expected a string path".to_string())),
+    };
+
+    let expressions = io::file_input(file.to_owned());
+    io::process_file_input(expressions, env);
+
+    Ok(Expr::Void())
+}
+
+/// End process.
+pub fn exit(_: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    std::process::exit(0);
 }

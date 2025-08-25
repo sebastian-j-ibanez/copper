@@ -1,0 +1,111 @@
+// Copyright (c) 2025 Sebastian Ibanez
+// Author: Sebastian Ibanez
+// Created: 2025-07-10
+
+//! Functions for REPL IO.
+
+use std::cell::RefCell;
+use std::fs::File;
+use std::io::{self, BufRead, Write, stdout};
+use std::process;
+use std::rc::Rc;
+
+use crate::env::Env;
+use crate::error::Error;
+use crate::parser;
+use crate::types::Expr;
+
+pub const COPPER_VERSION: &str = "0.2.0";
+
+/// Get expression from stdin.
+pub fn stdin_input() -> String {
+    if let Err(e) = stdout().flush() {
+        eprintln!("error: {}", e.to_string());
+        process::exit(1);
+    }
+
+    let mut buf = String::new();
+    let mut handle = io::stdin().lock();
+
+    if let Err(e) = handle.read_line(&mut buf) {
+        eprintln!("error: {}", e.to_string());
+    }
+
+    while !parser::expression_closed(&buf) {
+        if let Err(e) = handle.read_line(&mut buf) {
+            eprintln!("error: {}", e.to_string());
+        }
+    }
+
+    buf
+}
+
+/// Get expressions from file.
+pub fn file_input(path: String) -> Vec<String> {
+    let file = match File::open(&path) {
+        Ok(file) => file,
+        Err(e) => panic!("error: {}", e),
+    };
+
+    let lines = io::BufReader::new(file).lines();
+    let mut buf = String::new();
+    let mut expressions = Vec::new();
+
+    for line in lines {
+        match line {
+            Ok(line) => {
+                buf.push_str(&line);
+                buf.push_str("\n");
+
+                if parser::expression_closed(&buf) {
+                    expressions.push(buf.trim().to_string());
+                    buf.clear();
+                }
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                process::exit(1);
+            }
+        }
+    }
+
+    expressions
+}
+
+/// Process file input in an environment.
+pub fn process_file_input(expressions: Vec<String>, env: Rc<RefCell<Env>>) {
+    for expr in expressions {
+        match parser::parse_and_eval(expr, env.clone()) {
+            Ok(Expr::Void()) => continue,
+            Ok(result) => println!("{}", result),
+            Err(Error::Message(e)) => println!("error: {}", e),
+        }
+    }
+}
+
+/// Print REPL greeting.
+pub fn print_greeting() {
+    println!("copper version {}", COPPER_VERSION);
+    println!("Press Ctrl+C to exit!\n");
+}
+
+/// Print CLI help.
+pub fn print_help() {
+    println!("A Scheme interpreter written in Rust.\n");
+    println!("Usage:\n\tcopper [flags]\n");
+    println!("If no flags are provided, copper starts in REPL mode.\n");
+    println!("Flags:\n");
+    println!("-f, --file <PATH>\tRead Scheme file and open REPL.");
+    println!("-h, --help\t\tPrint help.");
+    println!("-v, --version\t\tPrint version.");
+}
+
+/// Print REPL prompt.
+pub fn print_repl_prompt() {
+    print!("> ");
+}
+
+/// Print version.
+pub fn print_version() {
+    println!("copper v{COPPER_VERSION}");
+}

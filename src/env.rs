@@ -10,13 +10,14 @@ mod operators;
 mod predicates;
 mod strings;
 
-use crate::env::io::{display, newline, print, println};
+use crate::env::io::{display, exit, load_file, newline, print, println};
 use crate::env::math::{exponent, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
     is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
     is_rational, is_real, is_string,
 };
+use crate::env::strings::{str_append, str_length};
 use crate::types::Expr;
 
 use std::cell::RefCell;
@@ -53,14 +54,16 @@ impl Env {
         data.insert("even?".to_string(), Expr::Func(is_even));
         data.insert("odd?".to_string(), Expr::Func(is_odd));
         // IO
+        data.insert("load".to_string(), Expr::Func(load_file));
         data.insert("display".to_string(), Expr::Func(display));
         data.insert("newline".to_string(), Expr::Func(newline));
         data.insert("print".to_string(), Expr::Func(print));
         data.insert("println".to_string(), Expr::Func(println));
-        data.insert(
-            "string-length".to_string(),
-            Expr::Func(strings::string_length),
-        );
+        // Strings
+        data.insert("string-append".to_string(), Expr::Func(str_append));
+        data.insert("string-length".to_string(), Expr::Func(str_length));
+        // Misc
+        data.insert("exit".to_string(), Expr::Func(exit));
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 
@@ -68,7 +71,7 @@ impl Env {
     pub fn local_env(outer: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
         Rc::new(RefCell::new(Env {
             data: HashMap::new(),
-            outer: Some(outer)
+            outer: Some(outer),
         }))
     }
 

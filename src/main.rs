@@ -2,54 +2,53 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+pub mod cli;
 pub mod env;
 pub mod error;
+pub mod io;
 pub mod macros;
 pub mod parser;
 pub mod tests;
 pub mod types;
-pub mod ui;
 
-use std::io::{self, BufRead, Write, stdout};
-use std::process;
-
+use crate::cli::{Flag, parse_args};
 use crate::env::Env;
 use crate::error::Error;
-use crate::parser::parse_eval;
+use crate::parser::parse_and_eval;
 use crate::types::Expr;
 
 fn main() {
-    ui::print_greeting();
     let env = Env::standard_env();
 
-    // Read, eval, print loop
+    // Process CLI args.
+    let args = std::env::args().skip(1).collect();
+    match parse_args(args) {
+        Some(Flag::File(f)) => {
+            let expressions = io::file_input(f.clone());
+            io::process_file_input(expressions, env);
+            std::process::exit(0);
+        }
+        Some(Flag::Help) => {
+            io::print_help();
+            std::process::exit(0);
+        }
+        Some(Flag::Version) => {
+            io::print_version();
+            std::process::exit(0);
+        }
+        None => io::print_greeting(),
+    }
+
+    // REPL.
     loop {
-        print!("{}", ui::REPL_PROMPT);
+        io::print_repl_prompt();
 
-        if let Err(e) = stdout().flush() {
-            eprintln!("error: {}", e.to_string());
-            process::exit(-1);
-        }
+        let input = io::stdin_input();
 
-        let mut buf = String::new();
-        let mut handle = io::stdin().lock();
-
-        if let Err(e) = handle.read_line(&mut buf) {
-            eprintln!("error: {}", e.to_string());
-        }
-
-        while !parser::expression_closed(&buf) {
-            if let Err(e) = handle.read_line(&mut buf) {
-                eprintln!("error: {}", e.to_string());
-            }
-        }
-
-        match parse_eval(buf, env.clone()) {
+        match parse_and_eval(input, env.clone()) {
             Ok(Expr::Void()) => continue,
             Ok(result) => println!("{}", result),
-            Err(e) => match e {
-                Error::Message(msg) => println!("error: {}", msg),
-            },
+            Err(Error::Message(e)) => println!("error: {}", e),
         }
     }
 }

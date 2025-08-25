@@ -6,13 +6,13 @@
 
 pub mod number;
 
+use crate::env::Env;
 use crate::error::Error;
 pub(crate) use number::Number;
 use std::fmt;
-use crate::env::Env;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
@@ -26,7 +26,7 @@ pub enum Expr {
     List(Vec<Expr>),
     Void(),
     Func(fn(&[Expr], Rc<RefCell<Env>>) -> Result<Expr, Error>),
-    Closure(Box<Closure>)
+    Closure(Box<Closure>),
 }
 
 impl fmt::Display for Expr {
@@ -68,6 +68,10 @@ pub struct Closure {
 
 impl Closure {
     pub fn init(env: Rc<RefCell<Env>>, parameters: Vec<String>, body: Expr) -> Closure {
-        Closure { env, parameters, body }
-    }    
+        Closure {
+            env,
+            parameters,
+            body,
+        }
+    }
 }

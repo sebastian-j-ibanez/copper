@@ -26,3 +26,6 @@ target
 *~
 \#*\#
 .\#*
+
+# VS Code
+.vscode/

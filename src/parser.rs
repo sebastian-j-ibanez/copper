@@ -9,11 +9,11 @@ use std::rc::Rc;
 
 use crate::env::Env;
 use crate::error::Error;
-use crate::types::{Expr, Number, BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR};
-use crate::macros::{define, lambda, apply_lambda};
+use crate::macros::{apply_lambda, define, lambda};
+use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
 
-/// Parse s-expression, evaluate it, return result.
-pub fn parse_eval(expr: String, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+/// Parse s-expression, evaluate it, and return result.
+pub fn parse_and_eval(expr: String, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     let (parsed_exp, _) = parse(&tokenize(expr))?;
     let evaled_exp = eval(&parsed_exp, env)?;
     Ok(evaled_exp)
@@ -23,11 +23,10 @@ pub fn parse_eval(expr: String, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) => Ok(expr.clone()),
-        Expr::Symbol(k) => {
-            env.borrow()
-                .find_var(k)
-                .ok_or(Error::Message(format!("unbound symbol '{}'", k)))
-        }
+        Expr::Symbol(k) => env
+            .borrow()
+            .find_var(k)
+            .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
         Expr::List(list) => {
             let [first, args @ ..] = list.as_slice() else {
                 return Err(Error::Message("empty list".to_string()));
@@ -38,9 +37,9 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
                 match s.as_str() {
                     "define" => return define(args, env),
                     "lambda" => return lambda(args, env),
-                    _ => {},
-                    }
+                    _ => {}
                 }
+            }
 
             let func_val = eval(first, env.clone())?;
 
@@ -55,7 +54,7 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
                 e => {
                     let msg = format!("not a function: {}", e);
                     Err(Error::Message(msg))
-                },
+                }
             }
         }
         Expr::Void() => Ok(Expr::Void()),
@@ -65,6 +64,11 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 
 /// Parse tokenized s-expressions.
 pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
+    // If `tokens` is empty, return void.
+    if tokens.is_empty() {
+        return Ok((Expr::Void(), &[]));
+    }
+
     let (token, right_expr) = tokens
         .split_first()
         .ok_or(Error::Message("could not parse first token".to_string()))?;
@@ -97,7 +101,7 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
 pub fn eval_atom(token: &str) -> Expr {
     // String
     if token.starts_with('"') && token.ends_with('"') && token.len() >= 2 {
-        let inner_string = &token[1..token.len() - 1];  // Remove quotes. 
+        let inner_string = &token[1..token.len() - 1]; // Remove quotes. 
         return Expr::String(inner_string.to_string());
     }
 
@@ -106,7 +110,7 @@ pub fn eval_atom(token: &str) -> Expr {
         return Expr::Boolean(true);
     } else if token == BOOLEAN_FALSE_STR {
         return Expr::Boolean(false);
-    } 
+    }
 
     // Number
     if let Ok(num) = Number::from_token(token) {
