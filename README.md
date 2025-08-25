@@ -12,12 +12,11 @@ Our goal is to have `v1.0.0` be fully `R7RS` compliant.
 
 ### Status
 
-As of `v0.1.1` features include:
-- Abstract syntax tree parsing
-- Basic type checking
-- `+`, `-`, `*`, `/` functions
-- `R7RS` numeric types
-- Predicates like `number?`, `complex?`, `string?`, and `boolean?`
+As of `v0.2.1` features include:
+- Abstract syntax tree parsing.
+- File parsing and loading.
+- `R7RS` numeric types (implicit conversion between them).
+- Basic std lib procedures and predicates.
 
 ### Influences
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
