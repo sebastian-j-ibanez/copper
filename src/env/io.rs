@@ -7,7 +7,7 @@
 use crate::env::Env;
 use crate::error::Error;
 use crate::io;
-use crate::types::Expr;
+use crate::types::{Expr, format_list};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -47,6 +47,9 @@ pub fn println(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         match arg {
             Expr::String(s) => println!("{}", s),
+            Expr::List(l) => {
+                println!("{}", format_list(l, "", false));
+            }
             _ => println!("{}", arg),
         }
         return Ok(Expr::Void());

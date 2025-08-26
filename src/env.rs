@@ -5,12 +5,15 @@
 //! Types and functions for the Copper runtime environment.
 
 mod io;
+mod lists;
 mod math;
 mod operators;
 mod predicates;
 mod strings;
 
+// Internal crate imports.
 use crate::env::io::{display, exit, load_file, newline, print, println};
+use crate::env::lists::{car, cdr, cons, list_append, list_length, new_list};
 use crate::env::math::{exponent, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
@@ -20,6 +23,7 @@ use crate::env::predicates::{
 use crate::env::strings::{str_append, str_length};
 use crate::types::Expr;
 
+// Std imports.
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -62,6 +66,13 @@ impl Env {
         // Strings
         data.insert("string-append".to_string(), Expr::Func(str_append));
         data.insert("string-length".to_string(), Expr::Func(str_length));
+        // Lists
+        data.insert("list".to_string(), Expr::Func(new_list));
+        data.insert("cons".to_string(), Expr::Func(cons));
+        data.insert("append".to_string(), Expr::Func(list_append));
+        data.insert("length".to_string(), Expr::Func(list_length));
+        data.insert("car".to_string(), Expr::Func(car));
+        data.insert("cdr".to_string(), Expr::Func(cdr));
         // Misc
         data.insert("exit".to_string(), Expr::Func(exit));
         Rc::new(RefCell::new(Env { data, outer: None }))
