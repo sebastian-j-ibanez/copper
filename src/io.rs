@@ -85,7 +85,13 @@ pub fn process_file_input(expressions: Vec<String>, env: Rc<RefCell<Env>>) {
 
 /// Print REPL greeting.
 pub fn print_greeting() {
-    println!("copper version {}", COPPER_VERSION);
+    let banner = r#"
+  _________  ____  ____  ___  _____
+ / ___/ __ \/ __ \/ __ \/ _ \/ ___/
+/ /__/ /_/ / /_/ / /_/ /  __/ /    
+\___/\____/ .___/ .___/\___/_/     
+         /_/   /_/"#;
+    println!("{}\n\nVersion {}", banner, COPPER_VERSION);
     println!("Press Ctrl+C to exit!\n");
 }
 
