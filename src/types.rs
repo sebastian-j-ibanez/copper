@@ -36,10 +36,7 @@ impl fmt::Display for Expr {
             Expr::String(s) => format_string(s),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
-            Expr::List(list) => {
-                let xs: Vec<String> = list.iter().map(|x| x.to_string()).collect();
-                format!("({})", xs.join(","))
-            }
+            Expr::List(list) => format_list(list, " ", true),
             Expr::Void() => return Ok(()),
             Expr::Func(_) => "#<function {}".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
@@ -48,14 +45,30 @@ impl fmt::Display for Expr {
     }
 }
 
+/// Format string in raw form.
 fn format_string(s: &String) -> String {
     format!("\"{}\"", s)
 }
 
+/// Format boolean in raw form.
 fn format_boolean(b: &bool) -> String {
     match *b {
         true => BOOLEAN_TRUE_STR.to_string(),
         false => BOOLEAN_FALSE_STR.to_string(),
+    }
+}
+
+/// Format list, optional delimeter and parenthesis.
+pub fn format_list(list: &Vec<Expr>, delim: &str, parenthesis: bool) -> String {
+    let items: String = list
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+        .join(delim);
+
+    match parenthesis {
+        true => format!("({})", items),
+        false => items,
     }
 }
 
