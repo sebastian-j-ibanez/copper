@@ -13,7 +13,7 @@ mod strings;
 
 // Internal crate imports.
 use crate::env::io::{display, exit, load_file, newline, print, println};
-use crate::env::lists::{car, cdr, cons, list_append, list_length, new_list};
+use crate::env::lists::{cadr, car, cdr, cons, list_append, list_length, list_reverse, new_list};
 use crate::env::math::{exponent, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
@@ -73,6 +73,8 @@ impl Env {
         data.insert("length".to_string(), Expr::Func(list_length));
         data.insert("car".to_string(), Expr::Func(car));
         data.insert("cdr".to_string(), Expr::Func(cdr));
+        data.insert("cadr".to_string(), Expr::Func(cadr));
+        data.insert("reverse".to_string(), Expr::Func(list_reverse));
         // Misc
         data.insert("exit".to_string(), Expr::Func(exit));
         Rc::new(RefCell::new(Env { data, outer: None }))

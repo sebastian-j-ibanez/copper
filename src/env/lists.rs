@@ -65,3 +65,27 @@ pub fn cdr(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
         _ => Err(Error::Message("expected list".to_string())),
     }
 }
+
+/// Get second item.
+pub fn cadr(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    match args {
+        [Expr::List(l)] => {
+            if l.len() < 2 {
+                return Err(Error::Message(
+                    "expected list of at least 2 items".to_string(),
+                ));
+            }
+
+            Ok(Expr::from(l[1].clone()))
+        }
+        _ => Err(Error::Message("expected list".to_string())),
+    }
+}
+
+/// Reverse list.
+pub fn list_reverse(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    match args {
+        [Expr::List(l)] => Ok(Expr::List(l.iter().cloned().rev().collect::<Vec<Expr>>())),
+        _ => Err(Error::Message("expected list".to_string())),
+    }
+}
