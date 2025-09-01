@@ -10,6 +10,8 @@ use std::io::{self, BufRead, Write, stdout};
 use std::process;
 use std::rc::Rc;
 
+use colored::{self, Colorize};
+
 use crate::env::Env;
 use crate::error::Error;
 use crate::parser;
@@ -91,7 +93,11 @@ pub fn print_greeting() {
 / /__/ /_/ / /_/ / /_/ /  __/ /    
 \___/\____/ .___/ .___/\___/_/     
          /_/   /_/"#;
-    println!("{}\n\nVersion {}", banner, COPPER_VERSION);
+    println!(
+        "{}\n\nVersion {}",
+        banner.truecolor(255, 148, 0).bold(),
+        COPPER_VERSION
+    );
     println!("Press Ctrl+C to exit!\n");
 }
 
