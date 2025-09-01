@@ -2,7 +2,7 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-29
 
-//! Functions related to IO.
+//! Functions for Scheme IO.
 
 use crate::env::Env;
 use crate::error::Error;
@@ -74,4 +74,20 @@ pub fn load_file(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 /// End process.
 pub fn exit(_: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     std::process::exit(0);
+}
+
+/// Print literal.
+pub fn pretty_print(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    match args.first() {
+        Some(Expr::Closure(c)) => {
+            let c_args = c.parameters.join(" ");
+            println!("(lambda ({}) {})", c_args, c.body);
+            return Ok(Expr::Void());
+        }
+        Some(_) => {
+            println!("{}", args[0]);
+            return Ok(Expr::Void());
+        }
+        None => return Err(Error::Message("expected ".to_string())),
+    }
 }
