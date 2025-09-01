@@ -97,3 +97,4 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
 
     eval(&closure.body, new_env)
 }
+

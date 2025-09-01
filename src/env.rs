@@ -21,6 +21,7 @@ use crate::env::predicates::{
     is_rational, is_real, is_string,
 };
 use crate::env::strings::{str_append, str_length};
+use crate::error::Error;
 use crate::types::Expr;
 
 // Std imports.
@@ -77,6 +78,7 @@ impl Env {
         data.insert("reverse".to_string(), Expr::Func(list_reverse));
         // Misc
         data.insert("exit".to_string(), Expr::Func(exit));
+        data.insert(":h".to_string(), Expr::Func(get_definition));
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 
@@ -98,4 +100,17 @@ impl Env {
             None
         }
     }
+}
+
+/// Print literal.
+pub fn get_definition(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, crate::error::Error> {
+    // 1. Check if it's a symbol.
+    // 2. If it is, print what it symbolizes.
+    // Does types::Expr need to store the literal?
+
+    if let Some(arg) = args.first() {
+        return Ok(arg.clone());
+    }
+
+    Err(Error::Message("get def exploded".to_string()))
 }
