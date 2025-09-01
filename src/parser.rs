@@ -133,23 +133,6 @@ pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     }
 }
 
-/// Check if s-expression has been closed with a parenthesis.
-pub fn expression_closed(buf: &str) -> bool {
-    let expression = buf.trim();
-    let mut open_paren = 0;
-    let mut close_paren = 0;
-
-    for e in expression.chars() {
-        match e {
-            '(' => open_paren += 1,
-            ')' => close_paren += 1,
-            _ => {}
-        }
-    }
-
-    (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
-}
-
 /// Tokenize a string s-expression.
 pub fn tokenize(expression: String) -> Vec<String> {
     let mut tokens: Vec<String> = Vec::new();
@@ -193,4 +176,21 @@ pub fn tokenize(expression: String) -> Vec<String> {
     }
 
     tokens
+}
+
+/// Check if s-expression has been closed with a parenthesis.
+pub fn expression_closed(buf: &str) -> bool {
+    let expression = buf.trim();
+    let mut open_paren = 0;
+    let mut close_paren = 0;
+
+    for e in expression.chars() {
+        match e {
+            '(' => open_paren += 1,
+            ')' => close_paren += 1,
+            _ => {}
+        }
+    }
+
+    (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
 }
