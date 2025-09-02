@@ -12,7 +12,7 @@ Our goal is to have `v1.0.0` be fully `R7RS` compliant.
 
 ### Status
 
-As of `v0.2.1` features include:
+As of `v0.2.2` features include:
 - List processing and manipulation.
 - File parsing and loading.
 - Basic standard library procedures and functions.
