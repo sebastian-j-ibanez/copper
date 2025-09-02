@@ -98,3 +98,10 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
     eval(&closure.body, new_env)
 }
 
+/// Process literal into expression.
+pub fn quote(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    match args {
+        [expr] => Ok(expr.clone()),
+        _ => Err(Error::Message("quote expects 1 argument".to_string())),
+    }
+}

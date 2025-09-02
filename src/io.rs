@@ -60,7 +60,7 @@ pub fn file_input(path: String) -> Vec<String> {
                 buf.push_str("\n");
 
                 if parser::expression_closed(&buf) {
-                    expressions.push(buf.trim().to_string());
+                    expressions.push(buf.to_string());
                     buf.clear();
                 }
             }

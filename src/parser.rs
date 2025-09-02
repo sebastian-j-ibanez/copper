@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::env::Env;
 use crate::error::Error;
-use crate::macros::{apply_lambda, define, lambda};
+use crate::macros::{apply_lambda, define, lambda, quote};
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
 
 /// Parse s-expression, evaluate it, and return result.
@@ -37,6 +37,7 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
                 match s.as_str() {
                     "define" => return define(args, env),
                     "lambda" => return lambda(args, env),
+                    "quote" => return quote(args, env),
                     _ => {}
                 }
             }
@@ -76,6 +77,13 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     match &token[..] {
         "(" => parse_right_expr(right_expr),
         ")" => Err(Error::Message("error: invalid ')'".to_string())),
+        "'" => {
+            let (quoted_expr, rest) = parse(right_expr)?;
+            Ok((
+                Expr::List(vec![Expr::Symbol("quote".to_string()), quoted_expr]),
+                rest,
+            ))
+        }
         _ => Ok((eval_atom(token), right_expr)),
     }
 }
