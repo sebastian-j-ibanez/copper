@@ -21,6 +21,7 @@ use crate::env::predicates::{
     is_rational, is_real, is_string,
 };
 use crate::env::strings::{str_append, str_length};
+use crate::macros::quote;
 use crate::types::Expr;
 
 // Std imports.
@@ -78,6 +79,7 @@ impl Env {
         data.insert("reverse".to_string(), Expr::Func(list_reverse));
         // Misc
         data.insert("exit".to_string(), Expr::Func(exit));
+        data.insert("quote".to_string(), Expr::Func(quote));
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 
