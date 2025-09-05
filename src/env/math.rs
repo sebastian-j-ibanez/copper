@@ -6,10 +6,10 @@
 
 use crate::env::Env;
 use crate::{error::Error, types::Expr};
+use crate::types::Number;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::types::Number;
 
 /// Perform modulo to number.
 pub fn modulo(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
@@ -19,7 +19,7 @@ pub fn modulo(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
             let b = b.clone();
             Ok(Expr::Number((a % b)?))
         }
-        _ => Err(Error::Message("expected exactly 2 arguments".to_string())),
+        _ => Err(Error::Message("expected 2 numbers".to_string())),
     }
 }
 
@@ -27,7 +27,7 @@ pub fn modulo(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 pub fn exponent(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     match args {
         [Expr::Number(a), Expr::Number(b)] => Ok(Expr::Number(a.pow(b)?)),
-        _ => Err(Error::Message("expected exactly 2 arguments".to_string())),
+        _ => Err(Error::Message("expected 2 numbers".to_string())),
     }
 }
 
@@ -37,14 +37,46 @@ pub fn abs(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
         [Expr::Number(n)] => {
             let n = n.clone();
             if n < Number::from_i64(0) {
-                return if let Ok(result) = n * Number::from_i64(-1) {
+                return if let Ok(result) = n.clone() * Number::from_i64(-1) {
                     Ok(Expr::Number(result))
                 } else {
-                    Err(Error::Message("".to_string()))
-                }
+                    Err(Error::Message(format!("unable to get absolute value from n: {}",n)))
+                };
             }
             Ok(Expr::Number(n))
         }
         _ => Err(Error::Message("expected 1 number".to_string())),
+    }
+}
+
+/// Round number up to the nearest integer.
+pub fn ceil(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    match args {
+        [Expr::Number(Number::Complex(_))] => {
+            Err(Error::Message("unable to round complex number".to_string()))
+        }
+        [Expr::Number(n)] => {
+            if let Some(result) = n.to_f64() {
+                return Ok(Expr::Number(Number::from_f64(result.ceil())));
+            }
+            Err(Error::Message("unable to convert number to float".to_string(),))
+        }
+        _ => Err(Error::Message("expected real number".to_string())),
+    }
+}
+
+/// Round number down to the nearest integer.
+pub fn floor(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    match args {
+        [Expr::Number(Number::Complex(_))] => {
+            Err(Error::Message("unable to round complex number".to_string()))
+        }
+        [Expr::Number(n)] => {
+            if let Some(result) = n.to_f64() {
+                return Ok(Expr::Number(Number::from_f64(result.floor())));
+            }
+            Err(Error::Message("unable to convert number to float".to_string()))
+        }
+        _ => Err(Error::Message("expected real number".to_string())),
     }
 }
