@@ -936,7 +936,7 @@ impl Pow<IntVariant> for IntVariant {
                 for _ in 0..r {
                     result *= f;
                 }
-                Ok(IntVariant::Small(result as i64))
+                Ok(IntVariant::Small(result))
             }
             (IntVariant::Big(b), IntVariant::Small(r)) => {
                 let mut result = BigInt::from(1);
