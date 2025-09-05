@@ -19,10 +19,12 @@ use std::{
     ops::Mul,
     ops::Sub,
 };
+use std::cmp::Ordering;
+use crate::types::Number::{Complex, Float, Int, Rational};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Number {
-    Integer(IntegerVariant),
+    Int(IntVariant),
     Float(f64),
     Complex(Complex64),
     Rational(Rational64),
@@ -37,11 +39,11 @@ impl Number {
                 let without_i = &s[0..s.len() - 1];
 
                 if without_i.is_empty() || without_i == "+" {
-                    return Ok(Number::Complex(Complex64::new(0.0, 1.0)));
+                    return Ok(Complex(Complex64::new(0.0, 1.0)));
                 } else if without_i == "-" {
-                    return Ok(Number::Complex(Complex64::new(0.0, -1.0)));
+                    return Ok(Complex(Complex64::new(0.0, -1.0)));
                 } else if let Ok(im_val) = without_i.parse::<f64>() {
-                    return Ok(Number::Complex(Complex64::new(0.0, im_val)));
+                    return Ok(Complex(Complex64::new(0.0, im_val)));
                 }
 
                 let parts: Vec<&str> = without_i
@@ -65,7 +67,7 @@ impl Number {
                         let re = re_part_str.parse::<f64>().map_err(ParseFloatError::from);
                         let im = im_part_str.parse::<f64>().map_err(ParseFloatError::from);
                         return match (re, im) {
-                            (Ok(re), Ok(im)) => Ok(Number::Complex(Complex64::new(re, im))),
+                            (Ok(re), Ok(im)) => Ok(Complex(Complex64::new(re, im))),
                             _ => Err(Error::Message("unable to parse complex number".to_string())),
                         };
                     }
@@ -74,7 +76,7 @@ impl Number {
                     && without_i.contains(|c: char| c.is_digit(10) || c == '.')
                 {
                     if let Ok(im_val) = without_i.parse::<f64>() {
-                        return Ok(Number::Complex(Complex64::new(0.0, im_val)));
+                        return Ok(Complex(Complex64::new(0.0, im_val)));
                     }
                 }
             }
@@ -110,7 +112,7 @@ impl Number {
         // Real number
         if s.contains('.') {
             if let Ok(f) = s.parse::<f64>() {
-                return Ok(Number::Float(f));
+                return Ok(Float(f));
             }
         }
 
@@ -129,72 +131,72 @@ impl Number {
     }
 
     pub fn from_i64(value: i64) -> Self {
-        Number::Integer(IntegerVariant::Fixnum(value))
+        Int(IntVariant::Small(value))
     }
 
     pub fn to_i64(&self) -> Option<i64> {
         match self {
-            Number::Integer(int_var) => match int_var {
-                IntegerVariant::Fixnum(i) => Some(*i),
-                IntegerVariant::Bignum(b) => b.to_i64(),
+            Int(int_var) => match int_var {
+                IntVariant::Small(i) => Some(*i),
+                IntVariant::Big(b) => b.to_i64(),
             },
-            Number::Float(f) => {
+            Float(f) => {
                 if f.fract() == 0.0 && *f >= i64::MIN as f64 && *f <= i64::MAX as f64 {
                     Some(*f as i64)
                 } else {
                     None
                 }
             }
-            Number::Rational(r) => {
+            Rational(r) => {
                 if r.is_integer() {
                     r.to_i64()
                 } else {
                     None
                 }
             }
-            Number::Complex(_) => None,
+            Complex(_) => None,
         }
     }
 
     pub fn from_f64(value: f64) -> Self {
-        Number::Float(value)
+        Float(value)
     }
 
     pub fn to_f64(&self) -> Option<f64> {
         match self {
-            Number::Integer(int_var) => match int_var {
-                IntegerVariant::Fixnum(i) => Some(*i as f64),
-                IntegerVariant::Bignum(b) => b.to_f64(),
+            Int(int_var) => match int_var {
+                IntVariant::Small(i) => Some(*i as f64),
+                IntVariant::Big(b) => b.to_f64(),
             },
-            Number::Float(f) => Some(*f),
-            Number::Rational(r) => r.to_f64(),
-            Number::Complex(_) => None,
+            Float(f) => Some(*f),
+            Rational(r) => r.to_f64(),
+            Complex(_) => None,
         }
     }
 
     pub fn from_rational(num_val: i64, den_val: i64) -> Self {
         if den_val == 0 {
-            Number::Float(f64::NAN)
+            Float(f64::NAN)
         } else {
             let rational = Rational64::new(num_val, den_val);
             if rational.denom() == &1 {
-                Number::Integer(IntegerVariant::Fixnum(*rational.numer()))
+                Int(IntVariant::Small(*rational.numer()))
             } else {
-                Number::Rational(rational)
+                Rational(rational)
             }
         }
     }
 
     pub fn from_bigint(value: BigInt) -> Self {
         if let Some(i64_val) = value.to_i64() {
-            Number::Integer(IntegerVariant::Fixnum(i64_val))
+            Int(IntVariant::Small(i64_val))
         } else {
-            Number::Integer(IntegerVariant::Bignum(value))
+            Int(IntVariant::Big(value))
         }
     }
 
     pub fn from_usize(size: usize) -> Self {
-        Number::Integer(IntegerVariant::Fixnum(size as i64))
+        Int(IntVariant::Small(size as i64))
     }
 
     /// Check if float can be simplified as an integer.
@@ -203,12 +205,12 @@ impl Number {
             if value >= i64::MIN as f64 && value <= i64::MAX as f64 {
                 Number::from_i64(value as i64)
             } else {
-                Number::Integer(IntegerVariant::Bignum(
+                Int(IntVariant::Big(
                     BigInt::from_f64(value).unwrap_or_else(|| BigInt::from(0)),
                 ))
             }
         } else {
-            Number::Float(value)
+            Float(value)
         }
     }
 
@@ -216,14 +218,14 @@ impl Number {
     pub fn pow(&self, exponent: &Number) -> Result<Number, Error> {
         match (self, exponent) {
             // Integer base
-            (Number::Integer(base), Number::Integer(exponent)) => {
+            (Int(base), Int(exponent)) => {
                 let result = base.clone().pow(exponent.clone())?;
-                Ok(Number::Integer(result))
+                Ok(Int(result))
             }
-            (Number::Integer(base), Number::Rational(exponent)) => {
+            (Int(base), Rational(exponent)) => {
                 let base_float = match base {
-                    IntegerVariant::Fixnum(i) => *i as f64,
-                    IntegerVariant::Bignum(b) => b
+                    IntVariant::Small(i) => *i as f64,
+                    IntVariant::Big(b) => b
                         .to_f64()
                         .ok_or(Error::Message("unable to convert base to f64".to_string()))?,
                 };
@@ -234,10 +236,10 @@ impl Number {
 
                 Ok(Number::rationalize_float(result))
             }
-            (Number::Integer(base), Number::Float(exponent)) => {
+            (Int(base), Float(exponent)) => {
                 let base_float = match base {
-                    IntegerVariant::Fixnum(i) => *i as f64,
-                    IntegerVariant::Bignum(b) => b
+                    IntVariant::Small(i) => *i as f64,
+                    IntVariant::Big(b) => b
                         .to_f64()
                         .ok_or(Error::Message("unable to convert base to f64".to_string()))?,
                 };
@@ -245,11 +247,11 @@ impl Number {
                 Ok(Number::rationalize_float(result))
             }
             // Rational base
-            (Number::Rational(base), Number::Integer(exponent)) => {
+            (Rational(base), Int(exponent)) => {
                 let exp_i64 = match exponent {
-                    IntegerVariant::Fixnum(i) => *i,
-                    IntegerVariant::Bignum(_) => {
-                        return self.pow_via_float(&Number::Integer(exponent.clone()));
+                    IntVariant::Small(i) => *i,
+                    IntVariant::Big(_) => {
+                        return self.pow_via_float(&Int(exponent.clone()));
                     }
                 };
 
@@ -267,10 +269,10 @@ impl Number {
                 if result.is_integer() {
                     Ok(Number::from_i64(*result.numer()))
                 } else {
-                    Ok(Number::Rational(result))
+                    Ok(Rational(result))
                 }
             }
-            (Number::Rational(base), Number::Rational(exponent)) => {
+            (Rational(base), Rational(exponent)) => {
                 let base_float = base
                     .to_f64()
                     .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
@@ -280,7 +282,7 @@ impl Number {
                 let result = base_float.powf(exp_float);
                 Ok(Number::rationalize_float(result))
             }
-            (Number::Rational(base), Number::Float(exponent)) => {
+            (Rational(base), Float(exponent)) => {
                 let base_float = base
                     .to_f64()
                     .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
@@ -288,24 +290,24 @@ impl Number {
                 Ok(Number::rationalize_float(result))
             }
             // Float base
-            (Number::Float(base), Number::Integer(exponent)) => {
+            (Float(base), Int(exponent)) => {
                 let exp_float = match exponent {
-                    IntegerVariant::Fixnum(i) => *i as f64,
-                    IntegerVariant::Bignum(b) => b.to_f64().ok_or(Error::Message(
+                    IntVariant::Small(i) => *i as f64,
+                    IntVariant::Big(b) => b.to_f64().ok_or(Error::Message(
                         "unable to convert exponent to f64".to_string(),
                     ))?,
                 };
                 let result = base.powf(exp_float);
                 Ok(Number::rationalize_float(result))
             }
-            (Number::Float(base), Number::Rational(exponent)) => {
+            (Float(base), Rational(exponent)) => {
                 let exp_float = exponent.to_f64().ok_or(Error::Message(
                     "unable to convert exponent to f64".to_string(),
                 ))?;
                 let result = base.powf(exp_float);
                 Ok(Number::rationalize_float(result))
             }
-            (Number::Float(base), Number::Float(exponent)) => {
+            (Float(base), Float(exponent)) => {
                 let result = base.powf(*exponent);
                 Ok(Number::rationalize_float(result))
             }
@@ -332,76 +334,76 @@ impl Add for Number {
     fn add(self, other: Number) -> Self::Output {
         match (self, other) {
             // Case 1: Complex + Any
-            (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 + c2)),
-            (Number::Complex(c1), Number::Float(r2)) => {
-                Ok(Number::Complex(c1 + Complex64::new(r2, 0.0)))
+            (Complex(c1), Complex(c2)) => Ok(Complex(c1 + c2)),
+            (Complex(c1), Float(r2)) => {
+                Ok(Complex(c1 + Complex64::new(r2, 0.0)))
             }
-            (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
+            (Complex(c1), Rational(r2)) => Ok(Complex(
                 c1 + Complex64::new(r2.to_f64().unwrap(), 0.0),
             )),
-            (Number::Complex(c1), Number::Integer(i2)) => Ok(Number::Complex(
+            (Complex(c1), Int(i2)) => Ok(Complex(
                 c1 + Complex64::new(i2.to_f64().unwrap(), 0.0),
             )),
 
             // Case 2: Real + Any (that hasn't been handled by Complex + Any)
-            (Number::Float(r1), Number::Complex(c2)) => {
-                Ok(Number::Complex(Complex64::new(r1, 0.0) + c2))
+            (Float(r1), Complex(c2)) => {
+                Ok(Complex(Complex64::new(r1, 0.0) + c2))
             }
-            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 + r2)),
-            (Number::Float(r1), Number::Rational(r2)) => {
-                Ok(Number::Float(r1 + r2.to_f64().unwrap()))
+            (Float(r1), Float(r2)) => Ok(Float(r1 + r2)),
+            (Float(r1), Rational(r2)) => {
+                Ok(Float(r1 + r2.to_f64().unwrap()))
             }
-            (Number::Float(r1), Number::Integer(i2)) => {
-                Ok(Number::Float(r1 + i2.to_f64().unwrap()))
+            (Float(r1), Int(i2)) => {
+                Ok(Float(r1 + i2.to_f64().unwrap()))
             }
 
             // Case 3: Rational + Any (that hasn't been handled by Complex/Real + Any)
-            (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Rational(r1), Complex(c2)) => Ok(Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) + c2,
             )),
-            (Number::Rational(r1), Number::Float(r2)) => {
-                Ok(Number::Float(r1.to_f64().unwrap() + r2))
+            (Rational(r1), Float(r2)) => {
+                Ok(Float(r1.to_f64().unwrap() + r2))
             }
-            (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 + r2)),
-            (Number::Rational(r1), Number::Integer(i2)) => {
+            (Rational(r1), Rational(r2)) => Ok(Rational(r1 + r2)),
+            (Rational(r1), Int(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Float(r1.to_f64().unwrap() + b.to_f64().unwrap()));
+                            return Ok(Float(r1.to_f64().unwrap() + b.to_f64().unwrap()));
                         }
                     }
                 };
-                Ok(Number::Rational(r1 + i2_rational))
+                Ok(Rational(r1 + i2_rational))
             }
 
             // Case 4: Integer + Any (that hasn't been handled by higher types)
-            (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Int(i1), Complex(c2)) => Ok(Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) + c2,
             )),
-            (Number::Integer(i1), Number::Float(r2)) => {
-                Ok(Number::Float(i1.to_f64().unwrap() + r2))
+            (Int(i1), Float(r2)) => {
+                Ok(Float(i1.to_f64().unwrap() + r2))
             }
-            (Number::Integer(i1), Number::Rational(r2)) => {
+            (Int(i1), Rational(r2)) => {
                 let i1_rational = match i1 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Float(b.to_f64().unwrap() + r2.to_f64().unwrap()));
+                            return Ok(Float(b.to_f64().unwrap() + r2.to_f64().unwrap()));
                         }
                     }
                 };
-                Ok(Number::Rational(i1_rational + r2))
+                Ok(Rational(i1_rational + r2))
             }
-            (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
+            (Int(i1), Int(i2)) => match (i1, i2) {
+                (IntVariant::Small(f1), IntVariant::Small(f2)) => {
                     let sum = f1.checked_add(f2);
                     match sum {
-                        Some(s) => Ok(Number::Integer(IntegerVariant::Fixnum(s))),
+                        Some(s) => Ok(Int(IntVariant::Small(s))),
                         None => {
                             let b1 = BigInt::from(f1);
                             let b2 = BigInt::from(f2);
@@ -409,14 +411,14 @@ impl Add for Number {
                         }
                     }
                 }
-                (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
+                (IntVariant::Big(b1), IntVariant::Big(b2)) => {
                     Ok(Number::from_bigint(b1 + b2))
                 }
-                (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
+                (IntVariant::Small(f1), IntVariant::Big(b2)) => {
                     let b1 = BigInt::from(f1);
                     Ok(Number::from_bigint(b1 + b2))
                 }
-                (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
+                (IntVariant::Big(b1), IntVariant::Small(f2)) => {
                     let b2 = BigInt::from(f2);
                     Ok(Number::from_bigint(b1 + b2))
                 }
@@ -430,78 +432,78 @@ impl Sub for Number {
     fn sub(self, other: Number) -> Self::Output {
         match (self, other) {
             // Complex - Any
-            (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 - c2)),
-            (Number::Complex(c1), Number::Float(r2)) => {
-                Ok(Number::Complex(c1 - Complex64::new(r2, 0.0)))
+            (Complex(c1), Complex(c2)) => Ok(Complex(c1 - c2)),
+            (Complex(c1), Float(r2)) => {
+                Ok(Complex(c1 - Complex64::new(r2, 0.0)))
             }
-            (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
+            (Complex(c1), Rational(r2)) => Ok(Complex(
                 c1 - Complex64::new(r2.to_f64().unwrap(), 0.0),
             )),
-            (Number::Complex(c1), Number::Integer(i2)) => Ok(Number::Complex(
+            (Complex(c1), Int(i2)) => Ok(Complex(
                 c1 - Complex64::new(i2.to_f64().unwrap(), 0.0),
             )),
 
             // Real - Any
-            (Number::Float(r1), Number::Complex(c2)) => {
-                Ok(Number::Complex(Complex64::new(r1, 0.0) - c2))
+            (Float(r1), Complex(c2)) => {
+                Ok(Complex(Complex64::new(r1, 0.0) - c2))
             }
-            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 - r2)),
-            (Number::Float(r1), Number::Rational(r2)) => {
-                Ok(Number::Float(r1 - r2.to_f64().unwrap()))
+            (Float(r1), Float(r2)) => Ok(Float(r1 - r2)),
+            (Float(r1), Rational(r2)) => {
+                Ok(Float(r1 - r2.to_f64().unwrap()))
             }
-            (Number::Float(r1), Number::Integer(i2)) => {
-                Ok(Number::Float(r1 - i2.to_f64().unwrap()))
+            (Float(r1), Int(i2)) => {
+                Ok(Float(r1 - i2.to_f64().unwrap()))
             }
 
             //Rational - Any
-            (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Rational(r1), Complex(c2)) => Ok(Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) - c2,
             )),
-            (Number::Rational(r1), Number::Float(r2)) => {
-                Ok(Number::Float(r1.to_f64().unwrap() - r2))
+            (Rational(r1), Float(r2)) => {
+                Ok(Float(r1.to_f64().unwrap() - r2))
             }
-            (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 - r2)),
-            (Number::Rational(r1), Number::Integer(i2)) => {
+            (Rational(r1), Rational(r2)) => Ok(Rational(r1 - r2)),
+            (Rational(r1), Int(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Float(r1.to_f64().unwrap() - b.to_f64().unwrap()));
+                            return Ok(Float(r1.to_f64().unwrap() - b.to_f64().unwrap()));
                         }
                     }
                 };
-                Ok(Number::Rational(r1 - i2_rational))
+                Ok(Rational(r1 - i2_rational))
             }
 
             // Integer - Any
-            (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Int(i1), Complex(c2)) => Ok(Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) - c2,
             )),
-            (Number::Integer(i1), Number::Float(r2)) => {
-                Ok(Number::Float(i1.to_f64().unwrap() - r2))
+            (Int(i1), Float(r2)) => {
+                Ok(Float(i1.to_f64().unwrap() - r2))
             }
-            (Number::Integer(i1), Number::Rational(r2)) => {
+            (Int(i1), Rational(r2)) => {
                 // Promote integer to rational
                 let i1_rational = match i1 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         if let Some(f) = b.to_i64() {
                             Rational64::new(f, 1)
                         } else {
-                            return Ok(Number::Float(b.to_f64().unwrap() - r2.to_f64().unwrap()));
+                            return Ok(Float(b.to_f64().unwrap() - r2.to_f64().unwrap()));
                         }
                     }
                 };
-                Ok(Number::Rational(i1_rational - r2))
+                Ok(Rational(i1_rational - r2))
             }
-            (Number::Integer(i1), Number::Integer(i2)) => {
+            (Int(i1), Int(i2)) => {
                 match (i1, i2) {
-                    (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
+                    (IntVariant::Small(f1), IntVariant::Small(f2)) => {
                         let diff = f1.checked_sub(f2);
                         match diff {
-                            Some(s) => Ok(Number::Integer(IntegerVariant::Fixnum(s))),
+                            Some(s) => Ok(Int(IntVariant::Small(s))),
                             None => {
                                 // Overflow: promote to Bignum
                                 let b1 = BigInt::from(f1);
@@ -510,14 +512,14 @@ impl Sub for Number {
                             }
                         }
                     }
-                    (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
+                    (IntVariant::Big(b1), IntVariant::Big(b2)) => {
                         Ok(Number::from_bigint(b1 - b2))
                     }
-                    (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
+                    (IntVariant::Small(f1), IntVariant::Big(b2)) => {
                         let b1 = BigInt::from(f1);
                         Ok(Number::from_bigint(b1 - b2))
                     }
-                    (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
+                    (IntVariant::Big(b1), IntVariant::Small(f2)) => {
                         let b2 = BigInt::from(f2);
                         Ok(Number::from_bigint(b1 - b2))
                     }
@@ -531,41 +533,41 @@ impl Mul for Number {
     fn mul(self, other: Number) -> Self::Output {
         match (self, other) {
             // Complex * Any
-            (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 * c2)),
-            (Number::Complex(c1), Number::Float(r2)) => {
-                Ok(Number::Complex(c1 * Complex64::new(r2, 0.0)))
+            (Complex(c1), Complex(c2)) => Ok(Complex(c1 * c2)),
+            (Complex(c1), Float(r2)) => {
+                Ok(Complex(c1 * Complex64::new(r2, 0.0)))
             }
-            (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
+            (Complex(c1), Rational(r2)) => Ok(Complex(
                 c1 * Complex64::new(r2.to_f64().unwrap(), 0.0),
             )),
-            (Number::Complex(c1), Number::Integer(i2)) => Ok(Number::Complex(
+            (Complex(c1), Int(i2)) => Ok(Complex(
                 c1 * Complex64::new(i2.to_f64().unwrap(), 0.0),
             )),
 
             // Real * Any
-            (Number::Float(r1), Number::Complex(c2)) => {
-                Ok(Number::Complex(Complex64::new(r1, 0.0) * c2))
+            (Float(r1), Complex(c2)) => {
+                Ok(Complex(Complex64::new(r1, 0.0) * c2))
             }
-            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 * r2)),
-            (Number::Float(r1), Number::Rational(r2)) => {
-                Ok(Number::Float(r1 * r2.to_f64().unwrap()))
+            (Float(r1), Float(r2)) => Ok(Float(r1 * r2)),
+            (Float(r1), Rational(r2)) => {
+                Ok(Float(r1 * r2.to_f64().unwrap()))
             }
-            (Number::Float(r1), Number::Integer(i2)) => {
-                Ok(Number::Float(r1 * i2.to_f64().unwrap()))
+            (Float(r1), Int(i2)) => {
+                Ok(Float(r1 * i2.to_f64().unwrap()))
             }
 
             // Rational * Any
-            (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Rational(r1), Complex(c2)) => Ok(Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) * c2,
             )),
-            (Number::Rational(r1), Number::Float(r2)) => {
-                Ok(Number::Float(r1.to_f64().unwrap() * r2))
+            (Rational(r1), Float(r2)) => {
+                Ok(Float(r1.to_f64().unwrap() * r2))
             }
-            (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 * r2)),
-            (Number::Rational(r1), Number::Integer(i2)) => {
+            (Rational(r1), Rational(r2)) => Ok(Rational(r1 * r2)),
+            (Rational(r1), Int(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -573,20 +575,20 @@ impl Mul for Number {
                             ))?
                     }
                 };
-                Ok(Number::Rational(r1 * i2_rational))
+                Ok(Rational(r1 * i2_rational))
             }
 
             // Integer * Any
-            (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Int(i1), Complex(c2)) => Ok(Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) * c2,
             )),
-            (Number::Integer(i1), Number::Float(r2)) => {
-                Ok(Number::Float(i1.to_f64().unwrap() * r2))
+            (Int(i1), Float(r2)) => {
+                Ok(Float(i1.to_f64().unwrap() * r2))
             }
-            (Number::Integer(i1), Number::Rational(r2)) => {
+            (Int(i1), Rational(r2)) => {
                 let i1_rational = match i1 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -594,23 +596,23 @@ impl Mul for Number {
                             ))?
                     }
                 };
-                Ok(Number::Rational(i1_rational * r2))
+                Ok(Rational(i1_rational * r2))
             }
-            (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
+            (Int(i1), Int(i2)) => match (i1, i2) {
+                (IntVariant::Small(f1), IntVariant::Small(f2)) => {
                     let prod = f1.checked_mul(f2);
                     match prod {
-                        Some(s) => Ok(Number::Integer(IntegerVariant::Fixnum(s))),
+                        Some(s) => Ok(Int(IntVariant::Small(s))),
                         None => Ok(Number::from_bigint(BigInt::from(f1) * BigInt::from(f2))),
                     }
                 }
-                (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
+                (IntVariant::Big(b1), IntVariant::Big(b2)) => {
                     Ok(Number::from_bigint(b1 * b2))
                 }
-                (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
+                (IntVariant::Small(f1), IntVariant::Big(b2)) => {
                     Ok(Number::from_bigint(BigInt::from(f1) * b2))
                 }
-                (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
+                (IntVariant::Big(b1), IntVariant::Small(f2)) => {
                     Ok(Number::from_bigint(b1 * BigInt::from(f2)))
                 }
             },
@@ -623,13 +625,13 @@ impl Div for Number {
     fn div(self, other: Number) -> Self::Output {
         // Pre-check for division by exact zero
         match &other {
-            Number::Integer(IntegerVariant::Fixnum(0)) => {
+            Int(IntVariant::Small(0)) => {
                 return Err(Error::Message("unable to divide by 0".to_string()));
             }
-            Number::Integer(IntegerVariant::Bignum(b)) if b == &BigInt::from(0) => {
+            Int(IntVariant::Big(b)) if b == &BigInt::from(0) => {
                 return Err(Error::Message("unable to divide by 0".to_string()));
             }
-            Number::Rational(r) if r.is_zero() => {
+            Rational(r) if r.is_zero() => {
                 return Err(Error::Message("unable to divide by 0".to_string()));
             }
             _ => {}
@@ -637,41 +639,41 @@ impl Div for Number {
 
         match (self, other) {
             // Complex / Any
-            (Number::Complex(c1), Number::Complex(c2)) => Ok(Number::Complex(c1 / c2)),
-            (Number::Complex(c1), Number::Float(r2)) => {
-                Ok(Number::Complex(c1 / Complex64::new(r2, 0.0)))
+            (Complex(c1), Complex(c2)) => Ok(Complex(c1 / c2)),
+            (Complex(c1), Float(r2)) => {
+                Ok(Complex(c1 / Complex64::new(r2, 0.0)))
             }
-            (Number::Complex(c1), Number::Rational(r2)) => Ok(Number::Complex(
+            (Complex(c1), Rational(r2)) => Ok(Complex(
                 c1 / Complex64::new(r2.to_f64().unwrap(), 0.0),
             )),
-            (Number::Complex(c1), Number::Integer(i2)) => Ok(Number::Complex(
+            (Complex(c1), Int(i2)) => Ok(Complex(
                 c1 / Complex64::new(i2.to_f64().unwrap(), 0.0),
             )),
 
             // Real / Any
-            (Number::Float(r1), Number::Complex(c2)) => {
-                Ok(Number::Complex(Complex64::new(r1, 0.0) / c2))
+            (Float(r1), Complex(c2)) => {
+                Ok(Complex(Complex64::new(r1, 0.0) / c2))
             }
-            (Number::Float(r1), Number::Float(r2)) => Ok(Number::Float(r1 / r2)),
-            (Number::Float(r1), Number::Rational(r2)) => {
-                Ok(Number::Float(r1 / r2.to_f64().unwrap()))
+            (Float(r1), Float(r2)) => Ok(Float(r1 / r2)),
+            (Float(r1), Rational(r2)) => {
+                Ok(Float(r1 / r2.to_f64().unwrap()))
             }
-            (Number::Float(r1), Number::Integer(i2)) => {
-                Ok(Number::Float(r1 / i2.to_f64().unwrap()))
+            (Float(r1), Int(i2)) => {
+                Ok(Float(r1 / i2.to_f64().unwrap()))
             }
 
             // Rational / Any
-            (Number::Rational(r1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Rational(r1), Complex(c2)) => Ok(Complex(
                 Complex64::new(r1.to_f64().unwrap(), 0.0) / c2,
             )),
-            (Number::Rational(r1), Number::Float(r2)) => {
-                Ok(Number::Float(r1.to_f64().unwrap() / r2))
+            (Rational(r1), Float(r2)) => {
+                Ok(Float(r1.to_f64().unwrap() / r2))
             }
-            (Number::Rational(r1), Number::Rational(r2)) => Ok(Number::Rational(r1 / r2)),
-            (Number::Rational(r1), Number::Integer(i2)) => {
+            (Rational(r1), Rational(r2)) => Ok(Rational(r1 / r2)),
+            (Rational(r1), Int(i2)) => {
                 let i2_rational = match i2 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -679,20 +681,20 @@ impl Div for Number {
                             ))?
                     }
                 };
-                Ok(Number::Rational(r1 / i2_rational))
+                Ok(Rational(r1 / i2_rational))
             }
 
             // Integer / Any
-            (Number::Integer(i1), Number::Complex(c2)) => Ok(Number::Complex(
+            (Int(i1), Complex(c2)) => Ok(Complex(
                 Complex64::new(i1.to_f64().unwrap(), 0.0) / c2,
             )),
-            (Number::Integer(i1), Number::Float(r2)) => {
-                Ok(Number::Float(i1.to_f64().unwrap() / r2))
+            (Int(i1), Float(r2)) => {
+                Ok(Float(i1.to_f64().unwrap() / r2))
             }
-            (Number::Integer(i1), Number::Rational(r2)) => {
+            (Int(i1), Rational(r2)) => {
                 let i1_rational = match i1 {
-                    IntegerVariant::Fixnum(f) => Rational64::new(f, 1),
-                    IntegerVariant::Bignum(b) => {
+                    IntVariant::Small(f) => Rational64::new(f, 1),
+                    IntVariant::Big(b) => {
                         b.to_i64()
                             .map(|f| Rational64::new(f, 1))
                             .ok_or(Error::Message(
@@ -700,17 +702,17 @@ impl Div for Number {
                             ))?
                     }
                 };
-                Ok(Number::Rational(i1_rational / r2))
+                Ok(Rational(i1_rational / r2))
             }
-            (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariant::Fixnum(f1), IntegerVariant::Fixnum(f2)) => {
+            (Int(i1), Int(i2)) => match (i1, i2) {
+                (IntVariant::Small(f1), IntVariant::Small(f2)) => {
                     if f1 % f2 == 0 {
                         Ok(Number::from_i64(f1 / f2))
                     } else {
-                        Ok(Number::Rational(Rational64::new(f1, f2)))
+                        Ok(Rational(Rational64::new(f1, f2)))
                     }
                 }
-                (IntegerVariant::Bignum(b1), IntegerVariant::Bignum(b2)) => {
+                (IntVariant::Big(b1), IntVariant::Big(b2)) => {
                     if b1.is_multiple_of(&b2) {
                         Ok(Number::from_bigint(b1 / b2))
                     } else {
@@ -720,10 +722,10 @@ impl Div for Number {
                         let r_den = b2.to_i64().ok_or(Error::Message(
                             "number too large for rational conversion".to_string(),
                         ))?;
-                        Ok(Number::Rational(Rational64::new(r_num, r_den)))
+                        Ok(Rational(Rational64::new(r_num, r_den)))
                     }
                 }
-                (IntegerVariant::Fixnum(f1), IntegerVariant::Bignum(b2)) => {
+                (IntVariant::Small(f1), IntVariant::Big(b2)) => {
                     let b1 = BigInt::from(f1);
                     if b1.is_multiple_of(&b2) {
                         Ok(Number::from_bigint(b1 / b2))
@@ -734,10 +736,10 @@ impl Div for Number {
                         let r_den = b2.to_i64().ok_or(Error::Message(
                             "number too large for rational conversion".to_string(),
                         ))?;
-                        Ok(Number::Rational(Rational64::new(r_num, r_den)))
+                        Ok(Rational(Rational64::new(r_num, r_den)))
                     }
                 }
-                (IntegerVariant::Bignum(b1), IntegerVariant::Fixnum(f2)) => {
+                (IntVariant::Big(b1), IntVariant::Small(f2)) => {
                     let b2 = BigInt::from(f2);
                     if b1.is_multiple_of(&b2) {
                         Ok(Number::from_bigint(b1 / b2))
@@ -748,7 +750,7 @@ impl Div for Number {
                         let r_den = b2.to_i64().ok_or(Error::Message(
                             "number too large for rational conversion".to_string(),
                         ))?;
-                        Ok(Number::Rational(Rational64::new(r_num, r_den)))
+                        Ok(Rational(Rational64::new(r_num, r_den)))
                     }
                 }
             },
@@ -760,18 +762,18 @@ impl Rem for Number {
     type Output = Result<Number, Error>;
     fn rem(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Number::Integer(i1), Number::Integer(i2)) => match (i1, i2) {
-                (IntegerVariant::Fixnum(i1), IntegerVariant::Fixnum(i2)) => {
-                    Ok(Number::Integer(IntegerVariant::Fixnum(i1 % i2)))
+            (Int(i1), Int(i2)) => match (i1, i2) {
+                (IntVariant::Small(i1), IntVariant::Small(i2)) => {
+                    Ok(Int(IntVariant::Small(i1 % i2)))
                 }
-                (IntegerVariant::Bignum(i1), IntegerVariant::Bignum(i2)) => {
-                    Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2)))
+                (IntVariant::Big(i1), IntVariant::Big(i2)) => {
+                    Ok(Int(IntVariant::Big(i1 % i2)))
                 }
-                (IntegerVariant::Fixnum(i1), IntegerVariant::Bignum(i2)) => {
-                    Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2)))
+                (IntVariant::Small(i1), IntVariant::Big(i2)) => {
+                    Ok(Int(IntVariant::Big(i1 % i2)))
                 }
-                (IntegerVariant::Bignum(i1), IntegerVariant::Fixnum(i2)) => {
-                    Ok(Number::Integer(IntegerVariant::Bignum(i1 % i2)))
+                (IntVariant::Big(i1), IntVariant::Small(i2)) => {
+                    Ok(Int(IntVariant::Big(i1 % i2)))
                 }
             },
             (_, _) => Err(Error::Message("expected integer".to_string())),
@@ -782,62 +784,168 @@ impl Rem for Number {
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Number::Integer(IntegerVariant::Fixnum(i)) => write!(f, "{}", i),
-            Number::Integer(IntegerVariant::Bignum(b)) => write!(f, "{}", b),
-            Number::Rational(r) => write!(f, "{}", r),
-            Number::Float(r) => write!(f, "{}", r),
-            Number::Complex(c) => write!(f, "{}", c),
+            Int(IntVariant::Small(i)) => write!(f, "{}", i),
+            Int(IntVariant::Big(b)) => write!(f, "{}", b),
+            Rational(r) => write!(f, "{}", r),
+            Float(r) => write!(f, "{}", r),
+            Complex(c) => write!(f, "{}", c),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum IntegerVariant {
-    Fixnum(i64),
-    Bignum(BigInt),
+impl PartialOrd for Number {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (Int(i1), Int(i2)) => i1.partial_cmp(i2),
+            (Int(i1), Float(f2)) => {
+                let i1_float = i1.to_f64()?;
+
+                if i1_float < *f2 {
+                    return Some(Ordering::Less)
+                } else if i1_float > *f2 {
+                    return Some(Ordering::Greater)
+                }
+
+                Some(Ordering::Equal)
+            }
+            (Int(i1), Rational(r2)) => {
+                let i1_rational = match i1 {
+                    IntVariant::Small(s) => Rational64::from_i64(*s)?,
+                    IntVariant::Big(h) => Rational64::from_i64(h.to_i64()?)?,
+                };
+
+                i1_rational.partial_cmp(&r2)
+            }
+            (Float(f1), Float(f2)) => f1.partial_cmp(f2),
+            (Float(f1), Int(i2)) => {
+                let i2_float = i2.to_f64()?;
+                f1.partial_cmp(&i2_float)
+            }
+            (Float(f1), Rational(r2)) => {
+                let f1_rational = Rational64::from_f64(*f1)?;
+                f1_rational.partial_cmp(&r2)
+            }
+            (Rational(r1), Rational(r2)) => r1.partial_cmp(r2),
+            (Rational(r1), Int(i2)) => {
+                let i2_rational = match i2 {
+                    IntVariant::Small(s) => Rational64::from_i64(*s)?,
+                    IntVariant::Big(h) => Rational64::from_i64(h.to_i64()?)?,
+                };
+
+                r1.partial_cmp(&i2_rational)
+            }
+            (Rational(r1), Float(f2)) => {
+                let f2_rational = Rational64::from_f64(*f2)?;
+                r1.partial_cmp(&f2_rational)
+            }
+            // Complex numbers cannot be ordered, only compared for equality.
+            (Int(i1), Complex(c2)) => {
+                let i1_complex = match i1 {
+                    IntVariant::Small(s) => Complex64::from_i64(*s),
+                    IntVariant::Big(h) => Complex64::from_i64(h.to_i64()?),
+                };
+
+                if i1_complex == Some(*c2) {
+                    return Some(Ordering::Equal)
+                }
+
+                None
+            }
+            (Float(f1), Complex(c2)) => {
+                let f1_complex = Complex64::from_f64(*f1)?;
+
+                if f1_complex == *c2 {
+                    return Some(Ordering::Equal)
+                }
+
+                None
+            }
+            (Rational(r1), Complex(c2)) => {
+                let r1_complex = Complex64::from_i64(r1.to_i64()?)?;
+
+                if r1_complex == *c2 {
+                    return Some(Ordering::Equal)
+                }
+
+                None
+            }
+            (Complex(c1), Complex(c2)) => {
+                if c1 == c2 {
+                    return Some(Ordering::Equal)
+                }
+
+                None
+            }
+            _ => None
+        }
+    }
 }
 
-impl ToPrimitive for IntegerVariant {
+/// Integer that is either fixed length or unbounded.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IntVariant {
+    Small(i64),
+    Big(BigInt),
+}
+
+impl PartialOrd for IntVariant {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (IntVariant::Small(i1), IntVariant::Small(i2)) => i1.partial_cmp(i2),
+            (IntVariant::Big(i1), IntVariant::Big(i2)) => i1.partial_cmp(i2),
+            (IntVariant::Big(i1), IntVariant::Small(i2)) => {
+                let heap_i2 = &BigInt::from(*i2);
+                i1.partial_cmp(heap_i2)
+            },
+            (IntVariant::Small(i1), IntVariant::Big(i2)) => {
+                let heap_i1 = &BigInt::from(*i1);
+                heap_i1.partial_cmp(i2)
+            },
+        }
+    }
+}
+
+impl ToPrimitive for IntVariant {
     fn to_i64(&self) -> Option<i64> {
         match self {
-            IntegerVariant::Fixnum(f) => Some(*f),
-            IntegerVariant::Bignum(b) => b.to_i64(),
+            IntVariant::Small(f) => Some(*f),
+            IntVariant::Big(b) => b.to_i64(),
         }
     }
     fn to_u64(&self) -> Option<u64> {
         match self {
-            IntegerVariant::Fixnum(f) => Some(*f as u64),
-            IntegerVariant::Bignum(b) => b.to_u64(),
+            IntVariant::Small(f) => Some(*f as u64),
+            IntVariant::Big(b) => b.to_u64(),
         }
     }
 
     fn to_f64(&self) -> Option<f64> {
         match self {
-            IntegerVariant::Fixnum(f) => Some(*f as f64),
-            IntegerVariant::Bignum(b) => b.to_f64(),
+            IntVariant::Small(f) => Some(*f as f64),
+            IntVariant::Big(b) => b.to_f64(),
         }
     }
 }
 
-impl Pow<IntegerVariant> for IntegerVariant {
-    type Output = Result<IntegerVariant, Error>;
-    fn pow(self, rhs: IntegerVariant) -> Self::Output {
+impl Pow<IntVariant> for IntVariant {
+    type Output = Result<IntVariant, Error>;
+    fn pow(self, rhs: IntVariant) -> Self::Output {
         match (self, rhs) {
-            (IntegerVariant::Fixnum(f), IntegerVariant::Fixnum(r)) => {
+            (IntVariant::Small(f), IntVariant::Small(r)) => {
                 let mut result = 1;
                 for _ in 0..r {
                     result *= f;
                 }
-                Ok(IntegerVariant::Fixnum(result as i64))
+                Ok(IntVariant::Small(result as i64))
             }
-            (IntegerVariant::Bignum(b), IntegerVariant::Fixnum(r)) => {
+            (IntVariant::Big(b), IntVariant::Small(r)) => {
                 let mut result = BigInt::from(1);
                 for _ in 0..r {
                     result *= b.clone();
                 }
-                Ok(IntegerVariant::Bignum(result))
+                Ok(IntVariant::Big(result))
             }
-            (IntegerVariant::Fixnum(f), IntegerVariant::Bignum(r)) => {
+            (IntVariant::Small(f), IntVariant::Big(r)) => {
                 let r = r.to_u64().ok_or(Error::Message(
                     "number too large for rational conversion".to_string(),
                 ))?;
@@ -845,9 +953,9 @@ impl Pow<IntegerVariant> for IntegerVariant {
                 for _ in 0..r {
                     result *= BigInt::from(f);
                 }
-                Ok(IntegerVariant::Bignum(result))
+                Ok(IntVariant::Big(result))
             }
-            (IntegerVariant::Bignum(b), IntegerVariant::Bignum(r)) => {
+            (IntVariant::Big(b), IntVariant::Big(r)) => {
                 let r = r.to_u64().ok_or(Error::Message(
                     "number too large for rational conversion".to_string(),
                 ))?;
@@ -855,7 +963,7 @@ impl Pow<IntegerVariant> for IntegerVariant {
                 for _ in 0..r {
                     result *= b.clone();
                 }
-                Ok(IntegerVariant::Bignum(result))
+                Ok(IntVariant::Big(result))
             }
         }
     }

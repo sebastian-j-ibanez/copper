@@ -339,3 +339,90 @@ fn test_cdr() {
     let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
     assert!(matches!(result, _expected));
 }
+
+#[test]
+fn test_abs_positive_number_string_result() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs 5)".to_string();
+    if let Ok(result) = parse_and_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(5));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
+}
+
+#[test]
+fn test_abs_positive_number_result() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs 5)".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(5)));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_abs_negative_number_string_result() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs -7)".to_string();
+    if let Ok(result) = parse_and_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(7));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
+}
+
+#[test]
+fn test_abs_negative_number_result() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs -7)".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(7)));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_abs_zero_string_result() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs 0)".to_string();
+    if let Ok(result) = parse_and_eval(input, env) {
+        let _expected: Expr = Expr::Number(Number::from_i64(0));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
+}
+
+#[test]
+fn test_abs_zero_result() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs 0)".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(0)));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_abs_rational_string_result() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs -3/4)".to_string();
+    if let Ok(result) = parse_and_eval(input, env) {
+        let _expected: Expr =
+            Expr::Number(Number::Rational(num_rational::Rational64::new(3, 4)));
+        assert_eq!(result.to_string(), _expected.to_string());
+    }
+}
+
+#[test]
+fn test_abs_rational_result() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    let env = Env::standard_env();
+    let input = "(abs -3/4)".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::Rational(
+        num_rational::Rational64::new(3, 4),
+    )));
+    assert!(matches!(result, _expected));
+}

@@ -10,7 +10,7 @@ use std::rc::Rc;
 use crate::env::Env;
 use crate::error::Error;
 use crate::parser::parse_number;
-use crate::types::number::IntegerVariant::Fixnum;
+use crate::types::number::IntVariant::Small;
 use crate::types::{Expr, Number};
 
 pub fn is_number(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
@@ -60,7 +60,7 @@ pub fn is_complex(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 pub fn is_integer(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         return match arg {
-            Expr::Number(Number::Integer(_)) => Ok(Expr::Boolean(true)),
+            Expr::Number(Number::Int(_)) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
         };
     }
@@ -116,15 +116,15 @@ pub fn is_even(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     args.first()
         .ok_or_else(|| Error::Message("expected one argument".to_string()))
         .and_then(|arg| parse_number(arg))
-        .and_then(|num| num % Number::Integer(Fixnum(2)))
-        .map(|result| Expr::Boolean(result == Number::Integer(Fixnum(0))))
+        .and_then(|num| num % Number::Int(Small(2)))
+        .map(|result| Expr::Boolean(result == Number::Int(Small(0))))
 }
 
 pub fn is_odd(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     args.first()
         .ok_or_else(|| Error::Message("expected one argument".to_string()))
         .and_then(|arg| parse_number(arg))
-        .and_then(|num| num % Number::Integer(Fixnum(2)))
-        .map(|result| Expr::Boolean(result == Number::Integer(Fixnum(1))))
+        .and_then(|num| num % Number::Int(Small(2)))
+        .map(|result| Expr::Boolean(result == Number::Int(Small(1))))
 }
 
