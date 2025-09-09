@@ -93,9 +93,10 @@ pub fn print_greeting() {
 / /__/ /_/ / /_/ / /_/ /  __/ /    
 \___/\____/ .___/ .___/\___/_/     
          /_/   /_/"#;
+
     println!(
         "{}\n\nVersion {}",
-        banner.truecolor(255, 148, 0).bold(),
+        banner.truecolor(82, 127, 118).bold(),
         COPPER_VERSION
     );
     println!("Press Ctrl+C to exit!\n");
