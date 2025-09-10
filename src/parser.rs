@@ -28,8 +28,9 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
             .find_var(k)
             .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
         Expr::List(list) => {
+            // Return empty list if there are no args.
             let [first, args @ ..] = list.as_slice() else {
-                return Err(Error::Message("empty list".to_string()));
+                return Ok(Expr::List(vec![Expr::Void()]));
             };
 
             // Check for special forms (like define)
