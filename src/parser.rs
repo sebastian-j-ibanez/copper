@@ -51,7 +51,7 @@ pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
                 .collect::<Result<Vec<_>, _>>()?;
 
             match func_val {
-                Expr::Func(f) => f(&arg_vals, env),
+                Expr::Procedure(f) => f(&arg_vals, env),
                 Expr::Closure(c) => apply_lambda(&c, arg_vals),
                 e => {
                     let msg = format!("not a function: {}", e);

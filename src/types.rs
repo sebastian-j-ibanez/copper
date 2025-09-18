@@ -17,6 +17,8 @@ use std::rc::Rc;
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
+pub type Procedure = fn(&[Expr], Rc<RefCell<Env>>) -> Result<Expr, Error>;
+
 #[derive(Debug, Clone)]
 pub enum Expr {
     Number(Number),
@@ -25,7 +27,7 @@ pub enum Expr {
     Symbol(String),
     List(Vec<Expr>),
     Void(),
-    Func(fn(&[Expr], Rc<RefCell<Env>>) -> Result<Expr, Error>),
+    Procedure(Procedure),
     Closure(Box<Closure>),
 }
 
@@ -38,7 +40,7 @@ impl fmt::Display for Expr {
             Expr::Symbol(s) => s.clone(),
             Expr::List(list) => format_list(list, " ", true),
             Expr::Void() => return Ok(()),
-            Expr::Func(_) => "#<function {}".to_string(),
+            Expr::Procedure(_) => "#<function {}".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
         };
         write!(f, "{}", s)

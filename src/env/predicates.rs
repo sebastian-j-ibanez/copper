@@ -104,7 +104,7 @@ pub fn is_list(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 pub fn is_procedure(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     if let Some(arg) = args.first() {
         return match arg {
-            Expr::Func(_) => Ok(Expr::Boolean(true)),
+            Expr::Procedure(_) => Ok(Expr::Boolean(true)),
             _ => Ok(Expr::Boolean(false)),
         };
     }
@@ -127,4 +127,3 @@ pub fn is_odd(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
         .and_then(|num| num % Number::Int(Small(2)))
         .map(|result| Expr::Boolean(result == Number::Int(Small(1))))
 }
-
