@@ -11,11 +11,28 @@ pub mod parser;
 pub mod tests;
 pub mod types;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use repl_lib::{ProcessFunc, TerminatedLineFunc};
+
 use crate::cli::{Flag, parse_args};
 use crate::env::Env;
 use crate::error::Error;
 use crate::parser::parse_and_eval;
-use crate::types::Expr;
+
+fn process_line(env: Rc<RefCell<Env>>) -> ProcessFunc {
+    Box::new(
+        move |line: String| match parse_and_eval(line, env.clone()) {
+            Ok(result) => Ok(result.to_string()),
+            Err(Error::Message(e)) => Err(repl_lib::Error::ProcessLine(format!("{}", e))),
+        },
+    )
+}
+
+fn expression_closed() -> TerminatedLineFunc {
+    Box::new(move |line: String| parser::expression_closed(line.as_str()))
+}
 
 fn main() {
     let env = Env::standard_env();
@@ -36,19 +53,39 @@ fn main() {
             io::print_version();
             std::process::exit(0);
         }
-        None => io::print_greeting(),
+        None => {}
     }
+
+    let prompt = String::from("> ");
+    let banner = String::from(
+        r#"
+        _________  ____  ____  ___  _____
+        / ___/ __ \/ __ \/ __ \/ _ \/ ___/
+        / /__/ /_/ / /_/ / /_/ /  __/ /    
+        \___/\____/ .___/ .___/\___/_/     
+        /_/   /_/"#,
+    );
+    let welcome_msg = format!("Version {}", io::COPPER_VERSION);
+    let mut repl = match repl_lib::Repl::new(
+        prompt,
+        banner,
+        welcome_msg,
+        process_line(env),
+        expression_closed(),
+    ) {
+        Ok(r) => r,
+        Err(e) => panic!("bruh: {}", e),
+    };
 
     // REPL.
     loop {
-        io::print_repl_prompt();
+        repl.print_prompt();
 
-        let input = io::stdin_input();
-
-        match parse_and_eval(input, env.clone()) {
-            Ok(Expr::Void()) => continue,
-            Ok(result) => println!("{}", result),
-            Err(Error::Message(e)) => println!("error: {}", e),
+        match repl.get_line() {
+            Ok(line) => println!("{}", line),
+            Err(e) => {
+                eprintln!("error: {}", e);
+            }
         }
     }
 }
