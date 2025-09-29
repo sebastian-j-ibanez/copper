@@ -14,14 +14,14 @@ pub mod types;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use repl_lib::{ProcessFunc, TerminatedLineFunc};
+use repl_lib::{LineCompletionFunc, ProcessLineFunc};
 
 use crate::cli::{Flag, parse_args};
 use crate::env::Env;
 use crate::error::Error;
 use crate::parser::parse_and_eval;
 
-fn process_line(env: Rc<RefCell<Env>>) -> ProcessFunc {
+fn process_line(env: Rc<RefCell<Env>>) -> ProcessLineFunc {
     Box::new(
         move |line: String| match parse_and_eval(line, env.clone()) {
             Ok(result) => Ok(result.to_string()),
@@ -30,7 +30,7 @@ fn process_line(env: Rc<RefCell<Env>>) -> ProcessFunc {
     )
 }
 
-fn expression_closed() -> TerminatedLineFunc {
+fn expression_closed() -> LineCompletionFunc {
     Box::new(move |line: String| parser::expression_closed(line.as_str()))
 }
 
@@ -59,13 +59,13 @@ fn main() {
     let prompt = String::from("> ");
     let banner = String::from(
         r#"
-        _________  ____  ____  ___  _____
-        / ___/ __ \/ __ \/ __ \/ _ \/ ___/
-        / /__/ /_/ / /_/ / /_/ /  __/ /    
-        \___/\____/ .___/ .___/\___/_/     
-        /_/   /_/"#,
+  _________  ____  ____  ___  _____
+ / ___/ __ \/ __ \/ __ \/ _ \/ ___/
+/ /__/ /_/ / /_/ / /_/ /  __/ /    
+\___/\____/ .___/ .___/\___/_/     
+         /_/   /_/"#,
     );
-    let welcome_msg = format!("Version {}", io::COPPER_VERSION);
+    let welcome_msg = format!("\nVersion {}", io::COPPER_VERSION);
     let mut repl = match repl_lib::Repl::new(
         prompt,
         banner,
@@ -77,11 +77,13 @@ fn main() {
         Err(e) => panic!("bruh: {}", e),
     };
 
+    repl.print_welcome();
+
     // REPL.
     loop {
         repl.print_prompt();
 
-        match repl.get_line() {
+        match repl.process_input() {
             Ok(line) => println!("{}", line),
             Err(e) => {
                 eprintln!("error: {}", e);
