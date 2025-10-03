@@ -5,8 +5,8 @@
 //! Functions related to math operations.
 
 use crate::env::Env;
-use crate::{error::Error, types::Expr};
 use crate::types::Number;
+use crate::{error::Error, types::Expr};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -40,7 +40,10 @@ pub fn abs(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
                 return if let Ok(result) = n.clone() * Number::from_i64(-1) {
                     Ok(Expr::Number(result))
                 } else {
-                    Err(Error::Message(format!("unable to get absolute value from n: {}",n)))
+                    Err(Error::Message(format!(
+                        "unable to get absolute value from n: {}",
+                        n
+                    )))
                 };
             }
             Ok(Expr::Number(n))
@@ -59,7 +62,9 @@ pub fn ceil(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
             if let Some(result) = n.to_f64() {
                 return Ok(Expr::Number(Number::from_f64(result.ceil())));
             }
-            Err(Error::Message("unable to convert number to float".to_string(),))
+            Err(Error::Message(
+                "unable to convert number to float".to_string(),
+            ))
         }
         _ => Err(Error::Message("expected real number".to_string())),
     }
@@ -75,7 +80,9 @@ pub fn floor(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
             if let Some(result) = n.to_f64() {
                 return Ok(Expr::Number(Number::from_f64(result.floor())));
             }
-            Err(Error::Message("unable to convert number to float".to_string()))
+            Err(Error::Message(
+                "unable to convert number to float".to_string(),
+            ))
         }
         _ => Err(Error::Message("expected real number".to_string())),
     }
