@@ -87,3 +87,81 @@ pub fn floor(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
         _ => Err(Error::Message("expected real number".to_string())),
     }
 }
+
+// /// Return largest real number from arguments.
+// pub fn max(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+//     if args.is_empty() {
+//         return Err(Error::Message("expected real numbers".to_string()));
+//     }
+//     let mut min: Number = Number::from_i64(0);
+//     for arg in args {
+//         match arg {
+//             Expr::Number(current) => {
+//                 if let Some(order) = match current.partial_cmp(&min) {
+//                     match order {
+//                         Ordering::
+//                     }
+//                     }
+//                 }
+//             },
+//             _ => {
+//                 return Err(Error::Message("expected real numbers".to_string()));
+//             }
+//         }
+//     }
+//     Ok(Expr::Number(min))
+// }
+
+/// Return smallest real number from arguments.
+pub fn min(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    if args.is_empty() {
+        return Err(Error::Message("expected real numbers".to_string()));
+    }
+
+    let mut min: Option<Number> = None;
+
+    for arg in args {
+        match arg {
+            Expr::Number(current) => match min {
+                None => min = Some(current.clone()),
+                Some(ref current_min) => {
+                    if current < current_min {
+                        min = Some(current.clone());
+                    }
+                }
+            },
+            _ => {
+                return Err(Error::Message("expected real numbers".to_string()));
+            }
+        }
+    }
+
+    Ok(Expr::Number(min.unwrap())) // Safe to unwrap since we checked for empty args
+}
+
+/// Return largest real number from arguments.
+pub fn max(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+    if args.is_empty() {
+        return Err(Error::Message("expected real numbers".to_string()));
+    }
+
+    let mut min: Option<Number> = None;
+
+    for arg in args {
+        match arg {
+            Expr::Number(current) => match min {
+                None => min = Some(current.clone()),
+                Some(ref current_min) => {
+                    if current > current_min {
+                        min = Some(current.clone());
+                    }
+                }
+            },
+            _ => {
+                return Err(Error::Message("expected real numbers".to_string()));
+            }
+        }
+    }
+
+    Ok(Expr::Number(min.unwrap())) // Safe to unwrap since we checked for empty args
+}

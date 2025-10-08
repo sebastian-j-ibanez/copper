@@ -14,7 +14,7 @@ mod strings;
 // Internal crate imports.
 use crate::env::io::{display, exit, load_file, newline, pretty_print, print, println};
 use crate::env::lists::{cadr, car, cdr, cons, list_append, list_length, list_reverse, new_list};
-use crate::env::math::{abs, ceil, exponent, floor, modulo};
+use crate::env::math::{abs, ceil, exponent, floor, max, min, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
     is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
@@ -49,6 +49,8 @@ impl Env {
         data.insert("abs".to_string(), Expr::Procedure(abs));
         data.insert("ceiling".to_string(), Expr::Procedure(ceil));
         data.insert("floor".to_string(), Expr::Procedure(floor));
+        data.insert("min".to_string(), Expr::Procedure(min));
+        data.insert("max".to_string(), Expr::Procedure(max));
         // Predicates
         data.insert("number?".to_string(), Expr::Procedure(is_number));
         data.insert("real?".to_string(), Expr::Procedure(is_real));
