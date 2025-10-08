@@ -11,17 +11,14 @@ pub mod parser;
 pub mod tests;
 pub mod types;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use repl_lib::{LineCompletionFunc, ProcessLineFunc};
 
 use crate::cli::{Flag, parse_args};
-use crate::env::Env;
+use crate::env::{Env, EnvRef};
 use crate::error::Error;
 use crate::parser::parse_and_eval;
 
-fn process_line(env: Rc<RefCell<Env>>) -> ProcessLineFunc {
+fn process_line(env: EnvRef) -> ProcessLineFunc {
     Box::new(
         move |line: String| match parse_and_eval(line, env.clone()) {
             Ok(result) => Ok(result.to_string()),

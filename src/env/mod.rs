@@ -29,14 +29,17 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// A reference counted pointer to Env. Allows nested scoped environments.
+pub type EnvRef = Rc<RefCell<Env>>;
+
 #[derive(Debug, Clone)]
 pub struct Env {
     pub data: HashMap<String, Expr>,
-    pub outer: Option<Rc<RefCell<Env>>>,
+    pub outer: Option<EnvRef>,
 }
 
 impl Env {
-    pub fn standard_env() -> Rc<RefCell<Env>> {
+    pub fn standard_env() -> EnvRef {
         let mut data: HashMap<String, Expr> = HashMap::new();
         // Operators
         data.insert("+".to_string(), Expr::Procedure(add));
@@ -89,7 +92,7 @@ impl Env {
     }
 
     /// Initialize an empty environment.
-    pub fn local_env(outer: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
+    pub fn local_env(outer: EnvRef) -> EnvRef {
         Rc::new(RefCell::new(Env {
             data: HashMap::new(),
             outer: Some(outer),

@@ -4,23 +4,20 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use crate::env::Env;
+use crate::env::EnvRef;
 use crate::error::Error;
 use crate::macros::{apply_lambda, define, lambda, quote};
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
 
 /// Parse s-expression, evaluate it, and return result.
-pub fn parse_and_eval(expr: String, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
     let (parsed_exp, _) = parse(&tokenize(expr))?;
     let evaled_exp = eval(&parsed_exp, env)?;
     Ok(evaled_exp)
 }
 
 /// Evaluate an s-expression.
-pub fn eval(expr: &Expr, env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) => Ok(expr.clone()),
         Expr::Symbol(k) => env

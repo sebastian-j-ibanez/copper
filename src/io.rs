@@ -4,15 +4,13 @@
 
 //! Functions for REPL IO.
 
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::{self, BufRead, Write, stdout};
 use std::process;
-use std::rc::Rc;
 
 use colored::{self, Colorize};
 
-use crate::env::Env;
+use crate::env::EnvRef;
 use crate::error::Error;
 use crate::parser;
 use crate::types::Expr;
@@ -75,7 +73,7 @@ pub fn file_input(path: String) -> Vec<String> {
 }
 
 /// Process file input in an environment.
-pub fn process_file_input(expressions: Vec<String>, env: Rc<RefCell<Env>>) {
+pub fn process_file_input(expressions: Vec<String>, env: EnvRef) {
     for expr in expressions {
         match parser::parse_and_eval(expr, env.clone()) {
             Ok(Expr::Void()) => continue,

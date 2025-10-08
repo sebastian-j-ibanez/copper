@@ -6,18 +6,16 @@
 
 pub mod number;
 
-use crate::env::Env;
+use crate::env::EnvRef;
 use crate::error::Error;
 pub(crate) use number::Number;
 use std::fmt;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
-pub type Procedure = fn(&[Expr], Rc<RefCell<Env>>) -> Result<Expr, Error>;
+pub type Result = std::result::Result<Expr, Error>;
+pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -76,13 +74,13 @@ pub fn format_list(list: &Vec<Expr>, delim: &str, parenthesis: bool) -> String {
 
 #[derive(Debug, Clone)]
 pub struct Closure {
-    pub env: Rc<RefCell<Env>>,
+    pub env: EnvRef,
     pub parameters: Vec<String>,
     pub body: Expr,
 }
 
 impl Closure {
-    pub fn init(env: Rc<RefCell<Env>>, parameters: Vec<String>, body: Expr) -> Closure {
+    pub fn init(env: EnvRef, parameters: Vec<String>, body: Expr) -> Closure {
         Closure {
             env,
             parameters,

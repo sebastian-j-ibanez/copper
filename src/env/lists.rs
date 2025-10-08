@@ -2,16 +2,14 @@
 // Author: Sebastian Ibanez
 // Created: 2025-08-25
 
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
-    env::Env,
+    env::EnvRef,
     error::Error,
-    types::{Expr, Number},
+    types::{Expr, Number, Result},
 };
 
 /// Make a new list with an unbound number of expressions.
-pub fn new_list(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
     let mut list = Vec::new();
     for arg in args {
         list.push(arg.to_owned());
@@ -21,7 +19,7 @@ pub fn new_list(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Construct a new pair with a 'car' and a 'cdr'.
-pub fn cons(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn cons(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [a, Expr::List(b)] => {
             let mut new_pair: Vec<Expr> = b.clone();
@@ -33,7 +31,7 @@ pub fn cons(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Append 2 lists together.
-pub fn list_append(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn list_append(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::List(a), Expr::List(b)] => {
             Ok(Expr::List(a.iter().chain(b.iter()).cloned().collect()))
@@ -43,7 +41,7 @@ pub fn list_append(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Get length of list.
-pub fn list_length(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn list_length(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::List(l)] => Ok(Expr::Number(Number::from_usize(l.len()))),
         _ => Err(Error::Message("expected list".to_string())),
@@ -51,7 +49,7 @@ pub fn list_length(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Get first item from list.
-pub fn car(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn car(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::List(l)] => Ok(Expr::List(l.iter().cloned().take(1).collect::<Vec<Expr>>())),
         _ => Err(Error::Message("expected list".to_string())),
@@ -59,7 +57,7 @@ pub fn car(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Get list without first item.
-pub fn cdr(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn cdr(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::List(l)] => Ok(Expr::List(l.iter().cloned().skip(1).collect::<Vec<Expr>>())),
         _ => Err(Error::Message("expected list".to_string())),
@@ -67,7 +65,7 @@ pub fn cdr(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Get second item.
-pub fn cadr(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn cadr(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::List(l)] => {
             if l.len() < 2 {
@@ -83,7 +81,7 @@ pub fn cadr(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Reverse list.
-pub fn list_reverse(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::List(l)] => Ok(Expr::List(l.iter().cloned().rev().collect::<Vec<Expr>>())),
         _ => Err(Error::Message("expected list".to_string())),

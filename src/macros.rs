@@ -4,15 +4,12 @@
 
 //! Define functions and variables.
 
-use crate::env::Env;
+use crate::env::{Env, EnvRef};
 use crate::parser::eval;
 use crate::{error::Error, types::Closure, types::Expr};
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 /// Associate a symbol with a value in an environment.
-pub fn define(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match (args.get(0), args.get(1)) {
         (Some(Expr::Symbol(name)), Some(expr)) => {
             let value = eval(&expr, env.clone())?;
@@ -39,7 +36,7 @@ pub fn define(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Lambda macro returns a closure (local environment and a body).
-pub fn lambda(args: &[Expr], env: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     // Example:
     // (x y) (+ x y)
     // args  function
@@ -99,7 +96,7 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
 }
 
 /// Process literal into expression.
-pub fn quote(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {
         [expr] => Ok(expr.clone()),
         _ => Err(Error::Message("quote expects 1 argument".to_string())),

@@ -4,15 +4,12 @@
 
 //! Functions related to math operations.
 
-use crate::env::Env;
-use crate::types::Number;
-use crate::{error::Error, types::Expr};
-
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::env::EnvRef;
+use crate::error::Error;
+use crate::types::{Expr, Number, Result};
 
 /// Perform modulo to number.
-pub fn modulo(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn modulo(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(a), Expr::Number(b)] => {
             let a = a.clone();
@@ -24,7 +21,7 @@ pub fn modulo(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Apply exponent to number.
-pub fn exponent(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn exponent(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(a), Expr::Number(b)] => Ok(Expr::Number(a.pow(b)?)),
         _ => Err(Error::Message("expected 2 numbers".to_string())),
@@ -32,7 +29,7 @@ pub fn exponent(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Get absolute value of number.
-pub fn abs(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn abs(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(n)] => {
             let n = n.clone();
@@ -53,7 +50,7 @@ pub fn abs(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Round number up to the nearest integer.
-pub fn ceil(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn ceil(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(Number::Complex(_))] => {
             Err(Error::Message("unable to round complex number".to_string()))
@@ -71,7 +68,7 @@ pub fn ceil(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Round number down to the nearest integer.
-pub fn floor(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn floor(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(Number::Complex(_))] => {
             Err(Error::Message("unable to round complex number".to_string()))
@@ -89,7 +86,7 @@ pub fn floor(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Return smallest real number from arguments.
-pub fn min(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn min(args: &[Expr], _: EnvRef) -> Result {
     if args.is_empty() {
         return Err(Error::Message("expected real numbers".to_string()));
     }
@@ -121,7 +118,7 @@ pub fn min(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
 }
 
 /// Return largest real number from arguments.
-pub fn max(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn max(args: &[Expr], _: EnvRef) -> Result {
     if args.is_empty() {
         return Err(Error::Message("expected real numbers".to_string()));
     }

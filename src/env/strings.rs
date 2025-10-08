@@ -2,14 +2,11 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-29
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use crate::env::Env;
+use crate::env::EnvRef;
 use crate::error::Error;
-use crate::types::{Expr, Number};
+use crate::types::{Expr, Number, Result};
 
-pub fn str_append(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn str_append(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(a), Expr::String(b)] => {
             let c = a.clone() + b;
@@ -19,7 +16,7 @@ pub fn str_append(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
     }
 }
 
-pub fn str_length(args: &[Expr], _: Rc<RefCell<Env>>) -> Result<Expr, Error> {
+pub fn str_length(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::Number(Number::from_usize(s.len()))),
         _ => Err(Error::Message("expected string".to_string())),
