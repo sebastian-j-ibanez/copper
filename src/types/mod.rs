@@ -21,6 +21,7 @@ pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 pub enum Expr {
     Number(Number),
     String(String),
+    Char(char),
     Boolean(bool),
     Symbol(String),
     List(Vec<Expr>),
@@ -34,6 +35,7 @@ impl fmt::Display for Expr {
         let s: String = match self {
             Expr::Number(n) => n.to_string(),
             Expr::String(s) => format_string(s),
+            Expr::Char(c) => format_char(c),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::List(list) => format_list(list, " ", true),
@@ -45,16 +47,21 @@ impl fmt::Display for Expr {
     }
 }
 
-/// Format string in raw form.
+/// Format string into its literal representation.
 fn format_string(s: &String) -> String {
     format!("\"{}\"", s)
 }
 
-/// Format boolean in raw form.
+/// Format char into its literal representation.
+fn format_char(c: &char) -> String {
+    format!("{}{}", "#\\", c)
+}
+
+/// Format boolean into its literal representation.
 fn format_boolean(b: &bool) -> String {
     match *b {
-        true => BOOLEAN_TRUE_STR.to_string(),
-        false => BOOLEAN_FALSE_STR.to_string(),
+        true => format!("{}", BOOLEAN_TRUE_STR),
+        false => format!("{}", BOOLEAN_FALSE_STR),
     }
 }
 

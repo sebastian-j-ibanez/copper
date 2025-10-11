@@ -19,7 +19,7 @@ pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
 /// Evaluate an s-expression.
 pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     match expr {
-        Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) => Ok(expr.clone()),
+        Expr::Number(_) | Expr::String(_) | Expr::Char(_) | Expr::Boolean(_) => Ok(expr.clone()),
         Expr::Symbol(k) => env
             .borrow()
             .find_var(k)
@@ -109,6 +109,14 @@ pub fn eval_atom(token: &str) -> Expr {
     if token.starts_with('"') && token.ends_with('"') && token.len() >= 2 {
         let inner_string = &token[1..token.len() - 1]; // Remove quotes. 
         return Expr::String(inner_string.to_string());
+    }
+
+    // Char
+    let char_delim = "#\\";
+    if token.starts_with(char_delim) && token.len() > char_delim.len() {
+        if let Some(c) = token.chars().nth(token.len() - 1) {
+            return Expr::Char(c);
+        }
     }
 
     // Boolean
