@@ -17,7 +17,7 @@ use crate::env::lists::{cadr, car, cdr, cons, list_append, list_length, list_rev
 use crate::env::math::{abs, ceil, exponent, floor, max, min, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
-    is_boolean, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
+    is_boolean, is_char, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
     is_rational, is_real, is_string,
 };
 use crate::env::strings::{str_append, str_length};
@@ -61,6 +61,7 @@ impl Env {
         data.insert("complex?".to_string(), Expr::Procedure(is_complex));
         data.insert("integer?".to_string(), Expr::Procedure(is_integer));
         data.insert("string?".to_string(), Expr::Procedure(is_string));
+        data.insert("char?".to_string(), Expr::Procedure(is_char));
         data.insert("boolean?".to_string(), Expr::Procedure(is_boolean));
         data.insert("list?".to_string(), Expr::Procedure(is_list));
         data.insert("procedure?".to_string(), Expr::Procedure(is_procedure));

@@ -76,6 +76,17 @@ pub fn is_string(args: &[Expr], _: EnvRef) -> Result {
     Err(Error::Message(msg))
 }
 
+pub fn is_char(args: &[Expr], _: EnvRef) -> Result {
+    if let Some(arg) = args.first() {
+        return match arg {
+            Expr::Char(_) => Ok(Expr::Boolean(true)),
+            _ => Ok(Expr::Boolean(false)),
+        };
+    }
+    let msg = format!("expected 1 argument, got {}", args.len());
+    Err(Error::Message(msg))
+}
+
 pub fn is_boolean(args: &[Expr], _: EnvRef) -> Result {
     if let Some(arg) = args.first() {
         return match arg {
