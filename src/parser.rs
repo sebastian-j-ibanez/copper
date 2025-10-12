@@ -82,7 +82,10 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
                 rest,
             ))
         }
-        _ => Ok((eval_atom(token), right_expr)),
+        _ => match eval_atom(token) {
+            Ok(atom) => Ok((atom, right_expr)),
+            Err(e) => Err(e),
+        },
     }
 }
 
@@ -104,34 +107,59 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
 }
 
 /// Create an Expr from a &str.
-pub fn eval_atom(token: &str) -> Expr {
+pub fn eval_atom(token: &str) -> crate::types::Result {
     // String
     if token.starts_with('"') && token.ends_with('"') && token.len() >= 2 {
         let inner_string = &token[1..token.len() - 1]; // Remove quotes. 
-        return Expr::String(inner_string.to_string());
+        return Ok(Expr::String(inner_string.to_string()));
     }
 
     // Char
+    // 1. #\x[hex value] (example: '#\x123')
+    // 2. #\[character] (example: '#\a')
+    // 3. #\[character name] (example: '#\space')
     let char_delim = "#\\";
     if token.starts_with(char_delim) && token.len() > char_delim.len() {
-        if let Some(c) = token.chars().nth(token.len() - 1) {
-            return Expr::Char(c);
+        let literal = &token[char_delim.len()..];
+        if literal.starts_with("x") {
+            let hex_value: u32 = match literal[1..].parse() {
+                Ok(l) => l,
+                Err(e) => {
+                    return Err(Error::Message(format!("invalid hex value: {}", e)));
+                }
+            };
+            if let Some(c) = char::from_u32(hex_value) {
+                return Ok(Expr::Char(c));
+            }
+            return Err(Error::Message("unable to parse char hex value".to_string()));
         }
+
+        match literal.chars().collect::<Vec<char>>().as_slice() {
+            [c] => {
+                return Ok(Expr::Char(*c));
+            }
+            _ => {}
+        }
+
+        return Err(Error::Message(format!(
+            "haven't implemented this kind of char yet: {}",
+            token
+        )));
     }
 
     // Boolean
     if token == BOOLEAN_TRUE_STR {
-        return Expr::Boolean(true);
+        return Ok(Expr::Boolean(true));
     } else if token == BOOLEAN_FALSE_STR {
-        return Expr::Boolean(false);
+        return Ok(Expr::Boolean(false));
     }
 
     // Number
     if let Ok(num) = Number::from_token(token) {
-        return Expr::Number(num);
+        return Ok(Expr::Number(num));
     }
 
-    return Expr::Symbol(token.to_string());
+    return Ok(Expr::Symbol(token.to_string()));
 }
 
 /// Get vec of numbers from an s-expression.

@@ -31,6 +31,10 @@ pub fn print(args: &[Expr], _: EnvRef) -> Result {
     if let Some(arg) = args.first() {
         match arg {
             Expr::String(s) => print!("{}", s),
+            Expr::Char(c) => print!("{}", c),
+            Expr::List(l) => {
+                print!("{}", format_list(l, "", false));
+            }
             _ => print!("{}", arg),
         }
         return Ok(Expr::Void());
@@ -44,6 +48,7 @@ pub fn println(args: &[Expr], _: EnvRef) -> Result {
     if let Some(arg) = args.first() {
         match arg {
             Expr::String(s) => println!("{}", s),
+            Expr::Char(c) => println!("{}", c),
             Expr::List(l) => {
                 println!("{}", format_list(l, "", false));
             }
