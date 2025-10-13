@@ -106,45 +106,50 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     }
 }
 
+const CHARACTER_ALIASES: &[(&str, char)] = &[
+    ("alarm", '\u{0007}'),
+    ("backspace", '\u{0008}'),
+    ("delete", '\u{007F}'),
+    ("escape", '\u{001B}'),
+    ("newline", '\u{000A}'),
+    ("null", '\u{0000}'),
+    ("return", '\u{000D}'),
+    ("space", '\u{0020}'),
+    ("tab", '\u{0009}'),
+];
+
 /// Create an Expr from a &str.
 pub fn eval_atom(token: &str) -> crate::types::Result {
     // String
     if token.starts_with('"') && token.ends_with('"') && token.len() >= 2 {
-        let inner_string = &token[1..token.len() - 1]; // Remove quotes. 
+        let inner_string = &token[1..token.len() - 1];
         return Ok(Expr::String(inner_string.to_string()));
     }
 
     // Char
-    // 1. #\x[hex value] (example: '#\x123')
-    // 2. #\[character] (example: '#\a')
-    // 3. #\[character name] (example: '#\space')
     let char_delim = "#\\";
     if token.starts_with(char_delim) && token.len() > char_delim.len() {
         let literal = &token[char_delim.len()..];
-        if literal.starts_with("x") {
-            let hex_value: u32 = match literal[1..].parse() {
-                Ok(l) => l,
-                Err(e) => {
-                    return Err(Error::Message(format!("invalid hex value: {}", e)));
-                }
-            };
-            if let Some(c) = char::from_u32(hex_value) {
-                return Ok(Expr::Char(c));
-            }
-            return Err(Error::Message("unable to parse char hex value".to_string()));
+        // #\x[hex value] (example: '#\x123')
+        if let Some(hex_str) = literal.strip_prefix('x') {
+            let codepoint = u32::from_str_radix(hex_str, 16)
+                .map_err(|_| Error::Message(format!("invalid hex value: {hex_str}")))?;
+            return char::from_u32(codepoint)
+                .map(Expr::Char)
+                .ok_or_else(|| Error::Message(format!("character out of range: {hex_str}")));
         }
 
-        match literal.chars().collect::<Vec<char>>().as_slice() {
-            [c] => {
-                return Ok(Expr::Char(*c));
-            }
-            _ => {}
+        // #\[character name] (example: '#\space')
+        let mut chars = literal.chars();
+        if let (Some(c), None) = (chars.next(), chars.next()) {
+            return Ok(Expr::Char(c));
         }
 
-        return Err(Error::Message(format!(
-            "haven't implemented this kind of char yet: {}",
-            token
-        )));
+        // #\[character] (example: '#\a')
+        return CHARACTER_ALIASES
+            .iter()
+            .find_map(|(name, ch)| literal.starts_with(name).then_some(Expr::Char(*ch)))
+            .ok_or_else(|| Error::Message(format!("invalid '#\\': {}", literal)));
     }
 
     // Boolean
