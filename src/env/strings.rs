@@ -22,3 +22,11 @@ pub fn str_length(args: &[Expr], _: EnvRef) -> Result {
         _ => Err(Error::Message("expected string".to_string())),
     }
 }
+
+pub fn new_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [] => Ok(Expr::String(String::new())),
+        [Expr::Char(c)] => Ok(Expr::String(String::from(*c))),
+        _ => Err(Error::Message("expected character".to_string())),
+    }
+}

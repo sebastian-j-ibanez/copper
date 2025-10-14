@@ -20,7 +20,7 @@ use crate::env::predicates::{
     is_boolean, is_char, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
     is_rational, is_real, is_string,
 };
-use crate::env::strings::{str_append, str_length};
+use crate::env::strings::{new_string, str_append, str_length};
 use crate::macros::quote;
 use crate::types::Expr;
 
@@ -77,6 +77,7 @@ impl Env {
         // Strings
         data.insert("string-append".to_string(), Expr::Procedure(str_append));
         data.insert("string-length".to_string(), Expr::Procedure(str_length));
+        data.insert("string".to_string(), Expr::Procedure(new_string));
         // Lists
         data.insert("list".to_string(), Expr::Procedure(new_list));
         data.insert("cons".to_string(), Expr::Procedure(cons));
