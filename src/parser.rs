@@ -74,14 +74,7 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
 
     match &token[..] {
         "(" => parse_right_expr(right_expr),
-        ")" => Err(Error::Message("error: invalid ')'".to_string())),
-        "'" => {
-            let (quoted_expr, rest) = parse(right_expr)?;
-            Ok((
-                Expr::List(vec![Expr::Symbol("quote".to_string()), quoted_expr]),
-                rest,
-            ))
-        }
+        ")" => Err(Error::Message("invalid ')'".to_string())),
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
             Err(e) => Err(e),
@@ -185,6 +178,7 @@ pub fn tokenize(expression: String) -> Vec<String> {
     let mut tokens: Vec<String> = Vec::new();
     let chars: Vec<char> = expression.chars().collect();
     let mut i = 0;
+    let is_delimiter = |c: char| c.is_whitespace() || c == '(' || c == ')' || c == '\'';
     while i < chars.len() {
         match chars[i] {
             // Skip whitespace.
@@ -207,13 +201,24 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 let string: String = chars[start..i].iter().collect();
                 tokens.push(string);
             }
+            '\'' => {
+                i += 1;
+                let start = i;
+
+                // Expand 'TOKEN to (quote TOKEN)
+                tokens.push("(".to_string());
+                tokens.push("quote".to_string());
+
+                while i < chars.len() && is_delimiter(chars[i]) {
+                    i += 1;
+                }
+                let quoted_string: String = chars[start..i].iter().collect();
+                tokens.push(quoted_string);
+                tokens.push(")".to_string());
+            }
             _ => {
                 let start = i;
-                while i < chars.len()
-                    && !chars[i].is_whitespace()
-                    && chars[i] != '('
-                    && chars[i] != ')'
-                {
+                while i < chars.len() && is_delimiter(chars[i]) {
                     i += 1;
                 }
                 let atom: String = chars[start..i].iter().collect();
