@@ -209,7 +209,7 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 tokens.push("(".to_string());
                 tokens.push("quote".to_string());
 
-                while i < chars.len() && is_delimiter(chars[i]) {
+                while i < chars.len() && !is_delimiter(chars[i]) {
                     i += 1;
                 }
                 let quoted_string: String = chars[start..i].iter().collect();
@@ -218,7 +218,7 @@ pub fn tokenize(expression: String) -> Vec<String> {
             }
             _ => {
                 let start = i;
-                while i < chars.len() && is_delimiter(chars[i]) {
+                while i < chars.len() && !is_delimiter(chars[i]) {
                     i += 1;
                 }
                 let atom: String = chars[start..i].iter().collect();
