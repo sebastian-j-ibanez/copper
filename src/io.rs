@@ -15,7 +15,7 @@ use crate::error::Error;
 use crate::parser;
 use crate::types::Expr;
 
-pub const COPPER_VERSION: &str = "0.2.2";
+pub const COPPER_VERSION: &str = "0.2.3";
 
 /// Get expression from stdin.
 pub fn stdin_input() -> String {
