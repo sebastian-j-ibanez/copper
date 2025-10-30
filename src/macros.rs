@@ -104,14 +104,15 @@ pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
 }
 
 /// If predicate is true evaluate first expression, otherwise evaluate second expression.
-pub fn if_statement(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
+pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
-        [conditional, first_branch, second_branch] => match conditional {
-            Expr::Boolean(b) if !b => {
-                return Ok(Expr::from(second_branch.clone()));
+        [conditional, first_branch, second_branch] => {
+            let cond_result = eval(conditional, env.to_owned())?;
+            match cond_result {
+                Expr::Boolean(false) => eval(second_branch, env),
+                _ => eval(first_branch, env),
             }
-            _ => return Ok(Expr::from(first_branch.clone())),
-        },
+        }
         _ => Err(Error::Message("ill-formed special form".to_string())),
     }
 }

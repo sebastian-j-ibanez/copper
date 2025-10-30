@@ -90,7 +90,6 @@ impl Env {
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));
-        data.insert("if".to_string(), Expr::Procedure(if_statement));
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 
