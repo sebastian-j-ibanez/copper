@@ -76,6 +76,13 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     match &token[..] {
         "(" => parse_right_expr(right_expr),
         ")" => Err(Error::Message("invalid ')'".to_string())),
+        "'" => {
+            let (quoted_expr, remaining) = parse(right_expr)?;
+            Ok((
+                Expr::List(vec![Expr::Symbol("quote".to_string()), quoted_expr]),
+                remaining,
+            ))
+        }
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
             Err(e) => Err(e),
@@ -203,19 +210,8 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 tokens.push(string);
             }
             '\'' => {
+                tokens.push("'".to_string());
                 i += 1;
-                let start = i;
-
-                // Expand 'TOKEN to (quote TOKEN)
-                tokens.push("(".to_string());
-                tokens.push("quote".to_string());
-
-                while i < chars.len() && !is_delimiter(chars[i]) {
-                    i += 1;
-                }
-                let quoted_string: String = chars[start..i].iter().collect();
-                tokens.push(quoted_string);
-                tokens.push(")".to_string());
             }
             _ => {
                 let start = i;
@@ -245,5 +241,9 @@ pub fn expression_closed(buf: &str) -> bool {
         }
     }
 
-    (open_paren == close_paren) || (!expression.starts_with('(') && !expression.ends_with(')'))
+    // Not a symbolic expression. Covers edge case when an atom contains parentheses.
+    // For example, "example string (with parentheses)".
+    let not_an_expression = !expression.starts_with('(') && !expression.ends_with(')');
+    let paren_are_equal = open_paren == close_paren;
+    not_an_expression || paren_are_equal
 }
