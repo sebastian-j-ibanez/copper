@@ -102,3 +102,16 @@ pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
         _ => Err(Error::Message("quote expects 1 argument".to_string())),
     }
 }
+
+/// If predicate is true evaluate first expression, otherwise evaluate second expression.
+pub fn if_statement(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [conditional, first_branch, second_branch] => match conditional {
+            Expr::Boolean(b) if !b => {
+                return Ok(Expr::from(second_branch.clone()));
+            }
+            _ => return Ok(Expr::from(first_branch.clone())),
+        },
+        _ => Err(Error::Message("ill-formed special form".to_string())),
+    }
+}

@@ -21,7 +21,7 @@ use crate::env::predicates::{
     is_rational, is_real, is_string,
 };
 use crate::env::strings::{new_string, str_append, str_length};
-use crate::macros::quote;
+use crate::macros::{if_statement, quote};
 use crate::types::Expr;
 
 // Std imports.
@@ -90,6 +90,7 @@ impl Env {
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));
+        data.insert("if".to_string(), Expr::Procedure(if_statement));
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 
