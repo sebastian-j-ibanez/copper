@@ -4,6 +4,7 @@
 
 //! Types and functions for the Copper runtime environment.
 
+mod convert;
 mod io;
 mod lists;
 mod math;
@@ -12,16 +13,18 @@ mod predicates;
 mod strings;
 
 // Internal crate imports.
+use crate::env::convert::{num_to_string, string_to_num, string_to_symbol, symbol_to_string};
 use crate::env::io::{display, exit, load_file, newline, pretty_print, print, println};
 use crate::env::lists::{cadr, car, cdr, cons, list_append, list_length, list_reverse, new_list};
 use crate::env::math::{abs, ceil, exponent, floor, max, min, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::predicates::{
-    is_boolean, is_char, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
-    is_rational, is_real, is_string,
+    is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
+    is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
+    is_rational, is_real, is_string, is_symbol,
 };
 use crate::env::strings::{new_string, str_append, str_length};
-use crate::macros::{if_statement, quote};
+use crate::macros::quote;
 use crate::types::Expr;
 
 // Std imports.
@@ -41,6 +44,17 @@ pub struct Env {
 impl Env {
     pub fn standard_env() -> EnvRef {
         let mut data: HashMap<String, Expr> = HashMap::new();
+        // Conversions
+        data.insert(
+            "symbol->string".to_string(),
+            Expr::Procedure(symbol_to_string),
+        );
+        data.insert(
+            "string->symbol".to_string(),
+            Expr::Procedure(string_to_symbol),
+        );
+        data.insert("string->number".to_string(), Expr::Procedure(string_to_num));
+        data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
         // Operators
         data.insert("+".to_string(), Expr::Procedure(add));
         data.insert("-".to_string(), Expr::Procedure(sub));
@@ -55,16 +69,37 @@ impl Env {
         data.insert("min".to_string(), Expr::Procedure(min));
         data.insert("max".to_string(), Expr::Procedure(max));
         // Predicates
+        data.insert("symbol?".to_string(), Expr::Procedure(is_symbol));
+        data.insert("string?".to_string(), Expr::Procedure(is_string));
+        data.insert("char?".to_string(), Expr::Procedure(is_char));
+        data.insert(
+            "char-alphabetic?".to_string(),
+            Expr::Procedure(is_char_alphabetic),
+        );
+        data.insert(
+            "char-numeric?".to_string(),
+            Expr::Procedure(is_char_numeric),
+        );
+        data.insert(
+            "char-whitespace?".to_string(),
+            Expr::Procedure(is_char_whitespace),
+        );
+        data.insert(
+            "char-upper-case?".to_string(),
+            Expr::Procedure(is_char_uppercase),
+        );
+        data.insert(
+            "char-lower-case?".to_string(),
+            Expr::Procedure(is_char_lowercase),
+        );
+        data.insert("boolean?".to_string(), Expr::Procedure(is_boolean));
+        data.insert("list?".to_string(), Expr::Procedure(is_list));
+        data.insert("procedure?".to_string(), Expr::Procedure(is_procedure));
         data.insert("number?".to_string(), Expr::Procedure(is_number));
         data.insert("real?".to_string(), Expr::Procedure(is_real));
         data.insert("rational?".to_string(), Expr::Procedure(is_rational));
         data.insert("complex?".to_string(), Expr::Procedure(is_complex));
         data.insert("integer?".to_string(), Expr::Procedure(is_integer));
-        data.insert("string?".to_string(), Expr::Procedure(is_string));
-        data.insert("char?".to_string(), Expr::Procedure(is_char));
-        data.insert("boolean?".to_string(), Expr::Procedure(is_boolean));
-        data.insert("list?".to_string(), Expr::Procedure(is_list));
-        data.insert("procedure?".to_string(), Expr::Procedure(is_procedure));
         data.insert("even?".to_string(), Expr::Procedure(is_even));
         data.insert("odd?".to_string(), Expr::Procedure(is_odd));
         // IO

@@ -7,7 +7,7 @@
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::io;
-use crate::types::{Expr, Result, format_list};
+use crate::types::{format_list, Expr, Result};
 
 /// Display raw expression in stdout.
 pub fn display(args: &[Expr], _: EnvRef) -> Result {

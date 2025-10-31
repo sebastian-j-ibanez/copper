@@ -7,7 +7,7 @@
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::macros::{apply_lambda, define, if_statement, lambda, quote};
-use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
+use crate::types::{Expr, Number, BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR};
 
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {

@@ -13,7 +13,7 @@ pub mod types;
 
 use repl_lib::{LineCompletionFunc, ProcessLineFunc};
 
-use crate::cli::{Flag, parse_args};
+use crate::cli::{parse_args, Flag};
 use crate::env::{Env, EnvRef};
 use crate::error::Error;
 use crate::parser::parse_and_eval;
