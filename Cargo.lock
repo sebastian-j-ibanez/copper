@@ -116,9 +116,9 @@ dependencies = [
 
 [[package]]
 name = "repl_lib"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9464f5b846e7877ec7e476d6335aaf720d7bcf3a40ec8caa6526b66b0aca8f7f"
+checksum = "6cd2e628e76bcc61418642672e5258d2022304c1c1173c59da0d63b06bbe5f53"
 dependencies = [
  "term_manager",
 ]
