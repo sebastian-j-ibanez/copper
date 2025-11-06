@@ -4,6 +4,7 @@
 
 //! Types and functions for the Copper runtime environment.
 
+mod bool;
 mod convert;
 mod io;
 mod lists;
@@ -12,6 +13,7 @@ mod operators;
 mod predicates;
 mod strings;
 
+use crate::env::bool::{and, not, or};
 // Internal crate imports.
 use crate::env::convert::{num_to_string, string_to_num, string_to_symbol, symbol_to_string};
 use crate::env::io::{display, exit, load_file, newline, pretty_print, print, println};
@@ -44,6 +46,10 @@ pub struct Env {
 impl Env {
     pub fn standard_env() -> EnvRef {
         let mut data: HashMap<String, Expr> = HashMap::new();
+        // Booleans
+        data.insert("not".to_string(), Expr::Procedure(not));
+        data.insert("and".to_string(), Expr::Procedure(and));
+        data.insert("or".to_string(), Expr::Procedure(or));
         // Conversions
         data.insert(
             "symbol->string".to_string(),

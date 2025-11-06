@@ -2,10 +2,13 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-29
 
+//! Standard library functions relating to strings.
+
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::{Expr, Number, Result};
 
+/// Appends two strings together.
 pub fn str_append(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(a), Expr::String(b)] => {
@@ -16,6 +19,7 @@ pub fn str_append(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Returns the size of a string as an `Expr::Number` (more specifically an `IntVariant::Small`).
 pub fn str_length(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::Number(Number::from_usize(s.len()))),
@@ -23,6 +27,7 @@ pub fn str_length(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Create either a new empty string or a string from a char.
 pub fn new_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [] => Ok(Expr::String(String::new())),
