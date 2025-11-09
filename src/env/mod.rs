@@ -10,16 +10,17 @@ mod io;
 mod lists;
 mod math;
 mod operators;
+mod pairs;
 mod predicates;
 mod strings;
 
 use crate::env::bool::{and, not, or};
-// Internal crate imports.
 use crate::env::convert::{num_to_string, string_to_num, string_to_symbol, symbol_to_string};
 use crate::env::io::{display, exit, load_file, newline, pretty_print, print, println};
-use crate::env::lists::{cadr, car, cdr, cons, list_append, list_length, list_reverse, new_list};
+use crate::env::lists::{cadr, car, cdr, list_append, list_length, list_reverse, new_list};
 use crate::env::math::{abs, ceil, exponent, floor, max, min, modulo};
 pub use crate::env::operators::{add, div, mult, sub};
+use crate::env::pairs::cons;
 use crate::env::predicates::{
     is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
     is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
@@ -29,7 +30,6 @@ use crate::env::strings::{new_string, str_append, str_length};
 use crate::macros::quote;
 use crate::types::Expr;
 
-// Std imports.
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -121,13 +121,14 @@ impl Env {
         data.insert("string".to_string(), Expr::Procedure(new_string));
         // Lists
         data.insert("list".to_string(), Expr::Procedure(new_list));
-        data.insert("cons".to_string(), Expr::Procedure(cons));
         data.insert("append".to_string(), Expr::Procedure(list_append));
         data.insert("length".to_string(), Expr::Procedure(list_length));
         data.insert("car".to_string(), Expr::Procedure(car));
         data.insert("cdr".to_string(), Expr::Procedure(cdr));
         data.insert("cadr".to_string(), Expr::Procedure(cadr));
         data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
+        // Pairs
+        data.insert("cons".to_string(), Expr::Procedure(cons));
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));

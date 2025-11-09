@@ -18,18 +18,6 @@ pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::List(list))
 }
 
-/// Construct a new pair with a 'car' and a 'cdr'.
-pub fn cons(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [a, Expr::List(b)] => {
-            let mut new_pair: Vec<Expr> = b.clone();
-            new_pair.insert(0, a.clone());
-            Ok(Expr::List(new_pair))
-        }
-        _ => Err(Error::Message("expected 2 lists".to_string())),
-    }
-}
-
 /// Append 2 lists together.
 pub fn list_append(args: &[Expr], _: EnvRef) -> Result {
     match args {

@@ -116,3 +116,21 @@ pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         _ => Err(Error::Message("ill-formed special form".to_string())),
     }
 }
+
+pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    for arg in args {
+        match arg {
+            Expr::List(v) => match v.as_slice() {
+                [conditional, result] => {
+                    let cond_result = eval(conditional, env.to_owned())?;
+                    if let Expr::Boolean(true) = cond_result {
+                        return eval(result, env);
+                    }
+                }
+                _ => continue,
+            },
+            _ => continue,
+        }
+    }
+    Ok(Expr::Void())
+}
