@@ -36,17 +36,19 @@ pub fn list_length(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Get first item from list.
+/// Get first element from list or pair.
 pub fn car(args: &[Expr], _: EnvRef) -> Result {
     match args {
+        [Expr::Pair(pair)] => Ok(pair.as_ref().0.clone()),
         [Expr::List(l)] => Ok(Expr::List(l.iter().cloned().take(1).collect::<Vec<Expr>>())),
         _ => Err(Error::Message("expected list".to_string())),
     }
 }
 
-/// Get list without first item.
+/// Return list without first element or return second element from pair.
 pub fn cdr(args: &[Expr], _: EnvRef) -> Result {
     match args {
+        [Expr::Pair(pair)] => Ok(pair.as_ref().1.clone()),
         [Expr::List(l)] => Ok(Expr::List(l.iter().cloned().skip(1).collect::<Vec<Expr>>())),
         _ => Err(Error::Message("expected list".to_string())),
     }

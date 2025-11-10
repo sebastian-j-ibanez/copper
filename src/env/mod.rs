@@ -23,8 +23,8 @@ pub use crate::env::operators::{add, div, mult, sub};
 use crate::env::pairs::cons;
 use crate::env::predicates::{
     is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
-    is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_procedure,
-    is_rational, is_real, is_string, is_symbol,
+    is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_pair,
+    is_procedure, is_rational, is_real, is_string, is_symbol,
 };
 use crate::env::strings::{new_string, str_append, str_length};
 use crate::macros::quote;
@@ -100,6 +100,7 @@ impl Env {
         );
         data.insert("boolean?".to_string(), Expr::Procedure(is_boolean));
         data.insert("list?".to_string(), Expr::Procedure(is_list));
+        data.insert("pair?".to_string(), Expr::Procedure(is_pair));
         data.insert("procedure?".to_string(), Expr::Procedure(is_procedure));
         data.insert("number?".to_string(), Expr::Procedure(is_number));
         data.insert("real?".to_string(), Expr::Procedure(is_real));
@@ -119,7 +120,8 @@ impl Env {
         data.insert("string-append".to_string(), Expr::Procedure(str_append));
         data.insert("string-length".to_string(), Expr::Procedure(str_length));
         data.insert("string".to_string(), Expr::Procedure(new_string));
-        // Lists
+        // Lists & Pairs
+        data.insert("cons".to_string(), Expr::Procedure(cons));
         data.insert("list".to_string(), Expr::Procedure(new_list));
         data.insert("append".to_string(), Expr::Procedure(list_append));
         data.insert("length".to_string(), Expr::Procedure(list_length));
@@ -127,8 +129,6 @@ impl Env {
         data.insert("cdr".to_string(), Expr::Procedure(cdr));
         data.insert("cadr".to_string(), Expr::Procedure(cadr));
         data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
-        // Pairs
-        data.insert("cons".to_string(), Expr::Procedure(cons));
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));

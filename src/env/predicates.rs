@@ -130,6 +130,18 @@ pub fn is_list(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return true is arg is pair.
+pub fn is_pair(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
 /// Returns true if arg is a procedure.
 pub fn is_procedure(args: &[Expr], _: EnvRef) -> Result {
     match args {
