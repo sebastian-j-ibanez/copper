@@ -15,7 +15,9 @@ mod predicates;
 mod strings;
 
 use crate::env::bool::{and, not, or};
-use crate::env::convert::{num_to_string, string_to_num, string_to_symbol, symbol_to_string};
+use crate::env::convert::{
+    num_to_string, string_to_list, string_to_num, string_to_symbol, symbol_to_string,
+};
 use crate::env::io::{display, exit, load_file, newline, pretty_print, print, println};
 use crate::env::lists::{cadr, car, cdr, list_append, list_length, list_reverse, new_list};
 use crate::env::math::{abs, ceil, exponent, floor, max, min, modulo};
@@ -51,16 +53,17 @@ impl Env {
         data.insert("and".to_string(), Expr::Procedure(and));
         data.insert("or".to_string(), Expr::Procedure(or));
         // Conversions
+        data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
         data.insert(
             "symbol->string".to_string(),
             Expr::Procedure(symbol_to_string),
         );
+        data.insert("string->number".to_string(), Expr::Procedure(string_to_num));
         data.insert(
             "string->symbol".to_string(),
             Expr::Procedure(string_to_symbol),
         );
-        data.insert("string->number".to_string(), Expr::Procedure(string_to_num));
-        data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
+        data.insert("string->list".to_string(), Expr::Procedure(string_to_list));
         // Operators
         data.insert("+".to_string(), Expr::Procedure(add));
         data.insert("-".to_string(), Expr::Procedure(sub));
@@ -132,6 +135,7 @@ impl Env {
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));
+
         Rc::new(RefCell::new(Env { data, outer: None }))
     }
 

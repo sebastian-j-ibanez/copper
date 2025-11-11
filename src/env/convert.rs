@@ -8,23 +8,15 @@ use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::{Expr, Number, Result};
 
-// Convert a string into a symbol.
-pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
+/// Convert a number into a string.
+pub fn num_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Symbol(s)] => Ok(Expr::String(s.to_owned())),
+        [Expr::Number(num)] => Ok(Expr::String(String::from(num.to_string()))),
         _ => Err(Error::Message("expected string".to_string())),
     }
 }
 
-// Convert a string into a symbol.
-pub fn string_to_symbol(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::String(s)] => Ok(Expr::Symbol(s.to_owned())),
-        _ => Err(Error::Message("expected string".to_string())),
-    }
-}
-
-// Convert a string into a number.
+/// Convert a string into a number.
 pub fn string_to_num(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(num_str)] => match Number::from_token(&num_str) {
@@ -35,10 +27,30 @@ pub fn string_to_num(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Convert a number into a string.
-pub fn num_to_string(args: &[Expr], _: EnvRef) -> Result {
+/// Convert a string into a symbol.
+pub fn string_to_symbol(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Number(num)] => Ok(Expr::String(String::from(num.to_string()))),
+        [Expr::String(s)] => Ok(Expr::Symbol(s.to_owned())),
+        _ => Err(Error::Message("expected string".to_string())),
+    }
+}
+
+/// Convert a string into a list of `Expr::Char`
+pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            return Ok(Expr::List(
+                s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>(),
+            ));
+        }
+        _ => Err(Error::Message("expected string".to_string())),
+    }
+}
+
+/// Convert a string into a symbol.
+pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Symbol(s)] => Ok(Expr::String(s.to_owned())),
         _ => Err(Error::Message("expected string".to_string())),
     }
 }
