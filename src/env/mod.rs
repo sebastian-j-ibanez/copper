@@ -28,7 +28,9 @@ use crate::env::predicates::{
     is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_pair,
     is_procedure, is_rational, is_real, is_string, is_symbol,
 };
-use crate::env::strings::{new_string, str_append, str_length};
+use crate::env::strings::{
+    new_string, str_append, str_length, string_to_downcase, string_to_upcase,
+};
 use crate::macros::quote;
 use crate::types::Expr;
 
@@ -120,9 +122,17 @@ impl Env {
         data.insert("println".to_string(), Expr::Procedure(println));
         data.insert("pp".to_string(), Expr::Procedure(pretty_print));
         // Strings
+        data.insert("string".to_string(), Expr::Procedure(new_string));
         data.insert("string-append".to_string(), Expr::Procedure(str_append));
         data.insert("string-length".to_string(), Expr::Procedure(str_length));
-        data.insert("string".to_string(), Expr::Procedure(new_string));
+        data.insert(
+            "string-upcase".to_string(),
+            Expr::Procedure(string_to_upcase),
+        );
+        data.insert(
+            "string-downcase".to_string(),
+            Expr::Procedure(string_to_downcase),
+        );
         // Lists & Pairs
         data.insert("cons".to_string(), Expr::Procedure(cons));
         data.insert("list".to_string(), Expr::Procedure(new_list));

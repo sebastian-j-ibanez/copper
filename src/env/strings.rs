@@ -35,3 +35,31 @@ pub fn new_string(args: &[Expr], _: EnvRef) -> Result {
         _ => Err(Error::Message("expected character".to_string())),
     }
 }
+
+/// Convert string to upper case.
+pub fn string_to_upcase(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let upcase = s
+                .chars()
+                .map(|c| c.to_ascii_uppercase())
+                .collect::<String>();
+            return Ok(Expr::String(upcase));
+        }
+        _ => Err(Error::Message("expected string".to_string())),
+    }
+}
+
+/// Convert string to lowercase.
+pub fn string_to_downcase(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let upcase = s
+                .chars()
+                .map(|c| c.to_ascii_lowercase())
+                .collect::<String>();
+            return Ok(Expr::String(upcase));
+        }
+        _ => Err(Error::Message("expected string".to_string())),
+    }
+}
