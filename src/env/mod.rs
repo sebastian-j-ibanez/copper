@@ -4,32 +4,23 @@
 
 //! Types and functions for the Copper runtime environment.
 
-mod bool;
 mod convert;
-mod io;
-mod lists;
-mod math;
-mod operators;
-mod pairs;
 mod predicates;
-mod strings;
+mod procedures;
 
-use crate::env::bool::{and, not, or};
 use crate::env::convert::{
     num_to_string, string_to_list, string_to_num, string_to_symbol, symbol_to_string,
 };
-use crate::env::io::{display, exit, load_file, newline, pretty_print, print, println};
-use crate::env::lists::{cadr, car, cdr, list_append, list_length, list_reverse, new_list};
-use crate::env::math::{abs, ceil, exponent, floor, max, min, modulo};
-pub use crate::env::operators::{add, div, mult, sub};
-use crate::env::pairs::cons;
 use crate::env::predicates::{
     is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
     is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_pair,
     is_procedure, is_rational, is_real, is_string, is_symbol,
 };
-use crate::env::strings::{
-    new_string, str_append, str_length, string_to_downcase, string_to_upcase,
+use crate::env::procedures::{
+    abs, add, and, cadr, car, cdr, ceil, cons, display, div, exit, exponent, floor, list_append,
+    list_length, list_reverse, load_file, max, min, modulo, mult, new_list, new_string, newline,
+    not, or, pretty_print, print, println, str_append, str_length, string_to_downcase,
+    string_to_upcase, sub,
 };
 use crate::macros::quote;
 use crate::types::Expr;
