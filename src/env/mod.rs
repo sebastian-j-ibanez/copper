@@ -4,23 +4,16 @@
 
 //! Types and functions for the Copper runtime environment.
 
-mod convert;
-mod predicates;
 mod procedures;
 
-use crate::env::convert::{
-    num_to_string, string_to_list, string_to_num, string_to_symbol, symbol_to_string,
-};
-use crate::env::predicates::{
-    is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
-    is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_pair,
-    is_procedure, is_rational, is_real, is_string, is_symbol,
-};
 use crate::env::procedures::{
-    abs, add, and, cadr, car, cdr, ceil, cons, display, div, exit, exponent, floor, list_append,
-    list_length, list_reverse, load_file, max, min, modulo, mult, new_list, new_string, newline,
-    not, or, pretty_print, print, println, str_append, str_length, string_to_downcase,
-    string_to_upcase, sub,
+    abs, add, and, cadr, car, cdr, ceil, cons, display, div, exit, exponent, floor, is_boolean,
+    is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
+    is_char_whitespace, is_complex, is_even, is_integer, is_list, is_number, is_odd, is_pair,
+    is_procedure, is_rational, is_real, is_string, is_symbol, list_append, list_length,
+    list_reverse, load_file, max, min, modulo, mult, new_list, new_string, newline, not,
+    num_to_string, or, pretty_print, print, println, str_append, str_length, string_to_downcase,
+    string_to_list, string_to_num, string_to_symbol, string_to_upcase, sub, symbol_to_string,
 };
 use crate::macros::quote;
 use crate::types::Expr;
@@ -41,10 +34,50 @@ pub struct Env {
 impl Env {
     pub fn standard_env() -> EnvRef {
         let mut data: HashMap<String, Expr> = HashMap::new();
+        // IO
+        data.insert("load".to_string(), Expr::Procedure(load_file));
+        data.insert("display".to_string(), Expr::Procedure(display));
+        data.insert("newline".to_string(), Expr::Procedure(newline));
+        data.insert("print".to_string(), Expr::Procedure(print));
+        data.insert("println".to_string(), Expr::Procedure(println));
+        data.insert("pp".to_string(), Expr::Procedure(pretty_print));
+        // Math
+        data.insert("+".to_string(), Expr::Procedure(add));
+        data.insert("-".to_string(), Expr::Procedure(sub));
+        data.insert("*".to_string(), Expr::Procedure(mult));
+        data.insert("/".to_string(), Expr::Procedure(div));
+        data.insert("modulo".to_string(), Expr::Procedure(modulo));
+        data.insert("expt".to_string(), Expr::Procedure(exponent));
+        data.insert("abs".to_string(), Expr::Procedure(abs));
+        data.insert("ceiling".to_string(), Expr::Procedure(ceil));
+        data.insert("floor".to_string(), Expr::Procedure(floor));
+        data.insert("min".to_string(), Expr::Procedure(min));
+        data.insert("max".to_string(), Expr::Procedure(max));
+        // Strings
+        data.insert("string".to_string(), Expr::Procedure(new_string));
+        data.insert("string-append".to_string(), Expr::Procedure(str_append));
+        data.insert("string-length".to_string(), Expr::Procedure(str_length));
+        data.insert(
+            "string-upcase".to_string(),
+            Expr::Procedure(string_to_upcase),
+        );
+        data.insert(
+            "string-downcase".to_string(),
+            Expr::Procedure(string_to_downcase),
+        );
         // Booleans
         data.insert("not".to_string(), Expr::Procedure(not));
         data.insert("and".to_string(), Expr::Procedure(and));
         data.insert("or".to_string(), Expr::Procedure(or));
+        // Lists & Pairs
+        data.insert("cons".to_string(), Expr::Procedure(cons));
+        data.insert("list".to_string(), Expr::Procedure(new_list));
+        data.insert("append".to_string(), Expr::Procedure(list_append));
+        data.insert("length".to_string(), Expr::Procedure(list_length));
+        data.insert("car".to_string(), Expr::Procedure(car));
+        data.insert("cdr".to_string(), Expr::Procedure(cdr));
+        data.insert("cadr".to_string(), Expr::Procedure(cadr));
+        data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
         // Conversions
         data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
         data.insert(
@@ -57,19 +90,6 @@ impl Env {
             Expr::Procedure(string_to_symbol),
         );
         data.insert("string->list".to_string(), Expr::Procedure(string_to_list));
-        // Operators
-        data.insert("+".to_string(), Expr::Procedure(add));
-        data.insert("-".to_string(), Expr::Procedure(sub));
-        data.insert("*".to_string(), Expr::Procedure(mult));
-        data.insert("/".to_string(), Expr::Procedure(div));
-        // Math
-        data.insert("modulo".to_string(), Expr::Procedure(modulo));
-        data.insert("expt".to_string(), Expr::Procedure(exponent));
-        data.insert("abs".to_string(), Expr::Procedure(abs));
-        data.insert("ceiling".to_string(), Expr::Procedure(ceil));
-        data.insert("floor".to_string(), Expr::Procedure(floor));
-        data.insert("min".to_string(), Expr::Procedure(min));
-        data.insert("max".to_string(), Expr::Procedure(max));
         // Predicates
         data.insert("symbol?".to_string(), Expr::Procedure(is_symbol));
         data.insert("string?".to_string(), Expr::Procedure(is_string));
@@ -105,34 +125,6 @@ impl Env {
         data.insert("integer?".to_string(), Expr::Procedure(is_integer));
         data.insert("even?".to_string(), Expr::Procedure(is_even));
         data.insert("odd?".to_string(), Expr::Procedure(is_odd));
-        // IO
-        data.insert("load".to_string(), Expr::Procedure(load_file));
-        data.insert("display".to_string(), Expr::Procedure(display));
-        data.insert("newline".to_string(), Expr::Procedure(newline));
-        data.insert("print".to_string(), Expr::Procedure(print));
-        data.insert("println".to_string(), Expr::Procedure(println));
-        data.insert("pp".to_string(), Expr::Procedure(pretty_print));
-        // Strings
-        data.insert("string".to_string(), Expr::Procedure(new_string));
-        data.insert("string-append".to_string(), Expr::Procedure(str_append));
-        data.insert("string-length".to_string(), Expr::Procedure(str_length));
-        data.insert(
-            "string-upcase".to_string(),
-            Expr::Procedure(string_to_upcase),
-        );
-        data.insert(
-            "string-downcase".to_string(),
-            Expr::Procedure(string_to_downcase),
-        );
-        // Lists & Pairs
-        data.insert("cons".to_string(), Expr::Procedure(cons));
-        data.insert("list".to_string(), Expr::Procedure(new_list));
-        data.insert("append".to_string(), Expr::Procedure(list_append));
-        data.insert("length".to_string(), Expr::Procedure(list_length));
-        data.insert("car".to_string(), Expr::Procedure(car));
-        data.insert("cdr".to_string(), Expr::Procedure(cdr));
-        data.insert("cadr".to_string(), Expr::Procedure(cadr));
-        data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));
