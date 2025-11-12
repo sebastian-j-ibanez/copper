@@ -4,7 +4,6 @@
 
 use crate::env::EnvRef;
 use crate::error::Error;
-use crate::parser::parse_number;
 use crate::types::number::IntVariant::Small;
 use crate::types::{Expr, Number, Result, format_list};
 use crate::{io, parser};
@@ -607,7 +606,42 @@ pub fn is_odd(args: &[Expr], _: EnvRef) -> Result {
             let remainder = (n.clone() % Number::Int(Small(2)))?;
             Ok(Expr::Boolean(remainder == Number::Int(Small(1))))
         }
-        _ => Err(Error::Message("expected one argument".to_string())),
+        _ => Err(Error::Message("expected a number".to_string())),
+    }
+}
+
+/// Returns true if number is exact.
+pub fn is_exact(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Int(_))] | [Expr::Number(Number::Rational(_))] => {
+            Ok(Expr::Boolean(true))
+        }
+        [Expr::Number(Number::Float(_))] | [Expr::Number(Number::Complex(_))] => {
+            Ok(Expr::Boolean(false))
+        }
+        _ => Err(Error::Message("expected a number".to_string())),
+    }
+}
+
+/// Returns false if number is inexact.
+pub fn is_inexact(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Float(_))] | [Expr::Number(Number::Complex(_))] => {
+            Ok(Expr::Boolean(true))
+        }
+        [Expr::Number(Number::Int(_))] | [Expr::Number(Number::Rational(_))] => {
+            Ok(Expr::Boolean(false))
+        }
+        _ => Err(Error::Message("expected a number".to_string())),
+    }
+}
+
+/// Returns true if number is an exact integer.
+pub fn is_exact_integer(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Int(_))] => Ok(Expr::Boolean(true)),
+        [Expr::Number(_)] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message("expected a number".to_string())),
     }
 }
 
