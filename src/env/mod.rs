@@ -91,6 +91,13 @@ impl Env {
         );
         data.insert("string->list".to_string(), Expr::Procedure(string_to_list));
         // Predicates
+        data.insert("number?".to_string(), Expr::Procedure(is_number));
+        data.insert("real?".to_string(), Expr::Procedure(is_real));
+        data.insert("rational?".to_string(), Expr::Procedure(is_rational));
+        data.insert("complex?".to_string(), Expr::Procedure(is_complex));
+        data.insert("integer?".to_string(), Expr::Procedure(is_integer));
+        data.insert("even?".to_string(), Expr::Procedure(is_even));
+        data.insert("odd?".to_string(), Expr::Procedure(is_odd));
         data.insert("symbol?".to_string(), Expr::Procedure(is_symbol));
         data.insert("string?".to_string(), Expr::Procedure(is_string));
         data.insert("char?".to_string(), Expr::Procedure(is_char));
@@ -118,13 +125,6 @@ impl Env {
         data.insert("list?".to_string(), Expr::Procedure(is_list));
         data.insert("pair?".to_string(), Expr::Procedure(is_pair));
         data.insert("procedure?".to_string(), Expr::Procedure(is_procedure));
-        data.insert("number?".to_string(), Expr::Procedure(is_number));
-        data.insert("real?".to_string(), Expr::Procedure(is_real));
-        data.insert("rational?".to_string(), Expr::Procedure(is_rational));
-        data.insert("complex?".to_string(), Expr::Procedure(is_complex));
-        data.insert("integer?".to_string(), Expr::Procedure(is_integer));
-        data.insert("even?".to_string(), Expr::Procedure(is_even));
-        data.insert("odd?".to_string(), Expr::Procedure(is_odd));
         // Misc
         data.insert("exit".to_string(), Expr::Procedure(exit));
         data.insert("quote".to_string(), Expr::Procedure(quote));

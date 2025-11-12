@@ -529,6 +529,88 @@ pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
 
 // Predicates
 
+/// Returns true if arg is a number.
+pub fn is_number(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Returns true if arg is a real number.
+pub fn is_real(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Float(_))] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Returns true if arg is a rational number.
+pub fn is_rational(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Rational(_))] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Returns true if arg is a complex number.
+pub fn is_complex(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Complex(_))] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Returns true if arg is an integer.
+pub fn is_integer(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Int(_))] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Returns true if number is even.
+pub fn is_even(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => {
+            let remainder = (n.clone() % Number::Int(Small(2)))?;
+            Ok(Expr::Boolean(remainder == Number::Int(Small(0))))
+        }
+        _ => Err(Error::Message("expected one argument".to_string())),
+    }
+}
+
+/// Returns true if number is odd.
+pub fn is_odd(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => {
+            let remainder = (n.clone() % Number::Int(Small(2)))?;
+            Ok(Expr::Boolean(remainder == Number::Int(Small(1))))
+        }
+        _ => Err(Error::Message("expected one argument".to_string())),
+    }
+}
+
 /// Returns true if arg is a symbol.
 pub fn is_symbol(args: &[Expr], _: EnvRef) -> Result {
     match args {
@@ -671,84 +753,4 @@ pub fn is_procedure(args: &[Expr], _: EnvRef) -> Result {
             args.len()
         ))),
     }
-}
-
-// Numbers
-
-/// Returns true if arg is a number.
-pub fn is_number(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Number(_)] => Ok(Expr::Boolean(true)),
-        [_] => Ok(Expr::Boolean(false)),
-        _ => Err(Error::Message(format!(
-            "expected 1 argument, got {}",
-            args.len()
-        ))),
-    }
-}
-
-/// Returns true if arg is a real number.
-pub fn is_real(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Number(Number::Float(_))] => Ok(Expr::Boolean(true)),
-        [_] => Ok(Expr::Boolean(false)),
-        _ => Err(Error::Message(format!(
-            "expected 1 argument, got {}",
-            args.len()
-        ))),
-    }
-}
-
-/// Returns true if arg is a rational number.
-pub fn is_rational(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Number(Number::Rational(_))] => Ok(Expr::Boolean(true)),
-        [_] => Ok(Expr::Boolean(false)),
-        _ => Err(Error::Message(format!(
-            "expected 1 argument, got {}",
-            args.len()
-        ))),
-    }
-}
-
-/// Returns true if arg is a complex number.
-pub fn is_complex(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Number(Number::Complex(_))] => Ok(Expr::Boolean(true)),
-        [_] => Ok(Expr::Boolean(false)),
-        _ => Err(Error::Message(format!(
-            "expected 1 argument, got {}",
-            args.len()
-        ))),
-    }
-}
-
-/// Returns true if arg is an integer.
-pub fn is_integer(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Number(Number::Int(_))] => Ok(Expr::Boolean(true)),
-        [_] => Ok(Expr::Boolean(false)),
-        _ => Err(Error::Message(format!(
-            "expected 1 argument, got {}",
-            args.len()
-        ))),
-    }
-}
-
-/// Returns true if number is even.
-pub fn is_even(args: &[Expr], _: EnvRef) -> Result {
-    args.first()
-        .ok_or_else(|| Error::Message("expected one argument".to_string()))
-        .and_then(|arg| parse_number(arg))
-        .and_then(|num| num % Number::Int(Small(2)))
-        .map(|result| Expr::Boolean(result == Number::Int(Small(0))))
-}
-
-/// Returns true if number is odd.
-pub fn is_odd(args: &[Expr], _: EnvRef) -> Result {
-    args.first()
-        .ok_or_else(|| Error::Message("expected one argument".to_string()))
-        .and_then(|arg| parse_number(arg))
-        .and_then(|num| num % Number::Int(Small(2)))
-        .map(|result| Expr::Boolean(result == Number::Int(Small(1))))
 }
