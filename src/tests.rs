@@ -674,8 +674,8 @@ fn test_cons_pair() {
     let input = "(cons 1 2)".to_string();
     let result = parse_and_eval(input, env);
     if let Ok(Expr::Pair(pair)) = result {
-        assert!(matches!(pair.0, Expr::Number(Number::Int(_))));
-        assert!(matches!(pair.1, Expr::Number(Number::Int(_))));
+        assert!(matches!(pair.borrow().0, Expr::Number(Number::Int(_))));
+        assert!(matches!(pair.borrow().1, Expr::Number(Number::Int(_))));
     } else {
         panic!("Expected a pair");
     }

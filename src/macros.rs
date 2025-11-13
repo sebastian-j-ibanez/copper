@@ -13,12 +13,12 @@ use crate::{error::Error, types::Closure, types::Expr};
 
 /// Associate a symbol with a value in an environment.
 pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
-    match (args.get(0), args.get(1)) {
-        (Some(Expr::Symbol(name)), Some(expr)) => {
+    match args {
+        [Expr::Symbol(name), expr] => {
             let value = eval(&expr, env.clone())?;
             env.borrow_mut().data.insert(name.to_owned(), value);
         }
-        (Some(Expr::List(list_ref)), Some(_)) => {
+        [Expr::List(list_ref), _] => {
             let list = list_ref.borrow();
             // Get name + remove it from l.
             let name = match list.first() {
@@ -38,6 +38,82 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
             return Err(Error::Message("ill-formed special form".to_string()));
         }
     }
+    Ok(Expr::Void())
+}
+
+/// Sets the first element in a list or pair.
+pub fn set_car(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Symbol(name), expr] => {
+            let env = env_ref.borrow_mut();
+            if let Some(value) = env.find_var(name) {
+                match value {
+                    Expr::List(list) => {
+                        let new_value = eval(&expr, env_ref.clone())?;
+                        list.borrow_mut()[0] = new_value.clone();
+                    }
+                    Expr::Pair(pair) => {
+                        let new_value = eval(&expr, env_ref.clone())?;
+                        pair.borrow_mut().0 = new_value.clone();
+                    }
+                    _ => return Err(Error::Message("pair or list expected".to_string())),
+                }
+            }
+        }
+        [Expr::List(list), expr] => {
+            let new_value = eval(&expr, env_ref.clone())?;
+            list.borrow_mut()[0] = new_value.clone();
+        }
+        [Expr::Pair(pair), expr] => {
+            let new_value = eval(&expr, env_ref.clone())?;
+            pair.borrow_mut().0 = new_value.clone();
+        }
+        [] => return Err(Error::Message("expected 2 arguments".to_string())),
+        _ => {}
+    }
+
+    Ok(Expr::Void())
+}
+
+/// Sets the last element in a list or pair.
+pub fn set_cdr(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Symbol(name), expr] => {
+            let env = env_ref.borrow_mut();
+            if let Some(value) = env.find_var(name) {
+                match value {
+                    Expr::List(list) => {
+                        let new_value = eval(&expr, env_ref.clone())?;
+                        let mut list = list.borrow_mut();
+                        let len = list.len();
+                        if list.len() > 0 {
+                            list[len - 1] = new_value.clone();
+                        }
+                    }
+                    Expr::Pair(pair) => {
+                        let new_value = eval(&expr, env_ref.clone())?;
+                        pair.borrow_mut().1 = new_value.clone();
+                    }
+                    _ => return Err(Error::Message("pair or list expected".to_string())),
+                }
+            }
+        }
+        [Expr::List(list), expr] => {
+            let new_value = eval(&expr, env_ref.clone())?;
+            let mut list = list.borrow_mut();
+            let len = list.len();
+            if list.len() > 0 {
+                list[len - 1] = new_value.clone();
+            }
+        }
+        [Expr::Pair(pair), expr] => {
+            let new_value = eval(&expr, env_ref.clone())?;
+            pair.borrow_mut().1 = new_value.clone();
+        }
+        [] => return Err(Error::Message("expected 2 arguments".to_string())),
+        _ => {}
+    }
+
     Ok(Expr::Void())
 }
 

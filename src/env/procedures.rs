@@ -427,7 +427,7 @@ pub fn list_length(args: &[Expr], _: EnvRef) -> Result {
 /// Get first element from list or pair.
 pub fn car(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(pair)] => Ok(pair.as_ref().0.clone()),
+        [Expr::Pair(pair)] => Ok(pair.borrow().0.clone()),
         [Expr::List(l)] => Ok(Expr::List(Rc::new(RefCell::new(
             l.borrow().iter().cloned().take(1).collect::<Vec<Expr>>(),
         )))),
@@ -438,7 +438,7 @@ pub fn car(args: &[Expr], _: EnvRef) -> Result {
 /// Return list without first element or return second element from pair.
 pub fn cdr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(pair)] => Ok(pair.as_ref().1.clone()),
+        [Expr::Pair(pair)] => Ok(pair.borrow().1.clone()),
         [Expr::List(l)] => Ok(Expr::List(Rc::new(RefCell::new(
             l.borrow().iter().cloned().skip(1).collect::<Vec<Expr>>(),
         )))),
@@ -472,25 +472,6 @@ pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// WIP! Sets the first element in a list or pair.
-pub fn set_car(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::List(list_ref), new_value] => {
-            let mut list = list_ref.borrow_mut();
-            if list.len() <= 0 {
-                list.push(new_value.clone());
-            }
-            Ok(Expr::Void())
-        }
-        [Expr::Pair(pair), new_value] => Ok(Expr::Pair(Box::new((
-            new_value.clone(),
-            pair.as_ref().1.clone(),
-        )))),
-        [a, b] => Ok(Expr::Pair(Box::new((a.clone(), b.clone())))),
-        _ => Err(Error::Message("expected 2 arguments".to_string())),
-    }
-}
-
 // Pairs
 
 /// Construct a new pair from 2 expressions.
@@ -502,7 +483,7 @@ pub fn cons(args: &[Expr], _: EnvRef) -> Result {
                 .collect();
             Ok(Expr::List(Rc::new(RefCell::new(new_list))))
         }
-        [a, b] => Ok(Expr::Pair(Box::new((a.clone(), b.clone())))),
+        [a, b] => Ok(Expr::Pair(Rc::new(RefCell::new((a.clone(), b.clone()))))),
         _ => Err(Error::Message("expected 2 arguments".to_string())),
     }
 }

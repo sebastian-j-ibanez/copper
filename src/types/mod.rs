@@ -29,7 +29,7 @@ pub enum Expr {
     Boolean(bool),
     Symbol(String),
     List(List),
-    Pair(Box<(Expr, Expr)>),
+    Pair(Pair),
     Void(),
     Procedure(Procedure),
     Closure(Box<Closure>),
@@ -44,7 +44,7 @@ impl fmt::Display for Expr {
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::List(list) => format_list(list, " ", true),
-            Expr::Pair(pair) => format_pair(pair.as_ref()),
+            Expr::Pair(pair) => format_pair(pair),
             Expr::Void() => return Ok(()),
             Expr::Procedure(_) => "#<function {}".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
@@ -87,8 +87,8 @@ pub fn format_list(list: &List, delim: &str, parenthesis: bool) -> String {
 }
 
 /// Format pair into literal representation.
-pub fn format_pair(pair: &(Expr, Expr)) -> String {
-    format!("({} . {})", pair.0, pair.1)
+pub fn format_pair(pair: &Pair) -> String {
+    format!("({} . {})", pair.borrow().0, pair.borrow().1)
 }
 
 #[derive(Debug, Clone)]

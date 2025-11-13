@@ -12,11 +12,11 @@ use crate::env::procedures::{
     is_char_whitespace, is_complex, is_even, is_exact, is_exact_integer, is_inexact, is_integer,
     is_list, is_number, is_odd, is_pair, is_procedure, is_rational, is_real, is_string, is_symbol,
     list_append, list_length, list_reverse, load_file, max, min, modulo, mult, new_list,
-    new_string, newline, not, num_to_string, or, pretty_print, print, println, set_car, str_append,
+    new_string, newline, not, num_to_string, or, pretty_print, print, println, str_append,
     str_length, string_to_downcase, string_to_list, string_to_num, string_to_symbol,
     string_to_upcase, sub, symbol_to_string,
 };
-use crate::macros::quote;
+use crate::macros::{quote, set_car, set_cdr};
 use crate::types::Expr;
 
 use std::cell::RefCell;
@@ -80,6 +80,7 @@ impl Env {
         data.insert("cadr".to_string(), Expr::Procedure(cadr));
         data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
         data.insert("set-car!".to_string(), Expr::Procedure(set_car));
+        data.insert("set-cdr!".to_string(), Expr::Procedure(set_cdr));
         // Conversions
         data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
         data.insert(

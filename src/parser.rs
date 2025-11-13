@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::env::EnvRef;
 use crate::error::Error;
-use crate::macros::{apply_lambda, define, if_statement, lambda, quote};
+use crate::macros::{apply_lambda, define, if_statement, lambda, quote, set_car};
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
 
 /// Parse s-expression, evaluate it, and return result.
@@ -38,6 +38,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             if let Expr::Symbol(s) = first {
                 match s.as_str() {
                     "define" => return define(args, env),
+                    "set-car!" => return set_car(args, env),
                     "lambda" => return lambda(args, env),
                     "quote" => return quote(args, env),
                     "if" => return if_statement(args, env),
