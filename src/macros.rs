@@ -4,6 +4,9 @@
 
 //! Define functions and variables.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::env::{Env, EnvRef};
 use crate::parser::eval;
 use crate::{error::Error, types::Closure, types::Expr};
@@ -15,16 +18,19 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
             let value = eval(&expr, env.clone())?;
             env.borrow_mut().data.insert(name.to_owned(), value);
         }
-        (Some(Expr::List(l)), Some(_)) => {
+        (Some(Expr::List(list_ref)), Some(_)) => {
+            let list = list_ref.borrow();
             // Get name + remove it from l.
-            let name = match l.first() {
+            let name = match list.first() {
                 Some(Expr::Symbol(s)) => s,
                 _ => {
                     return Err(Error::Message("ill-formed special form name".to_string()));
                 }
             };
 
-            let args_without_name = Expr::List(l.iter().skip(1).cloned().collect());
+            let args_without_name = Expr::List(Rc::new(RefCell::new(
+                list.iter().skip(1).cloned().collect::<Vec<Expr>>(),
+            )));
             let value = lambda(&[args_without_name, args[1].clone()], env.clone())?;
             env.borrow_mut().data.insert(name.to_owned(), value);
         }
@@ -51,6 +57,7 @@ pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 
     // Add argument symbols to env.
     let params: Vec<String> = arg_list
+        .borrow()
         .iter()
         .map(|arg| {
             if let Expr::Symbol(s) = arg {
@@ -120,15 +127,18 @@ pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     for arg in args {
         match arg {
-            Expr::List(v) => match v.as_slice() {
-                [conditional, result] => {
-                    let cond_result = eval(conditional, env.to_owned())?;
-                    if let Expr::Boolean(true) = cond_result {
-                        return eval(result, env);
+            Expr::List(list_ref) => {
+                let list = list_ref.borrow();
+                match list.as_slice() {
+                    [conditional, result] => {
+                        let cond_result = eval(conditional, env.to_owned())?;
+                        if let Expr::Boolean(true) = cond_result {
+                            return eval(result, env);
+                        }
                     }
+                    _ => continue,
                 }
-                _ => continue,
-            },
+            }
             _ => continue,
         }
     }

@@ -9,12 +9,16 @@ pub mod number;
 use crate::env::EnvRef;
 use crate::error::Error;
 pub(crate) use number::Number;
+use std::cell::RefCell;
 use std::fmt;
+use std::rc::Rc;
 
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
 pub type Result = std::result::Result<Expr, Error>;
+pub type List = Rc<RefCell<Vec<Expr>>>;
+pub type Pair = Rc<RefCell<(Expr, Expr)>>;
 pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 
 #[derive(Debug, Clone)]
@@ -24,7 +28,7 @@ pub enum Expr {
     Char(char),
     Boolean(bool),
     Symbol(String),
-    List(Vec<Expr>),
+    List(List),
     Pair(Box<(Expr, Expr)>),
     Void(),
     Procedure(Procedure),
@@ -68,8 +72,9 @@ fn format_boolean(b: &bool) -> String {
 }
 
 /// Format list, optional delimeter and parenthesis.
-pub fn format_list(list: &Vec<Expr>, delim: &str, parenthesis: bool) -> String {
+pub fn format_list(list: &List, delim: &str, parenthesis: bool) -> String {
     let items: String = list
+        .borrow()
         .iter()
         .map(|x| x.to_string())
         .collect::<Vec<String>>()

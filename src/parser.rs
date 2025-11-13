@@ -4,10 +4,13 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::macros::{apply_lambda, define, if_statement, lambda, quote};
-use crate::types::{Expr, Number, BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR};
+use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
 
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
@@ -24,10 +27,11 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             .borrow()
             .find_var(k)
             .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
-        Expr::List(list) => {
+        Expr::List(list_ref) => {
+            let list = list_ref.borrow();
             // Return empty list if there are no args.
             let [first, args @ ..] = list.as_slice() else {
-                return Ok(Expr::List(vec![Expr::Void()]));
+                return Ok(Expr::List(Rc::new(RefCell::new(vec![Expr::Void()]))));
             };
 
             // Check for special forms (like define)
@@ -79,7 +83,10 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
         "'" => {
             let (quoted_expr, remaining) = parse(right_expr)?;
             Ok((
-                Expr::List(vec![Expr::Symbol("quote".to_string()), quoted_expr]),
+                Expr::List(Rc::new(RefCell::new(vec![
+                    Expr::Symbol("quote".to_string()),
+                    quoted_expr,
+                ]))),
                 remaining,
             ))
         }
@@ -99,7 +106,7 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
             "unable to parse rest of expression".to_string(),
         ))?;
         if car == ")" {
-            return Ok((Expr::List(expressions), cdr));
+            return Ok((Expr::List(Rc::new(RefCell::new(expressions))), cdr));
         }
         let (expr, new_copy) = parse(&tokens_copy)?;
         expressions.push(expr);

@@ -259,7 +259,9 @@ fn test_new_list() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
@@ -270,7 +272,9 @@ fn test_new_list_empty() {
     let input = "(list)".to_string();
     let result = parse_and_eval(input, env.clone());
     let expected_values = vec![Expr::Void()];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
@@ -285,7 +289,9 @@ fn test_cons() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
@@ -301,7 +307,9 @@ fn test_list_append() {
         Expr::Number(Number::from_i64(3)),
         Expr::Number(Number::from_i64(4)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
@@ -322,7 +330,9 @@ fn test_car() {
     let input = "(car (list 1 2 3))".to_string();
     let result = parse_and_eval(input, env.clone());
     let expected_values = vec![Expr::Number(Number::from_i64(1))];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
@@ -336,7 +346,9 @@ fn test_cdr() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
@@ -647,7 +659,9 @@ fn test_reverse() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(1)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(expected_values));
+    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
+        expected_values,
+    ))));
     assert!(matches!(result, _expected));
 }
 
