@@ -7,9 +7,7 @@ use crate::error::Error;
 use crate::types::number::IntVariant::Small;
 use crate::types::{Expr, Number, Pair, PairIter, Result}; // format_list removed
 use crate::{io, parser};
-use std::cell::RefCell;
 use std::ops::{Add, Div, Mul, Sub};
-use std::rc::Rc;
 
 // I/O
 
@@ -393,74 +391,62 @@ pub fn or(args: &[Expr], _: EnvRef) -> Result {
 
 // Lists
 
-// /// Make a new list with an unbound number of expressions.
-// pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
-//     let mut list = Vec::new();
-//     for arg in args {
-//         list.push(arg.to_owned());
-//     }
+/// Make a new list.
+pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
+    let list = Pair::list(args);
+    Ok(Expr::Pair(list))
+}
 
-//     Ok(Expr::List(Rc::new(RefCell::new(list))))
-// }
+/// Append 2 lists together.
+pub fn list_append(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(list_a), Expr::Pair(list_b)] if list_a.is_list() && list_b.is_list() => {
+            let result = list_a.clone().append(Expr::Pair(list_b.clone()))?;
+            Ok(result)
+        }
+        _ => Err(Error::Message("expected 2 lists".to_string())),
+    }
+}
 
-// /// Append 2 lists together.
-// pub fn list_append(args: &[Expr], _: EnvRef) -> Result {
-//     match args {
-//         [Expr::List(list_a_ref), Expr::List(list_b_ref)] => {
-//             let list_a = list_a_ref.borrow_mut();
-//             let list_b = list_b_ref.borrow_mut();
-//             let result: Vec<Expr> = list_a.iter().chain(list_b.iter()).cloned().collect();
-//             Ok(Expr::List(Rc::new(RefCell::new(result))))
-//         }
-//         _ => Err(Error::Message("expected 2 lists".to_string())),
-//     }
-// }
+/// Get length of list.
+pub fn list_length(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => Ok(Expr::Number(Number::from_usize(p.len()))),
+        _ => Err(Error::Message("expected list".to_string())),
+    }
+}
 
-// /// Get length of list.
-// pub fn list_length(args: &[Expr], _: EnvRef) -> Result {
-//     match args {
-//         [Expr::List(l)] => Ok(Expr::Number(Number::from_usize(l.borrow().len()))),
-//         _ => Err(Error::Message("expected list".to_string())),
-//     }
-// }
+/// Return first element from `Pair`.
+pub fn car(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(pair)] => Ok(pair.car()),
+        _ => Err(Error::Message("expected pair".to_string())),
+    }
+}
 
-// /// Get first element from list or pair.
-// pub fn car(args: &[Expr], _: EnvRef) -> Result {
-//     match args {
-//         [Expr::Pair(pair)] => Ok(pair.car()),
-//         [Expr::List(l)] => Ok(Expr::List(Rc::new(RefCell::new(
-//             l.borrow().iter().cloned().take(1).collect::<Vec<Expr>>(),
-//         )))),
-//         _ => Err(Error::Message("expected pair".to_string())),
-//     }
-// }
+/// Return second element from `Pair`.
+pub fn cdr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(pair)] => Ok(pair.cdr()),
+        _ => Err(Error::Message("expected pair".to_string())),
+    }
+}
 
-// /// Return list without first element or return second element from pair.
-// pub fn cdr(args: &[Expr], _: EnvRef) -> Result {
-//     match args {
-//         [Expr::Pair(pair)] => Ok(pair.cdr()),
-//         [Expr::List(l)] => Ok(Expr::List(Rc::new(RefCell::new(
-//             l.borrow().iter().cloned().skip(1).collect::<Vec<Expr>>(),
-//         )))),
-//         _ => Err(Error::Message("expected pair".to_string())),
-//     }
-// }
-
-// /// Get second item.
-// pub fn cadr(args: &[Expr], _: EnvRef) -> Result {
-//     match args {
-//         [Expr::List(l)] => {
-//             if l.borrow().len() < 2 {
-//                 return Err(Error::Message(
-//                     "expected list of at least 2 items".to_string(),
-//                 ));
-//             }
-
-//             Ok(Expr::from(l.borrow()[1].clone()))
-//         }
-//         _ => Err(Error::Message("expected list".to_string())),
-//     }
-// }
+/// Return car of cdr.
+pub fn cadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => {
+            let cdr = p.cdr();
+            match cdr {
+                Expr::Pair(p) => Ok(p.car()),
+                _ => Err(Error::Message(
+                    "expected list of at least 2 items".to_string(),
+                )),
+            }
+        }
+        _ => Err(Error::Message("expected list".to_string())),
+    }
+}
 
 /// Reverse list.
 pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {

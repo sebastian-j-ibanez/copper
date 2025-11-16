@@ -107,15 +107,13 @@ impl Closure {
 #[derive(Debug, Clone)]
 pub struct Pair {
     elements: Rc<RefCell<(Expr, Expr)>>,
-    index: usize,
 }
 
 impl Pair {
-    /// Create a new `Expr::Pair`.
+    /// Create a new dotted `Pair`.
     pub fn cons(value: (Expr, Expr)) -> Pair {
         Pair {
             elements: Rc::new(RefCell::new(value)),
-            index: 0,
         }
     }
 
@@ -129,13 +127,31 @@ impl Pair {
             })
     }
 
+    /// Return an immutable iterator over a `Pair`.
+    pub fn iter(&self) -> PairIter {
+        PairIter {
+            current: Some(self.clone()),
+        }
+    }
+
+    /// Return an mutable iterator over a `Pair`.
+    pub fn iter_mut(&mut self) -> PairIterMut {
+        PairIterMut {
+            current: Some(self.clone()),
+        }
+    }
+
     /// Returns if `&self` is a list.
     pub fn is_list(&self) -> bool {
-        let items: Vec<Expr> = PairIter::new(self).into_iter().collect();
-        match items.last() {
-            Some(Expr::Null) => true,
-            _ => false,
+        let mut current = Some(self.clone());
+        while let Some(pair) = current {
+            match pair.cdr() {
+                Expr::Pair(next) => current = Some(next),
+                Expr::Null => return true,
+                _ => return false,
+            }
         }
+        false
     }
 
     /// Return if cdr is an `Expr::Pair`.
@@ -154,6 +170,16 @@ impl Pair {
     /// Get last element.
     pub fn cdr(&self) -> Expr {
         self.elements.borrow().1.clone()
+    }
+
+    /// Set the first element in the pair.
+    pub fn set_car(&self, value: Expr) {
+        self.elements.borrow_mut().0 = value
+    }
+
+    /// Set the last element in the pair.
+    pub fn set_cdr(&self, value: Expr) {
+        self.elements.borrow_mut().1 = value
     }
 
     /// Get element from list.
@@ -185,8 +211,92 @@ impl Pair {
             return Some(curr_element.0.clone());
         }
     }
+
+    /// Set element from list.
+    pub fn set(&self, value: Expr, mut index: usize) -> std::result::Result<(), Error> {
+        let mut current = self.clone();
+        let even = index % 2;
+        let depth = index / 2;
+
+        for _ in 0..depth {
+            match current.cdr() {
+                Expr::Pair(next) => current = next,
+                _ => {
+                    return Err(Error::Message(
+                        "pair is not a null terminated list".to_string(),
+                    ));
+                }
+            }
+            index -= 1;
+        }
+
+        let mut borrowed_pair = current.elements.borrow_mut();
+        if even == 0 {
+            borrowed_pair.1 = value;
+        } else {
+            borrowed_pair.0 = value;
+        }
+
+        Ok(())
+    }
+
+    /// Append element and return new list. Does not mutate `&self`.
+    pub fn append(&self, new_element: Expr) -> Result {
+        let mut elements: Vec<Expr> = self.iter().collect();
+        elements.push(new_element);
+        let new_list = Pair::list(elements.as_slice());
+
+        Ok(Expr::Pair(new_list))
+    }
+
+    /// Append element to list, mutating `&self`.
+    pub fn append_mut(&mut self, element: Expr) -> std::result::Result<(), Error> {
+        let mut current = self.clone();
+        loop {
+            match current.cdr() {
+                Expr::Pair(next) => current = next,
+                Expr::Null => break,
+                _ => {
+                    return Err(Error::Message(
+                        "pair is not a null terminated list".to_string(),
+                    ));
+                }
+            }
+        }
+
+        // Update last element.
+        let mut tail = current.elements.borrow_mut();
+        match element {
+            Expr::Pair(ref p) if p.is_list() => {
+                tail.1 = Expr::Pair(p.clone());
+            }
+            _ => {
+                let new_tail = Pair::cons((element, Expr::Null));
+                tail.1 = Expr::Pair(new_tail);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Return the number of elements in the `Pair` or list.
+    pub fn len(&self) -> usize {
+        let mut len: usize = 0;
+        let mut current = self.clone();
+
+        loop {
+            match current.cdr() {
+                Expr::Pair(next) => current = next,
+                _ => break,
+            }
+            len += 1;
+        }
+
+        len
+    }
 }
 
+/// Immutable iterator wrapper for `Pair`.
 pub struct PairIter {
     current: Option<Pair>,
 }
@@ -211,5 +321,48 @@ impl Iterator for PairIter {
             _ => None,
         };
         Some(car)
+    }
+}
+
+/// Proxy that refers to a single cons cell and can read or write its car.
+pub struct PairElemMut {
+    node: Pair,
+}
+
+impl PairElemMut {
+    /// Get a cloned copy of the car.
+    pub fn get(&self) -> Expr {
+        self.node.car()
+    }
+
+    /// Set the `Pair` car a new value.
+    pub fn set(&self, new_value: Expr) {
+        let mut borrow = self.node.elements.borrow_mut();
+        borrow.0 = new_value;
+    }
+
+    pub fn update<F: FnOnce(&mut Expr)>(&self, f: F) {
+        let mut borrow = self.node.elements.borrow_mut();
+        f(&mut borrow.0);
+    }
+}
+
+/// Mutable iterator wrapper for `Pair`.
+pub struct PairIterMut {
+    current: Option<Pair>,
+}
+
+impl Iterator for PairIterMut {
+    type Item = PairElemMut;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let node = self.current.take()?;
+        let handle = PairElemMut { node: node.clone() };
+        let cdr = node.cdr();
+        self.current = match cdr {
+            Expr::Pair(next) => Some(next),
+            _ => None,
+        };
+        Some(handle)
     }
 }
