@@ -8,6 +8,7 @@ pub mod number;
 
 use crate::env::EnvRef;
 use crate::error::Error;
+use num_integer::div_floor;
 pub(crate) use number::Number;
 use std::cell::RefCell;
 use std::fmt;
@@ -16,9 +17,10 @@ use std::rc::Rc;
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
+// pub type List = Rc<RefCell<Vec<Expr>>>;
+// pub type Pair = Rc<RefCell<(Expr, Expr)>>;
+
 pub type Result = std::result::Result<Expr, Error>;
-pub type List = Rc<RefCell<Vec<Expr>>>;
-pub type Pair = Rc<RefCell<(Expr, Expr)>>;
 pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 
 #[derive(Debug, Clone)]
@@ -28,8 +30,8 @@ pub enum Expr {
     Char(char),
     Boolean(bool),
     Symbol(String),
-    List(List),
     Pair(Pair),
+    Null,
     Void(),
     Procedure(Procedure),
     Closure(Box<Closure>),
@@ -43,8 +45,8 @@ impl fmt::Display for Expr {
             Expr::Char(c) => format_char(c),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
-            Expr::List(list) => format_list(list, " ", true),
             Expr::Pair(pair) => format_pair(pair),
+            Expr::Null => format_null(),
             Expr::Void() => return Ok(()),
             Expr::Procedure(_) => "#<function {}".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
@@ -71,24 +73,18 @@ fn format_boolean(b: &bool) -> String {
     }
 }
 
-/// Format list, optional delimeter and parenthesis.
-pub fn format_list(list: &List, delim: &str, parenthesis: bool) -> String {
-    let items: String = list
-        .borrow()
-        .iter()
-        .map(|x| x.to_string())
-        .collect::<Vec<String>>()
-        .join(delim);
-
-    match parenthesis {
-        true => format!("({})", items),
-        false => items,
-    }
-}
-
 /// Format pair into literal representation.
 pub fn format_pair(pair: &Pair) -> String {
-    format!("({} . {})", pair.borrow().0, pair.borrow().1)
+    format!(
+        "({} . {})",
+        pair.elements.borrow().0,
+        pair.elements.borrow().1
+    )
+}
+
+/// Return literal representation of a null list.
+pub fn format_null() -> String {
+    String::from("()")
 }
 
 #[derive(Debug, Clone)]
@@ -105,5 +101,115 @@ impl Closure {
             parameters,
             body,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Pair {
+    elements: Rc<RefCell<(Expr, Expr)>>,
+    index: usize,
+}
+
+impl Pair {
+    /// Create a new `Expr::Pair`.
+    pub fn cons(value: (Expr, Expr)) -> Pair {
+        Pair {
+            elements: Rc::new(RefCell::new(value)),
+            index: 0,
+        }
+    }
+
+    /// Create a new list.
+    pub fn list(values: &[Expr]) -> Pair {
+        values
+            .iter()
+            .rev()
+            .fold(Pair::cons((Expr::Null, Expr::Null)), |cdr, car| {
+                Pair::cons((car.clone(), Expr::Pair(cdr)))
+            })
+    }
+
+    /// Returns if `&self` is a list.
+    pub fn is_list(&self) -> bool {
+        let items: Vec<Expr> = PairIter::new(self).into_iter().collect();
+        match items.last() {
+            Some(Expr::Null) => true,
+            _ => false,
+        }
+    }
+
+    /// Return if cdr is an `Expr::Pair`.
+    pub fn cdr_is_pair(&self) -> bool {
+        match self.elements.borrow().1 {
+            Expr::Pair(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Get first element.
+    pub fn car(&self) -> Expr {
+        self.elements.borrow().0.clone()
+    }
+
+    /// Get last element.
+    pub fn cdr(&self) -> Expr {
+        self.elements.borrow().1.clone()
+    }
+
+    /// Get element from list.
+    pub fn get(&self, index: usize) -> Option<Expr> {
+        if index == 0 {
+            return Some(self.elements.borrow().0.clone());
+        }
+        let mut curr_pair = self.clone();
+        let even = index % 2;
+        let depth = div_floor(index, 2);
+        for _ in 0..(depth + 1) {
+            let next_pair = {
+                let borrowed = curr_pair.elements.borrow();
+                match &borrowed.1 {
+                    Expr::Pair(p) => match p.elements.borrow().1 {
+                        Expr::Null => return None,
+                        _ => p.clone(),
+                    },
+                    _ => return None,
+                }
+            };
+            curr_pair = next_pair;
+        }
+
+        let curr_element = curr_pair.elements.borrow();
+        if even == 0 {
+            return Some(curr_element.1.clone());
+        } else {
+            return Some(curr_element.0.clone());
+        }
+    }
+}
+
+pub struct PairIter {
+    current: Option<Pair>,
+}
+
+impl PairIter {
+    pub fn new(pair: &Pair) -> PairIter {
+        PairIter {
+            current: Some(pair.clone()),
+        }
+    }
+}
+
+impl Iterator for PairIter {
+    type Item = Expr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let pair = self.current.clone()?;
+        let car = pair.car();
+        let cdr = pair.cdr();
+        self.current = match cdr {
+            Expr::Pair(next) => Some(next),
+            _ => None,
+        };
+        Some(car)
     }
 }
