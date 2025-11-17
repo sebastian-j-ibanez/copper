@@ -7,8 +7,8 @@
 mod procedures;
 
 use crate::env::procedures::{
-    abs, add, and, cadr, car, cdr, ceil, cons, display, div, exit, exponent, floor, is_boolean,
-    is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
+    abs, add, and, cadr, car, cdr, ceil, cons_proc, display, div, exit, exponent, floor,
+    is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
     is_char_whitespace, is_complex, is_even, is_exact, is_exact_integer, is_inexact, is_integer,
     is_list, is_number, is_odd, is_pair, is_procedure, is_rational, is_real, is_string, is_symbol,
     list_append, list_length, list_reverse, load_file, max, min, modulo, mult, new_list,
@@ -71,16 +71,16 @@ impl Env {
         data.insert("and".to_string(), Expr::Procedure(and));
         data.insert("or".to_string(), Expr::Procedure(or));
         // Lists & Pairs
-        data.insert("cons".to_string(), Expr::Procedure(cons));
+        data.insert("cons".to_string(), Expr::Procedure(cons_proc));
         data.insert("list".to_string(), Expr::Procedure(new_list));
         data.insert("append".to_string(), Expr::Procedure(list_append));
         data.insert("length".to_string(), Expr::Procedure(list_length));
         data.insert("car".to_string(), Expr::Procedure(car));
         data.insert("cdr".to_string(), Expr::Procedure(cdr));
         data.insert("cadr".to_string(), Expr::Procedure(cadr));
-        data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
         data.insert("set-car!".to_string(), Expr::Procedure(set_car));
         data.insert("set-cdr!".to_string(), Expr::Procedure(set_cdr));
+        data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
         // Conversions
         data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
         data.insert(

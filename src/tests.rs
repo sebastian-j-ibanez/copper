@@ -4,15 +4,15 @@
 
 //! Unit test module.
 
-// #[test]
-// fn test_template() {
-//     use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
-//     let env = Env::standard_env();
-//     let input = "".to_string();
-//     let result = parse_and_eval(input, env);
-//     let _expected: Result<Expr, Error> = Ok(Expr::Void());
-//     assert!(matches!(result, _expected));
-// }
+#[test]
+fn test_template() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::Void());
+    assert!(matches!(result, _expected));
+}
 
 #[test]
 fn test_add_string_result() {
@@ -250,7 +250,7 @@ fn test_define_lambda_implicit() {
 
 #[test]
 fn test_new_list() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(list 1 2 3)".to_string();
     let result = parse_and_eval(input, env.clone());
@@ -259,28 +259,24 @@ fn test_new_list() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
 fn test_new_list_empty() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Pair};
     let env = Env::standard_env();
     let input = "(list)".to_string();
     let result = parse_and_eval(input, env.clone());
     let expected_values = vec![Expr::Void()];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
 fn test_cons() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(cons 1 (list 2 3))".to_string();
     let result = parse_and_eval(input, env.clone());
@@ -289,15 +285,13 @@ fn test_cons() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
 fn test_list_append() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(append (list 1 2) (list 3 4))".to_string();
     let result = parse_and_eval(input, env.clone());
@@ -307,10 +301,8 @@ fn test_list_append() {
         Expr::Number(Number::from_i64(3)),
         Expr::Number(Number::from_i64(4)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
@@ -325,20 +317,18 @@ fn test_list_length() {
 
 #[test]
 fn test_car() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(car (list 1 2 3))".to_string();
     let result = parse_and_eval(input, env.clone());
     let expected_values = vec![Expr::Number(Number::from_i64(1))];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
 fn test_cdr() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(cdr (list 1 2 3))".to_string();
     let result = parse_and_eval(input, env.clone());
@@ -346,10 +336,8 @@ fn test_cdr() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
@@ -650,7 +638,7 @@ fn test_cadr() {
 
 #[test]
 fn test_reverse() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(reverse (list 1 2 3))".to_string();
     let result = parse_and_eval(input, env);
@@ -659,26 +647,23 @@ fn test_reverse() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(1)),
     ];
-    let _expected: Result<Expr, Error> = Ok(Expr::List(std::rc::Rc::new(std::cell::RefCell::new(
-        expected_values,
-    ))));
-    assert!(matches!(result, _expected));
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
 }
 
 // Pair Functions
 
 #[test]
 fn test_cons_pair() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
     let env = Env::standard_env();
     let input = "(cons 1 2)".to_string();
     let result = parse_and_eval(input, env);
-    if let Ok(Expr::Pair(pair)) = result {
-        assert!(matches!(pair.borrow().0, Expr::Number(Number::Int(_))));
-        assert!(matches!(pair.borrow().1, Expr::Number(Number::Int(_))));
-    } else {
-        panic!("Expected a pair");
-    }
+    let _expected = Pair::cons((
+        Expr::Number(Number::from_i64(1)),
+        Expr::Number(Number::from_i64(2)),
+    ));
+    assert!(matches!(result, Ok(_expected)));
 }
 
 #[test]
@@ -933,4 +918,83 @@ fn test_odd_predicate() {
     let result = parse_and_eval(input, env);
     let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
     assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_pair_get_element() {
+    use crate::types::{Expr, Pair};
+    let pair = Pair::cons((Expr::Boolean(true), Expr::Boolean(false)));
+    let result = pair.get(0);
+    let _expected = Some(Expr::Boolean(true));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_list_get_first_element() {
+    use crate::types::{Expr, Number, Pair};
+    let pair = Pair::cons((
+        Expr::Number(Number::from_i64(0)),
+        Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(1)), Expr::Null))),
+    ));
+    let result = pair.get(1);
+    let _expected = Some(Expr::Number(Number::from_i64(1)));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_list_get_second_element() {
+    use crate::types::{Expr, Number, Pair};
+    let pair = Pair::cons((
+        Expr::Number(Number::from_i64(0)),
+        Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(1)), Expr::Null))),
+    ));
+    let result = pair.get(1);
+    let _expected = Some(Expr::Boolean(false));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_list_get_invalid_element() {
+    use crate::types::{Expr, Number, Pair};
+    let pair = Pair::cons((
+        Expr::Number(Number::from_i64(0)),
+        Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(1)), Expr::Null))),
+    ));
+    let result = pair.get(2);
+    assert!(matches!(result, None));
+}
+
+#[test]
+fn test_list_get_last_element() {
+    use crate::types::{Expr, Number, Pair};
+    let pair = Pair::cons((
+        Expr::Number(Number::from_i64(0)),
+        Expr::Pair(Pair::cons((
+            Expr::Number(Number::from_i64(1)),
+            Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(2)), Expr::Null))),
+        ))),
+    ));
+    let result = pair.get(4);
+    println!("result: {:?}", result);
+    assert!(matches!(result, None));
+}
+
+#[test]
+fn test_create_list() {
+    use crate::types::{Expr, Number, Pair};
+    let expr = [
+        Expr::Number(Number::from_i64(0)),
+        Expr::Number(Number::from_i64(1)),
+        Expr::Number(Number::from_i64(2)),
+    ];
+    let list = Pair::list(&expr);
+    println!("list: {:?}", list);
+}
+
+#[test]
+fn test_empty_list_format() {
+    use crate::types::{Expr, Pair};
+    let empty = Pair::list(&[]);
+    assert_eq!(format!("{}", empty), "()");
+    assert!(matches!(empty, Expr::Null));
 }

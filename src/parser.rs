@@ -4,13 +4,10 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::macros::{apply_lambda, define, if_statement, lambda, quote, set_car};
-use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number};
+use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair};
 
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
@@ -27,11 +24,19 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             .borrow()
             .find_var(k)
             .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
-        Expr::List(list_ref) => {
-            let list = list_ref.borrow();
+        Expr::Pair(pair) => {
+            let mut list_elements: Vec<Expr> = pair.iter().collect();
+
+            // Drop terminating `Expr::Null` from list.
+            if pair.is_list()
+                && let Some(Expr::Null) = list_elements.last()
+            {
+                list_elements.pop();
+            }
+
             // Return empty list if there are no args.
-            let [first, args @ ..] = list.as_slice() else {
-                return Ok(Expr::List(Rc::new(RefCell::new(vec![Expr::Void()]))));
+            let [first, args @ ..] = list_elements.as_slice() else {
+                return Ok(Expr::Null);
             };
 
             // Check for special forms (like define)
@@ -63,6 +68,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             }
         }
         Expr::Void() => Ok(Expr::Void()),
+        Expr::Null => Ok(Expr::Null),
         _ => Err(Error::Message("unexpected form".to_string())),
     }
 }
@@ -83,13 +89,8 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
         ")" => Err(Error::Message("invalid ')'".to_string())),
         "'" => {
             let (quoted_expr, remaining) = parse(right_expr)?;
-            Ok((
-                Expr::List(Rc::new(RefCell::new(vec![
-                    Expr::Symbol("quote".to_string()),
-                    quoted_expr,
-                ]))),
-                remaining,
-            ))
+            let slice = vec![Expr::Symbol("quote".to_string()), quoted_expr];
+            Ok((Pair::list(slice.as_slice()), remaining))
         }
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
@@ -107,7 +108,7 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
             "unable to parse rest of expression".to_string(),
         ))?;
         if car == ")" {
-            return Ok((Expr::List(Rc::new(RefCell::new(expressions))), cdr));
+            return Ok((Pair::list(expressions.as_slice()), cdr));
         }
         let (expr, new_copy) = parse(&tokens_copy)?;
         expressions.push(expr);
