@@ -393,8 +393,7 @@ pub fn or(args: &[Expr], _: EnvRef) -> Result {
 
 /// Make a new list.
 pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
-    let list = Pair::list(args);
-    Ok(Expr::Pair(list))
+    Ok(Pair::list(args))
 }
 
 /// Append 2 lists together.
@@ -454,7 +453,7 @@ pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
         [Expr::Pair(pair)] => {
             let items: Vec<Expr> = PairIter::new(pair).map(|e| e.clone()).collect();
             let reversed: Vec<Expr> = items.into_iter().rev().collect::<Vec<_>>();
-            Ok(Expr::Pair(Pair::list(&reversed)))
+            Ok(Pair::list(&reversed))
         }
         _ => Err(Error::Message("expected list".to_string())),
     }
@@ -505,7 +504,7 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => {
             let chars: Vec<Expr> = s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>();
-            Ok(Expr::Pair(Pair::list(chars.as_slice())))
+            Ok(Pair::list(chars.as_slice()))
         }
         _ => Err(Error::Message("expected string".to_string())),
     }

@@ -259,7 +259,7 @@ fn test_new_list() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -270,7 +270,7 @@ fn test_new_list_empty() {
     let input = "(list)".to_string();
     let result = parse_and_eval(input, env.clone());
     let expected_values = vec![Expr::Void()];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -285,7 +285,7 @@ fn test_cons() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -301,7 +301,7 @@ fn test_list_append() {
         Expr::Number(Number::from_i64(3)),
         Expr::Number(Number::from_i64(4)),
     ];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -322,7 +322,7 @@ fn test_car() {
     let input = "(car (list 1 2 3))".to_string();
     let result = parse_and_eval(input, env.clone());
     let expected_values = vec![Expr::Number(Number::from_i64(1))];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -336,7 +336,7 @@ fn test_cdr() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(3)),
     ];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -647,7 +647,7 @@ fn test_reverse() {
         Expr::Number(Number::from_i64(2)),
         Expr::Number(Number::from_i64(1)),
     ];
-    let _expected = Expr::Pair(Pair::list(expected_values.as_slice()));
+    let _expected = Pair::list(expected_values.as_slice());
     assert!(matches!(result, Ok(_expected)));
 }
 
@@ -989,4 +989,12 @@ fn test_create_list() {
     ];
     let list = Pair::list(&expr);
     println!("list: {:?}", list);
+}
+
+#[test]
+fn test_empty_list_format() {
+    use crate::types::{Expr, Pair};
+    let empty = Pair::list(&[]);
+    assert_eq!(format!("{}", empty), "()");
+    assert!(matches!(empty, Expr::Null));
 }

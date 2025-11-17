@@ -25,7 +25,14 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             .find_var(k)
             .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
         Expr::Pair(pair) => {
-            let list_elements: Vec<Expr> = pair.iter().collect();
+            let mut list_elements: Vec<Expr> = pair.iter().collect();
+
+            // Drop terminating `Expr::Null` from list.
+            if pair.is_list()
+                && let Some(Expr::Null) = list_elements.last()
+            {
+                list_elements.pop();
+            }
 
             // Return empty list if there are no args.
             let [first, args @ ..] = list_elements.as_slice() else {
@@ -83,7 +90,7 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
         "'" => {
             let (quoted_expr, remaining) = parse(right_expr)?;
             let slice = vec![Expr::Symbol("quote".to_string()), quoted_expr];
-            Ok((Expr::Pair(Pair::list(slice.as_slice())), remaining))
+            Ok((Pair::list(slice.as_slice()), remaining))
         }
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
@@ -101,7 +108,7 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
             "unable to parse rest of expression".to_string(),
         ))?;
         if car == ")" {
-            return Ok((Expr::Pair(Pair::list(expressions.as_slice())), cdr));
+            return Ok((Pair::list(expressions.as_slice()), cdr));
         }
         let (expr, new_copy) = parse(&tokens_copy)?;
         expressions.push(expr);

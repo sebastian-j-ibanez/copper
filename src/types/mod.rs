@@ -118,13 +118,10 @@ impl Pair {
     }
 
     /// Create a new list.
-    pub fn list(values: &[Expr]) -> Pair {
-        values
-            .iter()
-            .rev()
-            .fold(Pair::cons((Expr::Null, Expr::Null)), |cdr, car| {
-                Pair::cons((car.clone(), Expr::Pair(cdr)))
-            })
+    pub fn list(values: &[Expr]) -> Expr {
+        values.iter().rev().fold(Expr::Null, |cdr, car| {
+            Expr::Pair(Pair::cons((car.clone(), cdr)))
+        })
     }
 
     /// Return an immutable iterator over a `Pair`.
@@ -223,9 +220,7 @@ impl Pair {
     pub fn append(&self, new_element: Expr) -> Result {
         let mut elements: Vec<Expr> = self.iter().collect();
         elements.push(new_element);
-        let new_list = Pair::list(elements.as_slice());
-
-        Ok(Expr::Pair(new_list))
+        Ok(Pair::list(elements.as_slice()))
     }
 
     /// Append element to list, mutating `&self`.
