@@ -141,27 +141,6 @@ impl Pair {
         }
     }
 
-    /// Returns if `&self` is a list.
-    pub fn is_list(&self) -> bool {
-        let mut current = Some(self.clone());
-        while let Some(pair) = current {
-            match pair.cdr() {
-                Expr::Pair(next) => current = Some(next),
-                Expr::Null => return true,
-                _ => return false,
-            }
-        }
-        false
-    }
-
-    /// Return if cdr is an `Expr::Pair`.
-    pub fn cdr_is_pair(&self) -> bool {
-        match self.elements.borrow().1 {
-            Expr::Pair(_) => true,
-            _ => false,
-        }
-    }
-
     /// Get first element.
     pub fn car(&self) -> Expr {
         self.elements.borrow().0.clone()
@@ -293,6 +272,27 @@ impl Pair {
         }
 
         len
+    }
+
+    /// Returns if `&self` is a list.
+    pub fn is_list(&self) -> bool {
+        let mut current = Some(self.clone());
+        while let Some(pair) = current {
+            match pair.cdr() {
+                Expr::Pair(next) => current = Some(next),
+                Expr::Null => return true,
+                _ => return false,
+            }
+        }
+        false
+    }
+
+    /// Return if cdr is an `Expr::Pair`.
+    pub fn cdr_is_pair(&self) -> bool {
+        match self.elements.borrow().1 {
+            Expr::Pair(_) => true,
+            _ => false,
+        }
     }
 }
 
