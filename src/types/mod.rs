@@ -17,9 +17,6 @@ use std::rc::Rc;
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
-// pub type List = Rc<RefCell<Vec<Expr>>>;
-// pub type Pair = Rc<RefCell<(Expr, Expr)>>;
-
 pub type Result = std::result::Result<Expr, Error>;
 pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 
