@@ -130,10 +130,12 @@ impl Number {
         Err(Error::Message(m))
     }
 
+    /// Create `Number` from `i64`.
     pub fn from_i64(value: i64) -> Self {
         Int(IntVariant::Small(value))
     }
 
+    /// Convert `Number` to `i64`.
     pub fn to_i64(&self) -> Option<i64> {
         match self {
             Int(int_var) => match int_var {
@@ -158,10 +160,12 @@ impl Number {
         }
     }
 
+    /// Create `Number` from `f64`.
     pub fn from_f64(value: f64) -> Self {
         Float(value)
     }
 
+    /// Convert `Number` to `f64`.
     pub fn to_f64(&self) -> Option<f64> {
         match self {
             Int(int_var) => match int_var {
@@ -171,6 +175,18 @@ impl Number {
             Float(f) => Some(*f),
             Rational(r) => r.to_f64(),
             Complex(_) => None,
+        }
+    }
+
+    /// Convert `Number` to `usize`.
+    pub fn to_usize(&self) -> Option<usize> {
+        match self {
+            Int(int_var) => match int_var {
+                IntVariant::Small(i) => Some(*i as usize),
+                IntVariant::Big(b) => b.to_usize(),
+            },
+            Float(f) => Some(*f as usize),
+            _ => None,
         }
     }
 

@@ -389,7 +389,16 @@ pub fn or(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Boolean(contains_true))
 }
 
-// Lists
+// Pairs & Lists
+
+/// Construct a new pair from 2 expressions.
+pub fn cons_proc(args: &[Expr], _: EnvRef) -> Result {
+    use crate::types::Pair;
+    match args {
+        [a, b] => Ok(Expr::Pair(Pair::cons((a.clone(), b.clone())))),
+        _ => Err(Error::Message("expected 2 arguments".to_string())),
+    }
+}
 
 /// Make a new list.
 pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
@@ -459,14 +468,38 @@ pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Pairs
+// Vectors
 
-/// Construct a new pair from 2 expressions.
-pub fn cons_proc(args: &[Expr], _: EnvRef) -> Result {
-    use crate::types::Pair;
+/// Create a new vector containing the given arguments.
+pub fn new_vector(args: &[Expr], _: EnvRef) -> Result {
+    if args.is_empty() {
+        return Err(Error::Message("".to_string()));
+    }
+    let mut new_vec = Vec::new();
+    for arg in args {
+        new_vec.push(arg.clone());
+    }
+    Ok(Expr::Vector(new_vec))
+}
+
+/// Create a new vector with an optional pre-allocated size.
+pub fn make_vector(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [a, b] => Ok(Expr::Pair(Pair::cons((a.clone(), b.clone())))),
-        _ => Err(Error::Message("expected 2 arguments".to_string())),
+        [Expr::Number(n)] => match n.to_usize() {
+            Some(size) => Ok(Expr::Vector(vec![Expr::Void(); size])),
+            _ => Err(Error::Message(
+                "invalid length, expected int or float".to_string(),
+            )),
+        },
+        _ => Ok(Expr::Vector(Vec::new())),
+    }
+}
+
+/// Return length of vector.
+pub fn vector_len(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(v)] => Ok(Expr::Number(Number::from_usize(v.len()))),
+        _ => Err(Error::Message("expected vector".to_string())),
     }
 }
 
@@ -764,6 +797,17 @@ pub fn is_list(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_pair(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Pair(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+pub fn is_vector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(_)] => Ok(Expr::Boolean(true)),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",

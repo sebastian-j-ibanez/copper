@@ -18,6 +18,7 @@ pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
 pub type Result = std::result::Result<Expr, Error>;
+pub type Vector = Vec<Expr>;
 pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 
 #[derive(Debug, Clone)]
@@ -29,9 +30,10 @@ pub enum Expr {
     Symbol(String),
     Pair(Pair),
     Null,
-    Void(),
+    Vector(Vec<Expr>),
     Procedure(Procedure),
     Closure(Box<Closure>),
+    Void(),
 }
 
 impl fmt::Display for Expr {
@@ -42,11 +44,12 @@ impl fmt::Display for Expr {
             Expr::Char(c) => format_char(c),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
-            Expr::Pair(pair) => format_pair(pair),
+            Expr::Pair(p) => format_pair(p),
             Expr::Null => format_null(),
-            Expr::Void() => return Ok(()),
+            Expr::Vector(v) => format_vector(v, true),
             Expr::Procedure(_) => "#<function {}".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
+            Expr::Void() => return Ok(()),
         };
         write!(f, "{}", s)
     }
@@ -72,11 +75,30 @@ fn format_boolean(b: &bool) -> String {
 
 /// Format pair into literal representation.
 pub fn format_pair(pair: &Pair) -> String {
-    format!(
-        "({} . {})",
-        pair.elements.borrow().0,
-        pair.elements.borrow().1
-    )
+    // TODO: format real lists
+    match pair.is_list() {
+        true => format!(
+            "({} . {})",
+            pair.elements.borrow().0,
+            pair.elements.borrow().1
+        ),
+        false => format!(""),
+    }
+}
+
+/// Format vector into literal representation.
+fn format_vector(vector: &Vector, literal: bool) -> String {
+    let items = vector
+        .iter()
+        .map(|e| e.to_string())
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    if literal {
+        return format!("#({})", items);
+    }
+
+    items
 }
 
 /// Return literal representation of a null list.
