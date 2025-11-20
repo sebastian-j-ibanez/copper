@@ -11,10 +11,11 @@ use crate::env::procedures::{
     is_boolean, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_uppercase,
     is_char_whitespace, is_complex, is_even, is_exact, is_exact_integer, is_inexact, is_integer,
     is_list, is_number, is_odd, is_pair, is_procedure, is_rational, is_real, is_string, is_symbol,
-    is_vector, list_append, list_length, list_reverse, load_file, make_vector, max, min, modulo,
-    mult, new_list, new_string, new_vector, newline, not, num_to_string, or, pretty_print, print,
-    println, str_append, str_length, string_to_downcase, string_to_list, string_to_num,
-    string_to_symbol, string_to_upcase, sub, symbol_to_string, vector_len,
+    is_vector, list_append, list_length, list_reverse, list_to_vector, load_file, make_vector, max,
+    min, modulo, mult, new_list, new_string, new_vector, newline, not, num_to_string, or,
+    pretty_print, print, println, str_append, str_length, string_to_downcase, string_to_list,
+    string_to_num, string_to_symbol, string_to_upcase, string_to_vector, sub, symbol_to_string,
+    vector_len, vector_ref, vector_set, vector_to_list, vector_to_string,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::Expr;
@@ -85,6 +86,8 @@ impl Env {
         data.insert("vector".to_string(), Expr::Procedure(new_vector));
         data.insert("make-vector".to_string(), Expr::Procedure(make_vector));
         data.insert("vector-length".to_string(), Expr::Procedure(vector_len));
+        data.insert("vector-ref".to_string(), Expr::Procedure(vector_ref));
+        data.insert("vector-set!".to_string(), Expr::Procedure(vector_set));
         // Conversions
         data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
         data.insert(
@@ -97,6 +100,16 @@ impl Env {
             Expr::Procedure(string_to_symbol),
         );
         data.insert("string->list".to_string(), Expr::Procedure(string_to_list));
+        data.insert(
+            "string->vector".to_string(),
+            Expr::Procedure(string_to_vector),
+        );
+        data.insert("list->vector".to_string(), Expr::Procedure(list_to_vector));
+        data.insert("vector->list".to_string(), Expr::Procedure(vector_to_list));
+        data.insert(
+            "vector->string".to_string(),
+            Expr::Procedure(vector_to_string),
+        );
         // Predicates
         data.insert("number?".to_string(), Expr::Procedure(is_number));
         data.insert("real?".to_string(), Expr::Procedure(is_real));

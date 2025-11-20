@@ -5,7 +5,7 @@
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
-use crate::types::{Expr, Number, Pair, PairIter, Result}; // format_list removed
+use crate::types::{Expr, Number, Pair, PairIter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -34,9 +34,9 @@ pub fn print(args: &[Expr], _: EnvRef) -> Result {
         match arg {
             Expr::String(s) => print!("{}", s),
             Expr::Char(c) => print!("{}", c),
-            // Expr::List(l) => {
-            //     print!("{}", format_list(l, "", false));
-            // }
+            Expr::Pair(p) => {
+                print!("{}", format_pair(p, "", false));
+            }
             _ => print!("{}", arg),
         }
         return Ok(Expr::Void());
@@ -472,40 +472,69 @@ pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
 
 /// Create a new vector containing the given arguments.
 pub fn new_vector(args: &[Expr], _: EnvRef) -> Result {
-    if args.is_empty() {
-        return Err(Error::Message("".to_string()));
-    }
-    let mut new_vec = Vec::new();
-    for arg in args {
-        new_vec.push(arg.clone());
-    }
-    Ok(Expr::Vector(new_vec))
+    Ok(Expr::Vector(Vector::from(args)))
 }
 
 /// Create a new vector with an optional pre-allocated size.
 pub fn make_vector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(n)] => match n.to_usize() {
-            Some(size) => Ok(Expr::Vector(vec![Expr::Void(); size])),
+            Some(size) => {
+                let vector = Vector::new();
+                vector.alloc_size(size, None);
+                Ok(Expr::Vector(vector))
+            }
+            _ => Err(Error::Message(
+                "invalid size, expected int or float".to_string(),
+            )),
+        },
+        _ => Ok(Expr::Vector(Vector::new())),
+    }
+}
+
+/// Return contents of vector at specified index.
+pub fn vector_ref(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(v), Expr::Number(n)] => match n.to_usize() {
+            Some(size) => match v.get(size) {
+                Some(e) => Ok(e.clone()),
+                _ => Err(Error::Message("invalid index".to_string())),
+            },
             _ => Err(Error::Message(
                 "invalid length, expected int or float".to_string(),
             )),
         },
-        _ => Ok(Expr::Vector(Vec::new())),
+        _ => Ok(Expr::Vector(Vector::new())),
+    }
+}
+
+/// Set contents of vector at specified index.
+pub fn vector_set(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(v), Expr::Number(n), expr] => match n.to_usize() {
+            Some(index) => {
+                v.set(index, expr.clone())?;
+                Ok(Expr::Void())
+            }
+            _ => Err(Error::Message("invalid index".to_string())),
+        },
+        _ => Err(Error::Message(
+            "expected vector, index, and new value".to_string(),
+        )),
     }
 }
 
 /// Return length of vector.
 pub fn vector_len(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Vector(v)] => Ok(Expr::Number(Number::from_usize(v.len()))),
+        [Expr::Vector(v)] => Ok(Expr::Number(Number::from_usize(v.elements.borrow().len()))),
         _ => Err(Error::Message("expected vector".to_string())),
     }
 }
 
 // Conversion
 
-/// Convert a number into a string.
+/// Convert a `Number` into a `String`.
 pub fn num_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(num)] => Ok(Expr::String(String::from(num.to_string()))),
@@ -513,7 +542,7 @@ pub fn num_to_string(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Convert a string into a number.
+/// Convert a `String` into a `Number`.
 pub fn string_to_num(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(num_str)] => match Number::from_token(&num_str) {
@@ -524,7 +553,7 @@ pub fn string_to_num(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Convert a string into a symbol.
+/// Convert a `String` into a `Symbol`.
 pub fn string_to_symbol(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::Symbol(s.to_owned())),
@@ -532,7 +561,7 @@ pub fn string_to_symbol(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Convert a string into a list of `Expr::Char`
+/// Convert a `String` into a `Pair` list.
 pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => {
@@ -543,11 +572,43 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Convert a string into a symbol.
+/// Convert a `String` into a `Vector`.
+pub fn string_to_vector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => Ok(Expr::Vector(Vector::from_string(s.clone()))),
+        _ => Err(Error::Message("expected string".to_string())),
+    }
+}
+
+/// Convert a `String` into a `Symbol`.
 pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Symbol(s)] => Ok(Expr::String(s.to_owned())),
         _ => Err(Error::Message("expected string".to_string())),
+    }
+}
+
+/// Convert `Pair` list to `Vector`.
+pub fn list_to_vector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] if p.is_list() => Ok(p.to_vector()),
+        _ => Err(Error::Message("expected proper list".to_string())),
+    }
+}
+
+/// Convert `Vector` to `Pair` list.
+pub fn vector_to_list(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(v)] => Ok(v.to_list()),
+        _ => Err(Error::Message("expected vector".to_string())),
+    }
+}
+
+/// Convert `Vector` to `String`.
+pub fn vector_to_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(v)] => v.to_string(),
+        _ => Err(Error::Message("expected vector".to_string())),
     }
 }
 

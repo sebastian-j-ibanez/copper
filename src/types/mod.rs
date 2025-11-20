@@ -18,7 +18,6 @@ pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
 pub type Result = std::result::Result<Expr, Error>;
-pub type Vector = Vec<Expr>;
 pub type Procedure = fn(&[Expr], EnvRef) -> Result;
 
 #[derive(Debug, Clone)]
@@ -30,7 +29,7 @@ pub enum Expr {
     Symbol(String),
     Pair(Pair),
     Null,
-    Vector(Vec<Expr>),
+    Vector(Vector),
     Procedure(Procedure),
     Closure(Box<Closure>),
     Void(),
@@ -44,7 +43,7 @@ impl fmt::Display for Expr {
             Expr::Char(c) => format_char(c),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
-            Expr::Pair(p) => format_pair(p),
+            Expr::Pair(p) => format_pair(p, " ", true),
             Expr::Null => format_null(),
             Expr::Vector(v) => format_vector(v, true),
             Expr::Procedure(_) => "#<function {}".to_string(),
@@ -74,21 +73,35 @@ fn format_boolean(b: &bool) -> String {
 }
 
 /// Format pair into literal representation.
-pub fn format_pair(pair: &Pair) -> String {
-    // TODO: format real lists
-    match pair.is_list() {
-        true => format!(
-            "({} . {})",
-            pair.elements.borrow().0,
-            pair.elements.borrow().1
-        ),
-        false => format!(""),
+pub fn format_pair(pair: &Pair, delim: &str, parenthesis: bool) -> String {
+    let (car, cdr) = &*pair.elements.borrow();
+
+    if pair.is_list() {
+        let items = pair
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join(delim);
+
+        return if parenthesis {
+            format!("({items})")
+        } else {
+            items
+        };
     }
+
+    if parenthesis {
+        return format!("({car} . {cdr})");
+    }
+
+    format!("{car}{cdr}")
 }
 
 /// Format vector into literal representation.
 fn format_vector(vector: &Vector, literal: bool) -> String {
     let items = vector
+        .elements
+        .borrow()
         .iter()
         .map(|e| e.to_string())
         .collect::<Vec<String>>()
@@ -308,6 +321,12 @@ impl Pair {
             _ => false,
         }
     }
+
+    /// Return `Vector` created from `&self` elements.
+    pub fn to_vector(&self) -> Expr {
+        let pair_elements: Vec<Expr> = self.iter().collect();
+        Expr::Vector(Vector::from(pair_elements.as_slice()))
+    }
 }
 
 /// Immutable iterator wrapper for `Pair`.
@@ -378,5 +397,86 @@ impl Iterator for PairIterMut {
             _ => None,
         };
         Some(handle)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Vector {
+    pub elements: Rc<RefCell<Vec<Expr>>>,
+}
+
+impl Vector {
+    /// Create a new vector;
+    pub fn new() -> Vector {
+        Vector {
+            elements: Rc::new(RefCell::new(Vec::new())),
+        }
+    }
+
+    /// Create a new vector from expressions.
+    pub fn from(expressions: &[Expr]) -> Vector {
+        let vector = Vector::new();
+        for expr in expressions {
+            vector.elements.borrow_mut().push(expr.clone());
+        }
+        vector
+    }
+
+    /// Allocate the vector to a specific size. Sets each element to `Expr::Void` by default.
+    /// Will overwrite all data in the vector.
+    pub fn alloc_size(&self, size: usize, default_value: Option<Expr>) {
+        let mut vec_ref = self.elements.borrow_mut();
+        let mut value = Expr::Void();
+        if let Some(default) = default_value {
+            value = default;
+        }
+        *vec_ref = vec![value; size];
+    }
+
+    /// Set element at `index` to `new_value`.
+    pub fn set(&self, index: usize, new_value: Expr) -> std::result::Result<(), Error> {
+        let mut vec_ref = self.elements.borrow_mut();
+        match vec_ref.get(index) {
+            Some(_) => {
+                vec_ref[index] = new_value;
+                Ok(())
+            }
+            None => Err(Error::Message("".to_string())),
+        }
+    }
+
+    /// Get element at `index`.
+    pub fn get(&self, index: usize) -> Option<Expr> {
+        let vec_ref = self.elements.borrow();
+        match vec_ref.get(index) {
+            Some(value) => Some(value.clone()),
+            None => None,
+        }
+    }
+
+    /// Return new `Pair` list created from `&self`.
+    pub fn to_list(&self) -> Expr {
+        let vec_ref = self.elements.borrow();
+        Pair::list(vec_ref.as_slice())
+    }
+
+    /// Return new `String` created from `&self`.
+    pub fn to_string(&self) -> Result {
+        let str_elements = self
+            .elements
+            .borrow()
+            .iter()
+            .map(|e| match e {
+                Expr::Char(c) => Ok(*c),
+                _ => return Err(Error::Message("expected char".to_string())),
+            })
+            .collect::<std::result::Result<String, Error>>()?;
+        Ok(Expr::String(str_elements))
+    }
+
+    /// Create new `Vector` from a `String`.
+    pub fn from_string(s: String) -> Vector {
+        let chars = s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>();
+        Vector::from(chars.as_slice())
     }
 }
