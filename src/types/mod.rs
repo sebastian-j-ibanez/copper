@@ -479,4 +479,21 @@ impl Vector {
         let chars = s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>();
         Vector::from(chars.as_slice())
     }
+
+    /// Return a new sub `Vector` with the given indices.
+    pub fn sub_vector(&self, start: usize, end: usize) -> Option<Vector> {
+        let vec_ref = self.elements.borrow();
+        match (vec_ref.get(start), vec_ref.get(end - 1)) {
+            (Some(_), Some(_)) => {
+                let sub_slice = &vec_ref[start..end];
+                Some(Vector::from(sub_slice))
+            }
+            _ => None,
+        }
+    }
+
+    /// Return length of `Vector`.
+    pub fn len(&self) -> usize {
+        self.elements.borrow().len()
+    }
 }
