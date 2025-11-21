@@ -18,7 +18,7 @@ use crate::env::procedures::{
     symbol_to_string, vector_len, vector_ref, vector_set, vector_to_list, vector_to_string,
 };
 use crate::macros::{quote, set_car, set_cdr};
-use crate::types::Expr;
+use crate::types::{Expr, Procedure};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -34,130 +34,105 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn standard_env() -> EnvRef {
-        let mut data: HashMap<String, Expr> = HashMap::new();
-        // IO
-        data.insert("load".to_string(), Expr::Procedure(load_file));
-        data.insert("display".to_string(), Expr::Procedure(display));
-        data.insert("newline".to_string(), Expr::Procedure(newline));
-        data.insert("print".to_string(), Expr::Procedure(print));
-        data.insert("println".to_string(), Expr::Procedure(println));
-        data.insert("pp".to_string(), Expr::Procedure(pretty_print));
-        // Math
-        data.insert("+".to_string(), Expr::Procedure(add));
-        data.insert("-".to_string(), Expr::Procedure(sub));
-        data.insert("*".to_string(), Expr::Procedure(mult));
-        data.insert("/".to_string(), Expr::Procedure(div));
-        data.insert("modulo".to_string(), Expr::Procedure(modulo));
-        data.insert("expt".to_string(), Expr::Procedure(exponent));
-        data.insert("abs".to_string(), Expr::Procedure(abs));
-        data.insert("ceiling".to_string(), Expr::Procedure(ceil));
-        data.insert("floor".to_string(), Expr::Procedure(floor));
-        data.insert("min".to_string(), Expr::Procedure(min));
-        data.insert("max".to_string(), Expr::Procedure(max));
-        // Strings
-        data.insert("string".to_string(), Expr::Procedure(new_string));
-        data.insert("string-append".to_string(), Expr::Procedure(str_append));
-        data.insert("string-length".to_string(), Expr::Procedure(str_length));
-        data.insert(
-            "string-upcase".to_string(),
-            Expr::Procedure(string_to_upcase),
-        );
-        data.insert(
-            "string-downcase".to_string(),
-            Expr::Procedure(string_to_downcase),
-        );
-        // Booleans
-        data.insert("not".to_string(), Expr::Procedure(not));
-        data.insert("and".to_string(), Expr::Procedure(and));
-        data.insert("or".to_string(), Expr::Procedure(or));
-        // Lists & Pairs
-        data.insert("cons".to_string(), Expr::Procedure(cons_proc));
-        data.insert("list".to_string(), Expr::Procedure(new_list));
-        data.insert("append".to_string(), Expr::Procedure(list_append));
-        data.insert("length".to_string(), Expr::Procedure(list_length));
-        data.insert("car".to_string(), Expr::Procedure(car));
-        data.insert("cdr".to_string(), Expr::Procedure(cdr));
-        data.insert("cadr".to_string(), Expr::Procedure(cadr));
-        data.insert("set-car!".to_string(), Expr::Procedure(set_car));
-        data.insert("set-cdr!".to_string(), Expr::Procedure(set_cdr));
-        data.insert("reverse".to_string(), Expr::Procedure(list_reverse));
-        // Vectors
-        data.insert("vector".to_string(), Expr::Procedure(new_vector));
-        data.insert("make-vector".to_string(), Expr::Procedure(make_vector));
-        data.insert("vector-length".to_string(), Expr::Procedure(vector_len));
-        data.insert("vector-ref".to_string(), Expr::Procedure(vector_ref));
-        data.insert("vector-set!".to_string(), Expr::Procedure(vector_set));
-        // Conversions
-        data.insert("number->string".to_string(), Expr::Procedure(num_to_string));
-        data.insert(
-            "symbol->string".to_string(),
-            Expr::Procedure(symbol_to_string),
-        );
-        data.insert("string->number".to_string(), Expr::Procedure(string_to_num));
-        data.insert(
-            "string->symbol".to_string(),
-            Expr::Procedure(string_to_symbol),
-        );
-        data.insert("string->list".to_string(), Expr::Procedure(string_to_list));
-        data.insert(
-            "string->vector".to_string(),
-            Expr::Procedure(string_to_vector),
-        );
-        data.insert("list->string".to_string(), Expr::Procedure(list_to_string));
-        data.insert("list->vector".to_string(), Expr::Procedure(list_to_vector));
-        data.insert("vector->list".to_string(), Expr::Procedure(vector_to_list));
-        data.insert(
-            "vector->string".to_string(),
-            Expr::Procedure(vector_to_string),
-        );
-        // Predicates
-        data.insert("number?".to_string(), Expr::Procedure(is_number));
-        data.insert("real?".to_string(), Expr::Procedure(is_real));
-        data.insert("rational?".to_string(), Expr::Procedure(is_rational));
-        data.insert("complex?".to_string(), Expr::Procedure(is_complex));
-        data.insert("integer?".to_string(), Expr::Procedure(is_integer));
-        data.insert("even?".to_string(), Expr::Procedure(is_even));
-        data.insert("odd?".to_string(), Expr::Procedure(is_odd));
-        data.insert("exact?".to_string(), Expr::Procedure(is_exact));
-        data.insert("inexact?".to_string(), Expr::Procedure(is_inexact));
-        data.insert(
-            "exact-integer?".to_string(),
-            Expr::Procedure(is_exact_integer),
-        );
-        data.insert("symbol?".to_string(), Expr::Procedure(is_symbol));
-        data.insert("string?".to_string(), Expr::Procedure(is_string));
-        data.insert("char?".to_string(), Expr::Procedure(is_char));
-        data.insert(
-            "char-alphabetic?".to_string(),
-            Expr::Procedure(is_char_alphabetic),
-        );
-        data.insert(
-            "char-numeric?".to_string(),
-            Expr::Procedure(is_char_numeric),
-        );
-        data.insert(
-            "char-whitespace?".to_string(),
-            Expr::Procedure(is_char_whitespace),
-        );
-        data.insert(
-            "char-upper-case?".to_string(),
-            Expr::Procedure(is_char_uppercase),
-        );
-        data.insert(
-            "char-lower-case?".to_string(),
-            Expr::Procedure(is_char_lowercase),
-        );
-        data.insert("boolean?".to_string(), Expr::Procedure(is_boolean));
-        data.insert("list?".to_string(), Expr::Procedure(is_list));
-        data.insert("pair?".to_string(), Expr::Procedure(is_pair));
-        data.insert("vector?".to_string(), Expr::Procedure(is_vector));
-        data.insert("procedure?".to_string(), Expr::Procedure(is_procedure));
-        // Misc
-        data.insert("exit".to_string(), Expr::Procedure(exit));
-        data.insert("quote".to_string(), Expr::Procedure(quote));
+    pub fn new() -> EnvRef {
+        let map: HashMap<String, Expr> = HashMap::new();
+        Rc::new(RefCell::new(Env {
+            data: map,
+            outer: None,
+        }))
+    }
 
-        Rc::new(RefCell::new(Env { data, outer: None }))
+    pub fn standard_env() -> EnvRef {
+        let env_ref = Env::new();
+        {
+            let mut env = env_ref.borrow_mut();
+            // IO
+            env.insert_proc("load", load_file);
+            env.insert_proc("load", load_file);
+            env.insert_proc("display", display);
+            env.insert_proc("newline", newline);
+            env.insert_proc("print", print);
+            env.insert_proc("println", println);
+            env.insert_proc("pp", pretty_print);
+            // Math
+            env.insert_proc("+", add);
+            env.insert_proc("-", sub);
+            env.insert_proc("*", mult);
+            env.insert_proc("/", div);
+            env.insert_proc("modulo", modulo);
+            env.insert_proc("expt", exponent);
+            env.insert_proc("abs", abs);
+            env.insert_proc("ceiling", ceil);
+            env.insert_proc("floor", floor);
+            env.insert_proc("min", min);
+            env.insert_proc("max", max);
+            // Strings
+            env.insert_proc("string", new_string);
+            env.insert_proc("string-append", str_append);
+            env.insert_proc("string-length", str_length);
+            env.insert_proc("string-upcase", string_to_upcase);
+            env.insert_proc("string-downcase", string_to_downcase);
+            // Booleans
+            env.insert_proc("not", not);
+            env.insert_proc("and", and);
+            env.insert_proc("or", or);
+            // Lists & Pairs
+            env.insert_proc("cons", cons_proc);
+            env.insert_proc("list", new_list);
+            env.insert_proc("append", list_append);
+            env.insert_proc("length", list_length);
+            env.insert_proc("car", car);
+            env.insert_proc("cdr", cdr);
+            env.insert_proc("cadr", cadr);
+            env.insert_proc("set-car!", set_car);
+            env.insert_proc("set-cdr!", set_cdr);
+            env.insert_proc("reverse", list_reverse);
+            // Vectors
+            env.insert_proc("vector", new_vector);
+            env.insert_proc("make-vector", make_vector);
+            env.insert_proc("vector-length", vector_len);
+            env.insert_proc("vector-ref", vector_ref);
+            env.insert_proc("vector-set!", vector_set);
+            // Conversions
+            env.insert_proc("number->string", num_to_string);
+            env.insert_proc("symbol->string", symbol_to_string);
+            env.insert_proc("string->number", string_to_num);
+            env.insert_proc("string->symbol", string_to_symbol);
+            env.insert_proc("string->list", string_to_list);
+            env.insert_proc("string->vector", string_to_vector);
+            env.insert_proc("list->string", list_to_string);
+            env.insert_proc("list->vector", list_to_vector);
+            env.insert_proc("vector->list", vector_to_list);
+            env.insert_proc("vector->string", vector_to_string);
+            // Predicates
+            env.insert_proc("number?", is_number);
+            env.insert_proc("real?", is_real);
+            env.insert_proc("rational?", is_rational);
+            env.insert_proc("complex?", is_complex);
+            env.insert_proc("integer?", is_integer);
+            env.insert_proc("even?", is_even);
+            env.insert_proc("odd?", is_odd);
+            env.insert_proc("exact?", is_exact);
+            env.insert_proc("inexact?", is_inexact);
+            env.insert_proc("exact-integer?", is_exact_integer);
+            env.insert_proc("symbol?", is_symbol);
+            env.insert_proc("string?", is_string);
+            env.insert_proc("char?", is_char);
+            env.insert_proc("char-alphabetic?", is_char_alphabetic);
+            env.insert_proc("char-numeric?", is_char_numeric);
+            env.insert_proc("char-whitespace?", is_char_whitespace);
+            env.insert_proc("char-upper-case?", is_char_uppercase);
+            env.insert_proc("char-lower-case?", is_char_lowercase);
+            env.insert_proc("boolean?", is_boolean);
+            env.insert_proc("list?", is_list);
+            env.insert_proc("pair?", is_pair);
+            env.insert_proc("vector?", is_vector);
+            env.insert_proc("procedure?", is_procedure);
+            // Misc
+            env.insert_proc("exit", exit);
+            env.insert_proc("quote", quote);
+        }
+        env_ref
     }
 
     /// Initialize an empty environment.
@@ -177,5 +152,16 @@ impl Env {
         } else {
             None
         }
+    }
+
+    /// Insert a new `Procedure` into `HashMap<String, Expr>`. Only used to clean up boilerplate in `env::standard_env()`.
+    fn insert_proc(&mut self, name: &str, function: Procedure) {
+        self.data
+            .insert(name.to_string(), Expr::Procedure(function));
+    }
+
+    /// Insert a new `Expr` into `&self`.
+    pub fn insert_expr(&mut self, name: &str, value: Expr) {
+        self.data.insert(name.to_string(), value);
     }
 }

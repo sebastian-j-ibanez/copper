@@ -323,13 +323,13 @@ impl Pair {
     }
 
     /// Return `Vector` created from `&self` elements.
-    pub fn to_vector(&self) -> Expr {
+    pub fn to_expr_vector(&self) -> Expr {
         let pair_elements: Vec<Expr> = self.iter().collect();
         Expr::Vector(Vector::from(pair_elements.as_slice()))
     }
 
     /// Return `String` created from `&self` elements.
-    pub fn to_string(&self) -> Result {
+    pub fn to_expr_string(&self) -> Result {
         let pair_elements = self
             .iter()
             .map(|e| match e {
@@ -478,14 +478,14 @@ impl Vector {
         }
     }
 
-    /// Return new `Pair` list created from `&self`.
-    pub fn to_list(&self) -> Expr {
+    /// Return new `Expr::Pair` list created from `&self`.
+    pub fn to_expr_list(&self) -> Expr {
         let vec_ref = self.elements.borrow();
         Pair::list(vec_ref.as_slice())
     }
 
-    /// Return new `String` created from `&self`.
-    pub fn to_string(&self) -> Result {
+    /// Return new `Expr::String` created from `&self`.
+    pub fn to_expr_string(&self) -> Result {
         let str_elements = self
             .elements
             .borrow()

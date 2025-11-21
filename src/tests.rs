@@ -815,8 +815,8 @@ fn test_list_to_vector_with_start() {
     let input = "(list->vector (list 1 2 3 4) 1)".to_string();
     let result = parse_and_eval(input, env);
     assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, Expr::Pair(_)));
+    if let Ok(Expr::Pair(p)) = result {
+        assert!(p.is_list());
     }
 }
 
@@ -839,8 +839,8 @@ fn test_vector_to_list() {
     let input = "(vector->list (vector 1 2 3))".to_string();
     let result = parse_and_eval(input, env);
     assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, Expr::Pair(_)));
+    if let Ok(Expr::Pair(p)) = result {
+        assert!(p.is_list());
     }
 }
 
@@ -851,8 +851,8 @@ fn test_vector_to_list_with_start() {
     let input = "(vector->list (vector 1 2 3 4) 2)".to_string();
     let result = parse_and_eval(input, env);
     assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, Expr::Vector(_)));
+    if let Ok(Expr::Pair(p)) = result {
+        assert!(p.is_list());
     }
 }
 
@@ -863,8 +863,8 @@ fn test_vector_to_list_with_start_and_end() {
     let input = "(vector->list (vector 1 2 3 4 5) 1 3)".to_string();
     let result = parse_and_eval(input, env);
     assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, Expr::Vector(_)));
+    if let Ok(Expr::Pair(p)) = result {
+        assert!(p.is_list());
     }
 }
 

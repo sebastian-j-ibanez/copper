@@ -591,7 +591,7 @@ pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
 /// WIP! Convert `Pair` list to `String`.
 pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] if p.is_list() => p.to_string(),
+        [Expr::Pair(p)] if p.is_list() => p.to_expr_string(),
         [Expr::Pair(list), Expr::Number(n_start)] if list.is_list() => {
             if *n_start == Number::from_usize(list.len()) {
                 return Ok(Expr::Null);
@@ -606,7 +606,7 @@ pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
             };
             match list.sub_list(start, list.len()) {
                 Some(list) => match list {
-                    Expr::Pair(p) => p.to_string(),
+                    Expr::Pair(p) => p.to_expr_string(),
                     _ => unreachable!(),
                 },
                 None => Err(Error::Message("out of range".to_string())),
@@ -634,7 +634,7 @@ pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
             };
             match list.sub_list(start, end) {
                 Some(list) => match list {
-                    Expr::Pair(p) => p.to_string(),
+                    Expr::Pair(p) => p.to_expr_string(),
                     _ => unreachable!(),
                 },
                 None => Err(Error::Message("out of range".to_string())),
@@ -647,7 +647,7 @@ pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
 /// Convert `Pair` list to `Vector`.
 pub fn list_to_vector(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(list)] if list.is_list() => Ok(list.to_vector()),
+        [Expr::Pair(list)] if list.is_list() => Ok(list.to_expr_vector()),
         [Expr::Pair(list), Expr::Number(n_start)] if list.is_list() => {
             if *n_start == Number::from_usize(list.len()) {
                 return Ok(Expr::Null);
@@ -687,7 +687,7 @@ pub fn list_to_vector(args: &[Expr], _: EnvRef) -> Result {
             };
             match list.sub_list(start, end) {
                 Some(sub_list) => match sub_list {
-                    Expr::Pair(sub_list) => Ok(sub_list.to_vector()),
+                    Expr::Pair(sub_list) => Ok(sub_list.to_expr_vector()),
                     _ => Err(Error::Message(
                         "unable to convert sub list to vector".to_string(),
                     )),
@@ -702,7 +702,7 @@ pub fn list_to_vector(args: &[Expr], _: EnvRef) -> Result {
 /// Convert `Vector` to `Pair` list.
 pub fn vector_to_list(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Vector(vec)] => Ok(vec.to_list()),
+        [Expr::Vector(vec)] => Ok(vec.to_expr_list()),
         [Expr::Vector(vec), Expr::Number(start)] => {
             if *start == Number::from_usize(vec.len()) {
                 return Ok(Expr::Null);
@@ -716,7 +716,7 @@ pub fn vector_to_list(args: &[Expr], _: EnvRef) -> Result {
                 }
             };
             match vec.sub_vector(start, vec.len()) {
-                Some(v) => Ok(Expr::Vector(v)),
+                Some(v) => Ok(v.to_expr_list()),
                 None => Err(Error::Message("out of range".to_string())),
             }
         }
@@ -742,7 +742,7 @@ pub fn vector_to_list(args: &[Expr], _: EnvRef) -> Result {
                 }
             };
             match vec.sub_vector(start, end) {
-                Some(v) => Ok(Expr::Vector(v)),
+                Some(v) => Ok(v.to_expr_list()),
                 None => Err(Error::Message("out of range".to_string())),
             }
         }
@@ -753,7 +753,50 @@ pub fn vector_to_list(args: &[Expr], _: EnvRef) -> Result {
 /// Convert `Vector` to `String`.
 pub fn vector_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Vector(v)] => v.to_string(),
+        [Expr::Vector(v)] => v.to_expr_string(),
+        [Expr::Vector(vec), Expr::Number(start)] => {
+            if *start == Number::from_usize(vec.len()) {
+                return Ok(Expr::Null);
+            }
+            let start = match start.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            match vec.sub_vector(start, vec.len()) {
+                Some(v) => Ok(v.to_expr_string()?),
+                None => Err(Error::Message("out of range".to_string())),
+            }
+        }
+        [Expr::Vector(vec), Expr::Number(start), Expr::Number(end)] => {
+            let v_len = Number::from_usize(vec.len());
+            if *start == v_len && *end == v_len {
+                return Ok(Expr::Null);
+            }
+            let start = match start.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            let end = match end.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            match vec.sub_vector(start, end) {
+                Some(v) => Ok(v.to_expr_string()?),
+                None => Err(Error::Message("out of range".to_string())),
+            }
+        }
         _ => Err(Error::Message("expected vector".to_string())),
     }
 }
