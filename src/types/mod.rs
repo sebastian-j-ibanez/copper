@@ -334,7 +334,7 @@ impl Pair {
             .iter()
             .map(|e| match e {
                 Expr::Char(c) => Ok(c),
-                _ => return Err(Error::Message("expected char".to_string())),
+                _ => return Err(Error::new("expected char")),
             })
             .collect::<std::result::Result<String, Error>>()?;
         Ok(Expr::String(pair_elements))
@@ -465,7 +465,7 @@ impl Vector {
                 vec_ref[index] = new_value;
                 Ok(())
             }
-            None => Err(Error::Message("".to_string())),
+            None => Err(Error::new("")),
         }
     }
 
@@ -492,7 +492,7 @@ impl Vector {
             .iter()
             .map(|e| match e {
                 Expr::Char(c) => Ok(*c),
-                _ => return Err(Error::Message("expected char".to_string())),
+                _ => return Err(Error::new("expected char")),
             })
             .collect::<std::result::Result<String, Error>>()?;
         Ok(Expr::String(str_elements))

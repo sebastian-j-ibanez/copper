@@ -69,7 +69,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         }
         Expr::Void() => Ok(Expr::Void()),
         Expr::Null => Ok(Expr::Null),
-        _ => Err(Error::Message("unexpected form".to_string())),
+        _ => Err(Error::new("unexpected form")),
     }
 }
 
@@ -81,11 +81,11 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
 
     let (token, right_expr) = tokens
         .split_first()
-        .ok_or(Error::Message("could not parse first token".to_string()))?;
+        .ok_or(Error::new("could not parse first token"))?;
 
     match &token[..] {
         "(" => parse_right_expr(right_expr),
-        ")" => Err(Error::Message("invalid ')'".to_string())),
+        ")" => Err(Error::new("invalid ')'")),
         "'" => {
             let (quoted_expr, remaining) = parse(right_expr)?;
             let slice = vec![Expr::Symbol("quote".to_string()), quoted_expr];
@@ -107,8 +107,8 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     let mut expressions: Vec<Expr> = vec![];
     let mut tokens_copy = tokens;
     loop {
-        let (car, cdr) = tokens_copy.split_first().ok_or(Error::Message(
-            "unable to parse rest of expression".to_string(),
+        let (car, cdr) = tokens_copy.split_first().ok_or(Error::new(
+            "unable to parse rest of expression",
         ))?;
         if car == ")" {
             return Ok((Pair::list(expressions.as_slice()), cdr));
@@ -126,7 +126,7 @@ pub fn parse_vector_literal(tokens: &[String]) -> Result<(Expr, &[String]), Erro
     loop {
         let (car, cdr) = tokens_copy
             .split_first()
-            .ok_or(Error::Message("unable to parse vector literal".to_string()))?;
+            .ok_or(Error::new("unable to parse vector literal"))?;
         if car == ")" {
             let mut vector_form = vec![Expr::Symbol("vector".to_string())];
             vector_form.extend(expressions);
@@ -208,7 +208,7 @@ pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<Number>, Error> {
 pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     match expr {
         Expr::Number(num) => Ok(num.clone()),
-        _ => Err(Error::Message("expected a number".to_string())),
+        _ => Err(Error::new("expected a number")),
     }
 }
 

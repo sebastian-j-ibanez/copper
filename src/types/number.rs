@@ -68,7 +68,7 @@ impl Number {
                         let im = im_part_str.parse::<f64>().map_err(ParseFloatError::from);
                         return match (re, im) {
                             (Ok(re), Ok(im)) => Ok(Complex(Complex64::new(re, im))),
-                            _ => Err(Error::Message("unable to parse complex number".to_string())),
+                            _ => Err(Error::new("unable to parse complex number")),
                         };
                     }
                 } else if parts.len() == 1
@@ -243,10 +243,10 @@ impl Number {
                     IntVariant::Small(i) => *i as f64,
                     IntVariant::Big(b) => b
                         .to_f64()
-                        .ok_or(Error::Message("unable to convert base to f64".to_string()))?,
+                        .ok_or(Error::new("unable to convert base to f64"))?,
                 };
-                let exp_float = exponent.to_f64().ok_or(Error::Message(
-                    "unable to convert exponent to f64".to_string(),
+                let exp_float = exponent.to_f64().ok_or(Error::new(
+                    "unable to convert exponent to f64",
                 ))?;
                 let result = base_float.powf(exp_float);
 
@@ -257,7 +257,7 @@ impl Number {
                     IntVariant::Small(i) => *i as f64,
                     IntVariant::Big(b) => b
                         .to_f64()
-                        .ok_or(Error::Message("unable to convert base to f64".to_string()))?,
+                        .ok_or(Error::new("unable to convert base to f64"))?,
                 };
                 let result = base_float.powf(*exponent);
                 Ok(Number::rationalize_float(result))
@@ -291,9 +291,9 @@ impl Number {
             (Rational(base), Rational(exponent)) => {
                 let base_float = base
                     .to_f64()
-                    .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
-                let exp_float = exponent.to_f64().ok_or(Error::Message(
-                    "unable to convert exponent to f64".to_string(),
+                    .ok_or(Error::new("unable to convert base to f64"))?;
+                let exp_float = exponent.to_f64().ok_or(Error::new(
+                    "unable to convert exponent to f64",
                 ))?;
                 let result = base_float.powf(exp_float);
                 Ok(Number::rationalize_float(result))
@@ -301,7 +301,7 @@ impl Number {
             (Rational(base), Float(exponent)) => {
                 let base_float = base
                     .to_f64()
-                    .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
+                    .ok_or(Error::new("unable to convert base to f64"))?;
                 let result = base_float.powf(*exponent);
                 Ok(Number::rationalize_float(result))
             }
@@ -317,8 +317,8 @@ impl Number {
                 Ok(Number::rationalize_float(result))
             }
             (Float(base), Rational(exponent)) => {
-                let exp_float = exponent.to_f64().ok_or(Error::Message(
-                    "unable to convert exponent to f64".to_string(),
+                let exp_float = exponent.to_f64().ok_or(Error::new(
+                    "unable to convert exponent to f64",
                 ))?;
                 let result = base.powf(exp_float);
                 Ok(Number::rationalize_float(result))
@@ -336,9 +336,9 @@ impl Number {
     fn pow_via_float(&self, exponent: &Number) -> Result<Number, Error> {
         let base_float = self
             .to_f64()
-            .ok_or(Error::Message("unable to convert base to f64".to_string()))?;
-        let exp_float = exponent.to_f64().ok_or(Error::Message(
-            "unable to convert exponent to f64".to_string(),
+            .ok_or(Error::new("unable to convert base to f64"))?;
+        let exp_float = exponent.to_f64().ok_or(Error::new(
+            "unable to convert exponent to f64",
         ))?;
         let result = base_float.powf(exp_float);
         Ok(Number::rationalize_float(result))
@@ -588,13 +588,13 @@ impl Div for Number {
         // Pre-check for division by exact zero
         match &other {
             Int(IntVariant::Small(0)) => {
-                return Err(Error::Message("unable to divide by 0".to_string()));
+                return Err(Error::new("unable to divide by 0"));
             }
             Int(IntVariant::Big(b)) if b == &BigInt::from(0) => {
-                return Err(Error::Message("unable to divide by 0".to_string()));
+                return Err(Error::new("unable to divide by 0"));
             }
             Rational(r) if r.is_zero() => {
-                return Err(Error::Message("unable to divide by 0".to_string()));
+                return Err(Error::new("unable to divide by 0"));
             }
             _ => {}
         }
@@ -716,7 +716,7 @@ impl Rem for Number {
                 (IntVariant::Small(i1), IntVariant::Big(i2)) => Ok(Int(IntVariant::Big(i1 % i2))),
                 (IntVariant::Big(i1), IntVariant::Small(i2)) => Ok(Int(IntVariant::Big(i1 % i2))),
             },
-            (_, _) => Err(Error::Message("expected integer".to_string())),
+            (_, _) => Err(Error::new("expected integer")),
         }
     }
 }
