@@ -961,7 +961,7 @@ fn test_list_get_invalid_element() {
         Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(1)), Expr::Null))),
     ));
     let result = pair.get(2);
-    assert!(matches!(result, None));
+    assert!(matches!(result, Some(Expr::Null)));
 }
 
 #[test]
@@ -975,8 +975,7 @@ fn test_list_get_last_element() {
         ))),
     ));
     let result = pair.get(4);
-    println!("result: {:?}", result);
-    assert!(matches!(result, None));
+    assert!(matches!(result, Some(Expr::Null)));
 }
 
 #[test]
@@ -988,7 +987,7 @@ fn test_create_list() {
         Expr::Number(Number::from_i64(2)),
     ];
     let list = Pair::list(&expr);
-    println!("list: {:?}", list);
+    assert!(matches!(list, Expr::Pair(_)));
 }
 
 #[test]

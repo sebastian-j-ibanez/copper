@@ -203,7 +203,7 @@ impl Pair {
                 let borrowed = curr_pair.elements.borrow();
                 match &borrowed.1 {
                     Expr::Pair(p) => match p.elements.borrow().1 {
-                        Expr::Null => return None,
+                        Expr::Null => return Some(Expr::Null),
                         _ => p.clone(),
                     },
                     _ => return None,
@@ -213,10 +213,10 @@ impl Pair {
         }
 
         let curr_element = curr_pair.elements.borrow();
-        if even == 0 {
-            return Some(curr_element.1.clone());
+        return if even == 0 {
+            Some(curr_element.1.clone())
         } else {
-            return Some(curr_element.0.clone());
+            Some(curr_element.0.clone())
         }
     }
 
@@ -287,7 +287,7 @@ impl Pair {
 
     /// Return the number of elements in the `Pair` or list.
     pub fn len(&self) -> usize {
-        let mut len: usize = 0;
+        let mut len: usize = 1;
         let mut current = self.clone();
 
         loop {
@@ -326,6 +326,18 @@ impl Pair {
     pub fn to_vector(&self) -> Expr {
         let pair_elements: Vec<Expr> = self.iter().collect();
         Expr::Vector(Vector::from(pair_elements.as_slice()))
+    }
+
+    /// Return a new sub `Vector` with the given indices. `start` is inclusive and `end` is exclusive. Return `None` if `&self` is not a list.
+    pub fn sub_list(&self, start: usize, end: usize) -> Option<Expr> {
+        let len = self.len();
+        if start < len && end <= len {
+            let vector = self.iter().collect::<Vec<Expr>>();
+            let sub_list = &vector.as_slice()[start..end];
+            return Some(Pair::list(sub_list))
+        }
+
+        None
     }
 }
 
@@ -480,7 +492,7 @@ impl Vector {
         Vector::from(chars.as_slice())
     }
 
-    /// Return a new sub `Vector` with the given indices.
+    /// Return a new sub `Vector` with the given indices. `start` is inclusive and `end` is exclusive.
     pub fn sub_vector(&self, start: usize, end: usize) -> Option<Vector> {
         let vec_ref = self.elements.borrow();
         match (vec_ref.get(start), vec_ref.get(end - 1)) {
