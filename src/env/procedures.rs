@@ -591,10 +591,7 @@ pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
 /// WIP! Convert `Pair` list to `String`.
 pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] if p.is_list() => {
-            let pair = Expr::Pair(p.clone());
-            Ok(Expr::String(pair.to_string()))
-        }
+        [Expr::Pair(p)] if p.is_list() => p.to_string(),
         [Expr::Pair(list), Expr::Number(n_start)] if list.is_list() => {
             if *n_start == Number::from_usize(list.len()) {
                 return Ok(Expr::Null);
@@ -608,7 +605,10 @@ pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
                 }
             };
             match list.sub_list(start, list.len()) {
-                Some(list) => Ok(Expr::String(list.to_string())),
+                Some(list) => match list {
+                    Expr::Pair(p) => p.to_string(),
+                    _ => unreachable!(),
+                },
                 None => Err(Error::Message("out of range".to_string())),
             }
         }
@@ -633,7 +633,10 @@ pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
                 }
             };
             match list.sub_list(start, end) {
-                Some(list) => Ok(Expr::String(list.to_string())),
+                Some(list) => match list {
+                    Expr::Pair(p) => p.to_string(),
+                    _ => unreachable!(),
+                },
                 None => Err(Error::Message("out of range".to_string())),
             }
         }

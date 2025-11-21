@@ -217,7 +217,7 @@ impl Pair {
             Some(curr_element.1.clone())
         } else {
             Some(curr_element.0.clone())
-        }
+        };
     }
 
     /// Set element from list.
@@ -328,13 +328,25 @@ impl Pair {
         Expr::Vector(Vector::from(pair_elements.as_slice()))
     }
 
+    /// Return `String` created from `&self` elements.
+    pub fn to_string(&self) -> Result {
+        let pair_elements = self
+            .iter()
+            .map(|e| match e {
+                Expr::Char(c) => Ok(c),
+                _ => return Err(Error::Message("expected char".to_string())),
+            })
+            .collect::<std::result::Result<String, Error>>()?;
+        Ok(Expr::String(pair_elements))
+    }
+
     /// Return a new sub `Vector` with the given indices. `start` is inclusive and `end` is exclusive. Return `None` if `&self` is not a list.
     pub fn sub_list(&self, start: usize, end: usize) -> Option<Expr> {
         let len = self.len();
         if start < len && end <= len {
             let vector = self.iter().collect::<Vec<Expr>>();
             let sub_list = &vector.as_slice()[start..end];
-            return Some(Pair::list(sub_list))
+            return Some(Pair::list(sub_list));
         }
 
         None

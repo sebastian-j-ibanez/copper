@@ -728,6 +728,156 @@ fn test_symbol_to_string() {
     assert!(matches!(result, _expected));
 }
 
+#[test]
+fn test_string_to_list() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Pair};
+    let env = Env::standard_env();
+    let input = "(string->list \"hello\")".to_string();
+    let result = parse_and_eval(input, env);
+    let expected_values = vec![
+        Expr::Char('h'),
+        Expr::Char('e'),
+        Expr::Char('l'),
+        Expr::Char('l'),
+        Expr::Char('o'),
+    ];
+    let _expected = Pair::list(expected_values.as_slice());
+    assert!(matches!(result, Ok(_expected)));
+}
+
+#[test]
+fn test_string_to_list_empty() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(string->list \"\")".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(matches!(result, Ok(Expr::Null)));
+}
+
+#[test]
+fn test_string_to_vector() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let input = "(string->vector \"abc\")".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, crate::types::Expr::Vector(_)));
+    }
+}
+
+#[test]
+fn test_list_to_string() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(list->string (list #\\h #\\i))".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::String("hi".to_string()));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_list_to_string_with_start() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1)".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::String("ello".to_string()));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_list_to_string_with_start_and_end() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1 4)".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::String("ell".to_string()));
+    assert!(matches!(result, _expected));
+}
+
+#[test]
+fn test_list_to_vector() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(list->vector (list 1 2 3))".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, Expr::Vector(_)));
+    }
+}
+
+#[test]
+fn test_list_to_vector_with_start() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(list->vector (list 1 2 3 4) 1)".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, Expr::Pair(_)));
+    }
+}
+
+#[test]
+fn test_list_to_vector_with_start_and_end() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(list->vector (list 1 2 3 4 5) 1 4)".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, Expr::Vector(_)));
+    }
+}
+
+#[test]
+fn test_vector_to_list() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(vector->list (vector 1 2 3))".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, Expr::Pair(_)));
+    }
+}
+
+#[test]
+fn test_vector_to_list_with_start() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(vector->list (vector 1 2 3 4) 2)".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, Expr::Vector(_)));
+    }
+}
+
+#[test]
+fn test_vector_to_list_with_start_and_end() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(vector->list (vector 1 2 3 4 5) 1 3)".to_string();
+    let result = parse_and_eval(input, env);
+    assert!(result.is_ok());
+    if let Ok(expr) = result {
+        assert!(matches!(expr, Expr::Vector(_)));
+    }
+}
+
+#[test]
+fn test_vector_to_string() {
+    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let input = "(vector->string (vector #\\a #\\b #\\c))".to_string();
+    let result = parse_and_eval(input, env);
+    let _expected: Result<Expr, Error> = Ok(Expr::String("abc".to_string()));
+    assert!(matches!(result, _expected));
+}
+
 // Predicate Functions
 
 #[test]
