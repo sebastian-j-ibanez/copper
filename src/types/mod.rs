@@ -507,17 +507,54 @@ impl Vector {
     /// Return a new sub `Vector` with the given indices. `start` is inclusive and `end` is exclusive.
     pub fn sub_vector(&self, start: usize, end: usize) -> Option<Vector> {
         let vec_ref = self.elements.borrow();
-        match (vec_ref.get(start), vec_ref.get(end - 1)) {
-            (Some(_), Some(_)) => {
-                let sub_slice = &vec_ref[start..end];
-                Some(Vector::from(sub_slice))
-            }
-            _ => None,
+        let len = self.len();
+        if start < len && end <= len {
+            let sub_slice = &vec_ref[start..end];
+            return Some(Vector::from(sub_slice));
         }
+
+        None
     }
 
     /// Return length of `Vector`.
     pub fn len(&self) -> usize {
         self.elements.borrow().len()
+    }
+
+    /// Set each element from `start` to `end` as `new_value`.
+    pub fn fill(
+        &self,
+        new_value: &Expr,
+        start: usize,
+        end: usize,
+    ) -> std::result::Result<(), Error> {
+        let len = self.len();
+        if start < len && end <= len {
+            self.elements
+                .borrow_mut()
+                .iter_mut()
+                .enumerate()
+                .skip(start)
+                .take(end - start)
+                .for_each(|(_, e)| {
+                    *e = new_value.clone();
+                });
+
+            return Ok(());
+        }
+
+        Err(Error::new("out of range"))
+    }
+
+    /// Append elements from `other` into `&self`, leaving `other` empty.
+    pub fn append(&self, other: Vector) {
+        let mut other_elements = other.elements.borrow_mut();
+        self.elements.borrow_mut().append(&mut other_elements)
+    }
+
+    /// Return a deep copy of `&self.elements`.
+    pub fn deep_copy(&self) -> Vector {
+        let copied_elements: Vec<Expr> = self.elements.borrow().iter().map(|e| e.clone()).collect();
+        Vector::from(copied_elements.as_slice())
     }
 }

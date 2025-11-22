@@ -212,9 +212,7 @@ pub fn abs(args: &[Expr], _: EnvRef) -> Result {
 /// Round number up to the nearest integer.
 pub fn ceil(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Number(Number::Complex(_))] => {
-            Err(Error::new("unable to round complex number"))
-        }
+        [Expr::Number(Number::Complex(_))] => Err(Error::new("unable to round complex number")),
         [Expr::Number(n)] => {
             if let Some(result) = n.to_f64() {
                 return Ok(Expr::Number(Number::from_f64(result.ceil())));
@@ -230,9 +228,7 @@ pub fn ceil(args: &[Expr], _: EnvRef) -> Result {
 /// Round number down to the nearest integer.
 pub fn floor(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Number(Number::Complex(_))] => {
-            Err(Error::new("unable to round complex number"))
-        }
+        [Expr::Number(Number::Complex(_))] => Err(Error::new("unable to round complex number")),
         [Expr::Number(n)] => {
             if let Some(result) = n.to_f64() {
                 return Ok(Expr::Number(Number::from_f64(result.floor())));
@@ -532,6 +528,124 @@ pub fn vector_len(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return a newly allocated copy of `&self`. Accepts optional start and end indexes.
+pub fn vector_copy(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(v)] => Ok(Expr::Vector(v.clone())),
+        [Expr::Vector(vec), Expr::Number(start)] => {
+            if *start == Number::from_usize(vec.len()) {
+                return Ok(Expr::Null);
+            }
+            let start = match start.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            match vec.sub_vector(start, vec.len()) {
+                Some(v) => Ok(Expr::Vector(v.clone())),
+                None => Err(Error::new("out of range")),
+            }
+        }
+        [Expr::Vector(vec), Expr::Number(start), Expr::Number(end)] => {
+            let v_len = Number::from_usize(vec.len());
+            if *start == v_len && *end == v_len {
+                return Ok(Expr::Null);
+            }
+            let start = match start.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            let end = match end.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            match vec.sub_vector(start, end) {
+                Some(v) => Ok(Expr::Vector(v.clone())),
+                None => Err(Error::new("out of range")),
+            }
+        }
+        _ => Err(Error::new("expected vector")),
+    }
+}
+
+/// Fill a vector with the given argument.
+pub fn vector_fill(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(vec), new_value] => {
+            vec.fill(new_value, 0, vec.len())?;
+            Ok(Expr::Void())
+        }
+        [Expr::Vector(vec), new_value, Expr::Number(start)] => {
+            if *start == Number::from_usize(vec.len()) {
+                return Ok(Expr::Null);
+            }
+            let start = match start.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            vec.fill(new_value, start, vec.len())?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::Vector(vec),
+            new_value,
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let v_len = Number::from_usize(vec.len());
+            if *start == v_len && *end == v_len {
+                return Ok(Expr::Null);
+            }
+            let start = match start.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            let end = match end.to_usize() {
+                Some(s) => s,
+                None => {
+                    return Err(Error::Message(
+                        "invalid index, expected int or float".to_string(),
+                    ));
+                }
+            };
+            vec.fill(new_value, start, end)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected vector and new value")),
+    }
+}
+
+/// Append two `Vector` and return resulting `Vector`.
+pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(a), Expr::Vector(b)] => {
+            let new_vec = a.deep_copy();
+            new_vec.append(b.deep_copy());
+            Ok(Expr::Vector(new_vec))
+        }
+        _ => Err(Error::new("expected 2 vectors")),
+    }
+}
+
 // Conversion
 
 /// Convert a `Number` into a `String`.
@@ -568,6 +682,8 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
             let chars: Vec<Expr> = s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>();
             Ok(Pair::list(chars.as_slice()))
         }
+        [Expr::String(s), Expr::Number(n_start)] => todo!(),
+        [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
         _ => Err(Error::new("expected string")),
     }
 }
@@ -576,6 +692,8 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
 pub fn string_to_vector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::Vector(Vector::from_string(s.clone()))),
+        [Expr::String(s), Expr::Number(n_start)] => todo!(),
+        [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
         _ => Err(Error::new("expected string")),
     }
 }
