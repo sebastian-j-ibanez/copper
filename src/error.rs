@@ -18,3 +18,9 @@ impl fmt::Display for Error {
         }
     }
 }
+
+impl Error {
+    pub fn new(message: &str) -> Error {
+        Error::Message(String::from(message))
+    }
+}

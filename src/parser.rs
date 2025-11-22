@@ -69,28 +69,31 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         }
         Expr::Void() => Ok(Expr::Void()),
         Expr::Null => Ok(Expr::Null),
-        _ => Err(Error::Message("unexpected form".to_string())),
+        _ => Err(Error::new("unexpected form")),
     }
 }
 
 /// Parse tokenized s-expressions.
 pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
-    // If `tokens` is empty, return void.
     if tokens.is_empty() {
         return Ok((Expr::Void(), &[]));
     }
 
     let (token, right_expr) = tokens
         .split_first()
-        .ok_or(Error::Message("could not parse first token".to_string()))?;
+        .ok_or(Error::new("could not parse first token"))?;
 
     match &token[..] {
         "(" => parse_right_expr(right_expr),
-        ")" => Err(Error::Message("invalid ')'".to_string())),
+        ")" => Err(Error::new("invalid ')'")),
         "'" => {
             let (quoted_expr, remaining) = parse(right_expr)?;
             let slice = vec![Expr::Symbol("quote".to_string()), quoted_expr];
             Ok((Pair::list(slice.as_slice()), remaining))
+        }
+        "#(" => {
+            let (vector_expr, remaining) = parse_vector_literal(right_expr)?;
+            Ok((vector_expr, remaining))
         }
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
@@ -104,11 +107,30 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     let mut expressions: Vec<Expr> = vec![];
     let mut tokens_copy = tokens;
     loop {
-        let (car, cdr) = tokens_copy.split_first().ok_or(Error::Message(
-            "unable to parse rest of expression".to_string(),
+        let (car, cdr) = tokens_copy.split_first().ok_or(Error::new(
+            "unable to parse rest of expression",
         ))?;
         if car == ")" {
             return Ok((Pair::list(expressions.as_slice()), cdr));
+        }
+        let (expr, new_copy) = parse(&tokens_copy)?;
+        expressions.push(expr);
+        tokens_copy = new_copy;
+    }
+}
+
+/// Parse vector literal.
+pub fn parse_vector_literal(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
+    let mut expressions: Vec<Expr> = vec![];
+    let mut tokens_copy = tokens;
+    loop {
+        let (car, cdr) = tokens_copy
+            .split_first()
+            .ok_or(Error::new("unable to parse vector literal"))?;
+        if car == ")" {
+            let mut vector_form = vec![Expr::Symbol("vector".to_string())];
+            vector_form.extend(expressions);
+            return Ok((Pair::list(vector_form.as_slice()), cdr));
         }
         let (expr, new_copy) = parse(&tokens_copy)?;
         expressions.push(expr);
@@ -186,7 +208,7 @@ pub fn parse_number_list(expressions: &[Expr]) -> Result<Vec<Number>, Error> {
 pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     match expr {
         Expr::Number(num) => Ok(num.clone()),
-        _ => Err(Error::Message("expected a number".to_string())),
+        _ => Err(Error::new("expected a number")),
     }
 }
 
@@ -221,6 +243,21 @@ pub fn tokenize(expression: String) -> Vec<String> {
             '\'' => {
                 tokens.push("'".to_string());
                 i += 1;
+            }
+            '#' => {
+                // Vector literal: '#('.
+                if i + 1 < chars.len() && chars[i + 1] == '(' {
+                    tokens.push("#(".to_string());
+                    i += 2;
+                } else {
+                    // Atom: '#\char', '#t', or '#f'.
+                    let start = i;
+                    while i < chars.len() && !is_delimiter(chars[i]) {
+                        i += 1;
+                    }
+                    let atom: String = chars[start..i].iter().collect();
+                    tokens.push(atom);
+                }
             }
             _ => {
                 let start = i;

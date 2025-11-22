@@ -19,7 +19,7 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
             let name = match pair.get(0) {
                 Some(Expr::Symbol(s)) => s,
                 _ => {
-                    return Err(Error::Message("ill-formed special form name".to_string()));
+                    return Err(Error::new("ill-formed special form name"));
                 }
             };
 
@@ -28,7 +28,7 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
             env.borrow_mut().data.insert(name.to_owned(), value);
         }
         _ => {
-            return Err(Error::Message("ill-formed special form".to_string()));
+            return Err(Error::new("ill-formed special form"));
         }
     }
     Ok(Expr::Void())
@@ -45,7 +45,7 @@ pub fn set_car(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
                         let new_value = eval(&expr, env_ref.clone())?;
                         pair.set_car(new_value.clone());
                     }
-                    _ => return Err(Error::Message("pair expected".to_string())),
+                    _ => return Err(Error::new("pair expected")),
                 }
             }
         }
@@ -53,7 +53,7 @@ pub fn set_car(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
             let new_value = eval(&expr, env_ref.clone())?;
             pair.set_car(new_value.clone());
         }
-        [] => return Err(Error::Message("expected 2 arguments".to_string())),
+        [] => return Err(Error::new("expected 2 arguments")),
         _ => {}
     }
 
@@ -71,7 +71,7 @@ pub fn set_cdr(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
                         let new_value = eval(&expr, env_ref.clone())?;
                         pair.set_cdr(new_value.clone());
                     }
-                    _ => return Err(Error::Message("expected pair".to_string())),
+                    _ => return Err(Error::new("expected pair")),
                 }
             }
         }
@@ -79,7 +79,7 @@ pub fn set_cdr(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
             let new_value = eval(&expr, env_ref.clone())?;
             pair.set_cdr(new_value.clone());
         }
-        [] => return Err(Error::Message("expected 2 arguments".to_string())),
+        [] => return Err(Error::new("expected 2 arguments")),
         _ => {}
     }
 
@@ -118,7 +118,7 @@ pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     // Get function.
     let body = match iter.next() {
         Some(e) => e,
-        _ => return Err(Error::Message("expected lambda body".to_string())),
+        _ => return Err(Error::new("expected lambda body")),
     };
 
     let closure = Box::new(Closure::init(env.clone(), params, body.clone()));
@@ -150,7 +150,7 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
 pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {
         [expr] => Ok(expr.clone()),
-        _ => Err(Error::Message("quote expects 1 argument".to_string())),
+        _ => Err(Error::new("quote expects 1 argument")),
     }
 }
 
@@ -164,7 +164,7 @@ pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                 _ => eval(first_branch, env),
             }
         }
-        _ => Err(Error::Message("ill-formed special form".to_string())),
+        _ => Err(Error::new("ill-formed special form")),
     }
 }
 

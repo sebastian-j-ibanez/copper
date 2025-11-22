@@ -5,7 +5,7 @@
 //! Functions for REPL IO.
 
 use std::fs::File;
-use std::io::{self, stdout, BufRead, Write};
+use std::io::{self, BufRead, Write, stdout};
 use std::process;
 
 use colored::{self, Colorize};
@@ -15,7 +15,7 @@ use crate::error::Error;
 use crate::parser;
 use crate::types::Expr;
 
-pub const COPPER_VERSION: &str = "0.2.3";
+pub const COPPER_VERSION: &str = "0.3.0";
 
 /// Get expression from stdin.
 pub fn stdin_input() -> String {
