@@ -215,6 +215,10 @@ impl Number {
         Int(IntVariant::Small(size as i64))
     }
 
+    pub fn from_u8(value: u8) -> Self {
+        Int(IntVariant::Small(value as i64))
+    }
+
     /// Check if float can be simplified as an integer.
     fn rationalize_float(value: f64) -> Number {
         if value.fract() == 0.0 && value.is_finite() {

@@ -652,13 +652,11 @@ pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
 
 /// Return a newly allocated `ByteVector` filled with all `u8` arguments.
 pub fn new_bytevector(args: &[Expr], _: EnvRef) -> Result {
-    let mut vector = ByteVector::new(args.len());
+    let vector = ByteVector::new(args.len());
     for (i, arg) in args.iter().enumerate() {
         match arg {
             Expr::Number(n) if n.is_byte() => {
-                let byte = n
-                    .to_u8()
-                    .expect("value should have been converted to a byte");
+                let byte = n.to_u8().expect("value should have been converted to byte");
                 vector.set(i, byte).expect("index should be in bounds");
             }
             _ => return Err(Error::new("expected byte")),
@@ -673,10 +671,10 @@ pub fn make_bytevector(args: &[Expr], _: EnvRef) -> Result {
         [Expr::Number(size), Expr::Number(default)] if size.is_usize() && default.is_byte() => {
             let byte = default
                 .to_u8()
-                .expect("value should have converted to a byte");
+                .expect("value should have converted to byte");
             let size = size
                 .to_usize()
-                .expect("value should have converted to a usize");
+                .expect("value should have converted to usize");
             let vec = vec![byte.clone(); size];
             Ok(Expr::ByteVector(ByteVector::from(vec.as_slice())))
         }
@@ -688,6 +686,46 @@ pub fn make_bytevector(args: &[Expr], _: EnvRef) -> Result {
 pub fn bytevector_length(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::ByteVector(bv)] => Ok(Expr::Number(Number::from_usize(bv.len()))),
+        _ => Err(Error::new("expected bytevector")),
+    }
+}
+
+/// Return byte at given index.
+pub fn bytevector_ref(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv), Expr::Number(n_index)] if n_index.is_usize() => {
+            let index = n_index
+                .to_usize()
+                .expect("value should have been converted to usize");
+            match bv.get(index) {
+                Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                None => Err(Error::new("index out of range")),
+            }
+        }
+        _ => Err(Error::new("expected bytevector")),
+    }
+}
+
+/// Set byte at index to new value.
+pub fn bytevector_set(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [
+            Expr::ByteVector(bv),
+            Expr::Number(n_index),
+            Expr::Number(n_byte),
+        ] if n_index.is_usize() && n_byte.is_byte() => {
+            let index = n_index
+                .to_usize()
+                .expect("value should have been converted to usize");
+            let byte = n_byte
+                .to_u8()
+                .expect("value should have been converted to byte");
+            if index < bv.len() {
+                bv.set(index, byte)?;
+                return Ok(Expr::Void());
+            }
+            Err(Error::new("index out of range"))
+        }
         _ => Err(Error::new("expected bytevector")),
     }
 }

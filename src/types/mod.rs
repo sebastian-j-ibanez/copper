@@ -120,6 +120,7 @@ fn format_vector(vector: &Vector, literal: bool) -> String {
 fn format_bytevector(vec: &ByteVector, literal: bool) -> String {
     let items = vec
         .buffer
+        .borrow()
         .iter()
         .map(|e| e.to_string())
         .collect::<Vec<String>>()
@@ -579,41 +580,42 @@ impl Vector {
 
 #[derive(Debug, Clone)]
 pub struct ByteVector {
-    buffer: Box<[u8]>,
+    buffer: Rc<RefCell<Box<[u8]>>>,
 }
 
 impl ByteVector {
     /// Create new `ByteVector` with the given `size`.
     pub fn new(size: usize) -> Self {
-        let buffer = vec![0; size].into_boxed_slice();
+        let buffer = Rc::new(RefCell::new(vec![0; size].into_boxed_slice()));
         Self { buffer }
     }
 
     /// Create new `ByteVector` from a slice of `u8` bytes.
     pub fn from(bytes: &[u8]) -> Self {
-        let mut vec = ByteVector::new(bytes.len());
+        let vec = ByteVector::new(bytes.len());
         bytes
             .iter()
             .enumerate()
-            .for_each(|(i, byte)| vec.buffer[i] = *byte);
+            .for_each(|(i, byte)| vec.buffer.borrow_mut()[i] = *byte);
         vec
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, u8> {
-        self.buffer.iter()
-    }
-
     /// Set element at `index` to `value`.
-    pub fn set(&mut self, index: usize, value: u8) -> std::result::Result<(), Error> {
-        if index < self.buffer.len() {
-            self.buffer[index] = value;
+    pub fn set(&self, index: usize, value: u8) -> std::result::Result<(), Error> {
+        let mut buffer = self.buffer.borrow_mut();
+        if index < buffer.len() {
+            buffer[index] = value;
             return Ok(());
         }
         Err(Error::new("index out of range"))
     }
 
+    pub fn get(&self, index: usize) -> Option<u8> {
+        self.buffer.borrow().get(index).copied()
+    }
+
     /// Return size of `buffer`.
     pub fn len(&self) -> usize {
-        self.buffer.len()
+        self.buffer.borrow().len()
     }
 }
