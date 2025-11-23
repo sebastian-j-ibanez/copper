@@ -618,4 +618,30 @@ impl ByteVector {
     pub fn len(&self) -> usize {
         self.buffer.borrow().len()
     }
+
+    /// Return copy of `ByteVector` from `start` and `end` indexes.
+    pub fn sub_bytevector(&self, start: usize, end: usize) -> Option<ByteVector> {
+        let vec_ref = self.buffer.borrow();
+        let len = self.len();
+        if start < len && end <= len {
+            let sub_slice = &vec_ref[start..end];
+            return Some(ByteVector::from(sub_slice));
+        }
+
+        None
+    }
+
+    /// Return contents of `&self` buffer as a `&[u8]`.
+    pub fn to_slice(&self) -> Box<[u8]> {
+        self.buffer.borrow().clone()
+    }
+
+    /// Convert a `u8` into a hex value `String`.
+    pub fn utf8_to_hex_str(byte: u8) -> String {
+        if byte > 31 {
+            return format!("{}", char::from(byte));
+        }
+
+        format!("\\x{};", byte)
+    }
 }

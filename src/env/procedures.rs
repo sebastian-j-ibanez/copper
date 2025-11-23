@@ -730,6 +730,60 @@ pub fn bytevector_set(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return a newly allocated copy of a `ByteVector`
+pub fn bytevector_copy(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => Ok(Expr::ByteVector(bv.clone())),
+        [Expr::ByteVector(vec), Expr::Number(start)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if start == vec.len() {
+                return Ok(Expr::ByteVector(ByteVector::new(0)));
+            }
+
+            match vec.sub_bytevector(start, vec.len()) {
+                Some(v) => Ok(Expr::ByteVector(v.clone())),
+                None => Err(Error::new("out of range")),
+            }
+        }
+        [
+            Expr::ByteVector(vec),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let v_len = Number::from_usize(vec.len());
+            if *start == v_len && *end == v_len {
+                return Ok(Expr::Null);
+            }
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            match vec.sub_bytevector(start, end) {
+                Some(v) => Ok(Expr::ByteVector(v.clone())),
+                None => Err(Error::new("out of range")),
+            }
+        }
+        _ => Err(Error::new("expected vector")),
+    }
+}
+
+/// Return a newly allocated `ByteVector` created from concatenating 2 `ByteVector`.
+pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(a), Expr::ByteVector(b)] => {
+            let new_slice = [a.to_slice(), b.to_slice()];
+            let bytevector = ByteVector::from(new_slice.concat().as_slice());
+            Ok(Expr::ByteVector(bytevector))
+        }
+        _ => Err(Error::new("expected 2 bytevectors")),
+    }
+}
+
 // Conversion
 
 /// Convert a `Number` into a `String`.
@@ -1000,6 +1054,65 @@ pub fn vector_to_string(args: &[Expr], _: EnvRef) -> Result {
             }
         }
         _ => Err(Error::new("expected vector")),
+    }
+}
+
+/// Convert `ByteVector` into `String`. Converts non-printable UTF-8 values into their hex value.
+pub fn utf8_to_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(b)] => {
+            let hex_str = b
+                .to_slice()
+                .iter()
+                .map(|byte| ByteVector::utf8_to_hex_str(*byte))
+                .collect::<String>();
+
+            Ok(Expr::String(hex_str))
+        }
+        [Expr::ByteVector(b), Expr::Number(start)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let len = b.len();
+            if start > len {
+                return Err(Error::new("index out of bounds"));
+            }
+
+            let hex_str = b
+                .to_slice()
+                .iter()
+                .skip(start)
+                .map(|byte| ByteVector::utf8_to_hex_str(*byte))
+                .collect::<String>();
+
+            Ok(Expr::String(hex_str))
+        }
+        [Expr::ByteVector(b), Expr::Number(start), Expr::Number(end)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let len = b.len();
+            if start > len || end > len {
+                return Err(Error::new("index out of bounds"));
+            }
+
+            let hex_str = b
+                .to_slice()
+                .iter()
+                .skip(start)
+                .take(end - start)
+                .map(|byte| ByteVector::utf8_to_hex_str(*byte))
+                .collect::<String>();
+
+            Ok(Expr::String(hex_str))
+        }
+        _ => Err(Error::new("expected bytevector")),
     }
 }
 
