@@ -245,9 +245,9 @@ impl Number {
                         .to_f64()
                         .ok_or(Error::new("unable to convert base to f64"))?,
                 };
-                let exp_float = exponent.to_f64().ok_or(Error::new(
-                    "unable to convert exponent to f64",
-                ))?;
+                let exp_float = exponent
+                    .to_f64()
+                    .ok_or(Error::new("unable to convert exponent to f64"))?;
                 let result = base_float.powf(exp_float);
 
                 Ok(Number::rationalize_float(result))
@@ -292,9 +292,9 @@ impl Number {
                 let base_float = base
                     .to_f64()
                     .ok_or(Error::new("unable to convert base to f64"))?;
-                let exp_float = exponent.to_f64().ok_or(Error::new(
-                    "unable to convert exponent to f64",
-                ))?;
+                let exp_float = exponent
+                    .to_f64()
+                    .ok_or(Error::new("unable to convert exponent to f64"))?;
                 let result = base_float.powf(exp_float);
                 Ok(Number::rationalize_float(result))
             }
@@ -317,9 +317,9 @@ impl Number {
                 Ok(Number::rationalize_float(result))
             }
             (Float(base), Rational(exponent)) => {
-                let exp_float = exponent.to_f64().ok_or(Error::new(
-                    "unable to convert exponent to f64",
-                ))?;
+                let exp_float = exponent
+                    .to_f64()
+                    .ok_or(Error::new("unable to convert exponent to f64"))?;
                 let result = base.powf(exp_float);
                 Ok(Number::rationalize_float(result))
             }
@@ -337,11 +337,26 @@ impl Number {
         let base_float = self
             .to_f64()
             .ok_or(Error::new("unable to convert base to f64"))?;
-        let exp_float = exponent.to_f64().ok_or(Error::new(
-            "unable to convert exponent to f64",
-        ))?;
+        let exp_float = exponent
+            .to_f64()
+            .ok_or(Error::new("unable to convert exponent to f64"))?;
         let result = base_float.powf(exp_float);
         Ok(Number::rationalize_float(result))
+    }
+
+    /// Return if `&self` is a byte compatible number.
+    pub fn is_byte(&self) -> bool {
+        let lower_bound = Number::from_i64(0);
+        let upper_bound = Number::from_i64(255);
+        self >= &lower_bound && self <= &upper_bound
+    }
+
+    /// Return true if `&self` can be converted to a usize.
+    pub fn is_usize(&self) -> bool {
+        match self.to_usize() {
+            Some(_) => true,
+            None => false,
+        }
     }
 }
 
@@ -821,6 +836,53 @@ impl PartialOrd for Number {
     }
 }
 
+impl ToPrimitive for Number {
+    fn to_i64(&self) -> Option<i64> {
+        match self {
+            Number::Int(i) => i.to_i64(),
+            Number::Float(f) => f.to_i64(),
+            Number::Rational(r) => r.to_i64(),
+            Number::Complex(c) => c.to_i64(),
+        }
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        match self {
+            Number::Int(i) => i.to_u64(),
+            Number::Float(f) => f.to_u64(),
+            Number::Rational(r) => r.to_u64(),
+            Number::Complex(c) => c.to_u64(),
+        }
+    }
+
+    fn to_f64(&self) -> Option<f64> {
+        match self {
+            Number::Int(i) => i.to_f64(),
+            Number::Float(f) => f.to_f64(),
+            Number::Rational(r) => r.to_f64(),
+            Number::Complex(c) => c.to_f64(),
+        }
+    }
+
+    fn to_u8(&self) -> Option<u8> {
+        match self {
+            Number::Int(i) => i.to_u8(),
+            Number::Float(f) => f.to_u8(),
+            Number::Rational(r) => r.to_u8(),
+            Number::Complex(c) => c.to_u8(),
+        }
+    }
+
+    fn to_usize(&self) -> Option<usize> {
+        match self {
+            Number::Int(i) => i.to_usize(),
+            Number::Float(f) => f.to_usize(),
+            Number::Rational(r) => r.to_usize(),
+            Number::Complex(c) => c.to_usize(),
+        }
+    }
+}
+
 /// Integer that is either fixed length or unbounded.
 #[derive(Debug, Clone, PartialEq)]
 pub enum IntVariant {
@@ -863,6 +925,13 @@ impl ToPrimitive for IntVariant {
         match self {
             IntVariant::Small(f) => Some(*f as f64),
             IntVariant::Big(b) => b.to_f64(),
+        }
+    }
+
+    fn to_u8(&self) -> Option<u8> {
+        match self {
+            IntVariant::Small(f) => Some(*f as u8),
+            IntVariant::Big(b) => b.to_u8(),
         }
     }
 }

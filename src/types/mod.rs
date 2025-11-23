@@ -30,6 +30,7 @@ pub enum Expr {
     Pair(Pair),
     Null,
     Vector(Vector),
+    ByteVector(ByteVector),
     Procedure(Procedure),
     Closure(Box<Closure>),
     Void(),
@@ -46,6 +47,7 @@ impl fmt::Display for Expr {
             Expr::Pair(p) => format_pair(p, " ", true),
             Expr::Null => format_null(),
             Expr::Vector(v) => format_vector(v, true),
+            Expr::ByteVector(bv) => format_bytevector(bv, true),
             Expr::Procedure(_) => "#<function {}".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
             Expr::Void() => return Ok(()),
@@ -109,6 +111,22 @@ fn format_vector(vector: &Vector, literal: bool) -> String {
 
     if literal {
         return format!("#({})", items);
+    }
+
+    items
+}
+
+/// Format `Bytevector` into literal representation.
+fn format_bytevector(vec: &ByteVector, literal: bool) -> String {
+    let items = vec
+        .buffer
+        .iter()
+        .map(|e| e.to_string())
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    if literal {
+        return format!("#u8({})", items);
     }
 
     items
@@ -556,5 +574,46 @@ impl Vector {
     pub fn deep_copy(&self) -> Vector {
         let copied_elements: Vec<Expr> = self.elements.borrow().iter().map(|e| e.clone()).collect();
         Vector::from(copied_elements.as_slice())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ByteVector {
+    buffer: Box<[u8]>,
+}
+
+impl ByteVector {
+    /// Create new `ByteVector` with the given `size`.
+    pub fn new(size: usize) -> Self {
+        let buffer = vec![0; size].into_boxed_slice();
+        Self { buffer }
+    }
+
+    /// Create new `ByteVector` from a slice of `u8` bytes.
+    pub fn from(bytes: &[u8]) -> Self {
+        let mut vec = ByteVector::new(bytes.len());
+        bytes
+            .iter()
+            .enumerate()
+            .for_each(|(i, byte)| vec.buffer[i] = *byte);
+        vec
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, u8> {
+        self.buffer.iter()
+    }
+
+    /// Set element at `index` to `value`.
+    pub fn set(&mut self, index: usize, value: u8) -> std::result::Result<(), Error> {
+        if index < self.buffer.len() {
+            self.buffer[index] = value;
+            return Ok(());
+        }
+        Err(Error::new("index out of range"))
+    }
+
+    /// Return size of `buffer`.
+    pub fn len(&self) -> usize {
+        self.buffer.len()
     }
 }

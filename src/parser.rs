@@ -92,8 +92,12 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
             Ok((Pair::list(slice.as_slice()), remaining))
         }
         "#(" => {
-            let (vector_expr, remaining) = parse_vector_literal(right_expr)?;
+            let (vector_expr, remaining) = parse_literal(right_expr, "vector".to_string())?;
             Ok((vector_expr, remaining))
+        }
+        "#u8(" => {
+            let (bytevector_expr, remaining) = parse_literal(right_expr, "bytevector".to_string())?;
+            Ok((bytevector_expr, remaining))
         }
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
@@ -107,9 +111,9 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     let mut expressions: Vec<Expr> = vec![];
     let mut tokens_copy = tokens;
     loop {
-        let (car, cdr) = tokens_copy.split_first().ok_or(Error::new(
-            "unable to parse rest of expression",
-        ))?;
+        let (car, cdr) = tokens_copy
+            .split_first()
+            .ok_or(Error::new("unable to parse rest of expression"))?;
         if car == ")" {
             return Ok((Pair::list(expressions.as_slice()), cdr));
         }
@@ -119,16 +123,16 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     }
 }
 
-/// Parse vector literal.
-pub fn parse_vector_literal(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
+/// Parse a literal. Primarily used to parse `Vector` and `ByteVector` literals.
+pub fn parse_literal(tokens: &[String], constructor: String) -> Result<(Expr, &[String]), Error> {
     let mut expressions: Vec<Expr> = vec![];
     let mut tokens_copy = tokens;
     loop {
         let (car, cdr) = tokens_copy
             .split_first()
-            .ok_or(Error::new("unable to parse vector literal"))?;
+            .ok_or(Error::new("unable to parse literal"))?;
         if car == ")" {
-            let mut vector_form = vec![Expr::Symbol("vector".to_string())];
+            let mut vector_form = vec![Expr::Symbol(constructor.to_string())];
             vector_form.extend(expressions);
             return Ok((Pair::list(vector_form.as_slice()), cdr));
         }
@@ -249,6 +253,9 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 if i + 1 < chars.len() && chars[i + 1] == '(' {
                     tokens.push("#(".to_string());
                     i += 2;
+                } else if i + 3 < chars.len() && chars[i + 1..i + 4] == ['u', '8', '('] {
+                    tokens.push("#u8(".to_string());
+                    i += 4;
                 } else {
                     // Atom: '#\char', '#t', or '#f'.
                     let start = i;

@@ -2,10 +2,12 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
+use num_traits::ToPrimitive;
+
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
-use crate::types::{Expr, Number, Pair, PairIter, Result, Vector, format_pair};
+use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -646,6 +648,50 @@ pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Bytevectors
+
+/// Return a newly allocated `ByteVector` filled with all `u8` arguments.
+pub fn new_bytevector(args: &[Expr], _: EnvRef) -> Result {
+    let mut vector = ByteVector::new(args.len());
+    for (i, arg) in args.iter().enumerate() {
+        match arg {
+            Expr::Number(n) if n.is_byte() => {
+                let byte = n
+                    .to_u8()
+                    .expect("value should have been converted to a byte");
+                vector.set(i, byte).expect("index should be in bounds");
+            }
+            _ => return Err(Error::new("expected byte")),
+        }
+    }
+    Ok(Expr::ByteVector(vector))
+}
+
+/// Return a newly allocated `ByteVector` of a given size and an optional value. Defaults to 0 if no value is provided.
+pub fn make_bytevector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(size), Expr::Number(default)] if size.is_usize() && default.is_byte() => {
+            let byte = default
+                .to_u8()
+                .expect("value should have converted to a byte");
+            let size = size
+                .to_usize()
+                .expect("value should have converted to a usize");
+            let vec = vec![byte.clone(); size];
+            Ok(Expr::ByteVector(ByteVector::from(vec.as_slice())))
+        }
+        _ => Err(Error::new("expected size and optional byte value")),
+    }
+}
+
+/// Return the length of a `ByteVector`.
+pub fn bytevector_length(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => Ok(Expr::Number(Number::from_usize(bv.len()))),
+        _ => Err(Error::new("expected bytevector")),
+    }
+}
+
 // Conversion
 
 /// Convert a `Number` into a `String`.
@@ -682,8 +728,8 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
             let chars: Vec<Expr> = s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>();
             Ok(Pair::list(chars.as_slice()))
         }
-        [Expr::String(s), Expr::Number(n_start)] => todo!(),
-        [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
+        // [Expr::String(s), Expr::Number(n_start)] => todo!(),
+        // [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
         _ => Err(Error::new("expected string")),
     }
 }
@@ -692,8 +738,8 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
 pub fn string_to_vector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::Vector(Vector::from_string(s.clone()))),
-        [Expr::String(s), Expr::Number(n_start)] => todo!(),
-        [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
+        // [Expr::String(s), Expr::Number(n_start)] => todo!(),
+        // [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
         _ => Err(Error::new("expected string")),
     }
 }
@@ -1188,6 +1234,18 @@ pub fn is_vector(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_procedure(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Procedure(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is a `ByteVector`.
+pub fn is_bytevector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(_)] => Ok(Expr::Boolean(true)),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",
