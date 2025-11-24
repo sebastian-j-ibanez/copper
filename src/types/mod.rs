@@ -600,6 +600,12 @@ impl ByteVector {
         vec
     }
 
+    /// Create new `ByteVector` from a String.
+    pub fn from_string(s: String) -> ByteVector {
+        let chars = s.chars().map(|c| c as u8).collect::<Vec<u8>>();
+        ByteVector::from(chars.as_slice())
+    }
+
     /// Set element at `index` to `value`.
     pub fn set(&self, index: usize, value: u8) -> std::result::Result<(), Error> {
         let mut buffer = self.buffer.borrow_mut();

@@ -15,10 +15,10 @@ use crate::env::procedures::{
     is_real, is_string, is_symbol, is_vector, list_append, list_length, list_reverse,
     list_to_string, list_to_vector, load_file, make_bytevector, make_vector, max, min, modulo,
     mult, new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string, or,
-    pretty_print, print, println, str_append, str_length, string_to_downcase, string_to_list,
-    string_to_num, string_to_symbol, string_to_upcase, string_to_vector, sub, symbol_to_string,
-    utf8_to_string, vector_append, vector_copy, vector_fill, vector_len, vector_ref, vector_set,
-    vector_to_list, vector_to_string,
+    pretty_print, print, println, str_append, str_length, string_to_bytevector, string_to_downcase,
+    string_to_list, string_to_num, string_to_symbol, string_to_upcase, string_to_vector, sub,
+    symbol_to_string, utf8_to_string, vector_append, vector_copy, vector_fill, vector_len,
+    vector_ref, vector_set, vector_to_list, vector_to_string,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::{Expr, Procedure};
@@ -115,6 +115,7 @@ impl Env {
             env.insert_proc("string->symbol", string_to_symbol);
             env.insert_proc("string->list", string_to_list);
             env.insert_proc("string->vector", string_to_vector);
+            env.insert_proc("string->utf8", string_to_bytevector);
             env.insert_proc("list->string", list_to_string);
             env.insert_proc("list->vector", list_to_vector);
             env.insert_proc("vector->list", vector_to_list);

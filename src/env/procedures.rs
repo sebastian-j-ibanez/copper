@@ -836,6 +836,40 @@ pub fn string_to_vector(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Convert a `String` into a `ByteVector`.
+pub fn string_to_bytevector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => Ok(Expr::ByteVector(ByteVector::from_string(s.clone()))),
+        [Expr::String(s), Expr::Number(start)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start < s.len() {
+                return Ok(Expr::ByteVector(ByteVector::from_string(
+                    s[start..].to_string(),
+                )));
+            }
+            Err(Error::new("out of range"))
+        }
+        [Expr::String(s), Expr::Number(start), Expr::Number(end)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let len = s.len();
+            if start < len && end < len {
+                return Ok(Expr::ByteVector(ByteVector::from_string(
+                    s[start..end].to_string(),
+                )));
+            }
+            Err(Error::new("out of range"))
+        }
+        _ => Err(Error::new("expected string")),
+    }
+}
+
 /// Convert a `String` into a `Symbol`.
 pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
