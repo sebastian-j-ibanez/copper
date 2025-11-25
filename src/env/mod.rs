@@ -7,16 +7,16 @@
 mod procedures;
 
 use crate::env::procedures::{
-    abs, add, and, bytevector_append, bytevector_copy, bytevector_length, bytevector_ref,
-    bytevector_set, cadr, car, cdr, ceil, cons_proc, display, div, exit, exponent, floor,
-    is_boolean, is_bytevector, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric,
-    is_char_uppercase, is_char_whitespace, is_complex, is_even, is_exact, is_exact_integer,
-    is_inexact, is_integer, is_list, is_number, is_odd, is_pair, is_procedure, is_rational,
-    is_real, is_string, is_symbol, is_vector, list_append, list_length, list_reverse,
+    abs, add, and, bytevector_append, bytevector_copy, bytevector_copy_from, bytevector_length,
+    bytevector_ref, bytevector_set, cadr, car, cdr, ceil, cons_proc, display, div, exit, exponent,
+    floor, is_boolean, is_bytevector, is_char, is_char_alphabetic, is_char_lowercase,
+    is_char_numeric, is_char_uppercase, is_char_whitespace, is_complex, is_even, is_exact,
+    is_exact_integer, is_inexact, is_integer, is_list, is_number, is_odd, is_pair, is_procedure,
+    is_rational, is_real, is_string, is_symbol, is_vector, list_append, list_length, list_reverse,
     list_to_string, list_to_vector, load_file, make_bytevector, make_vector, max, min, modulo,
     mult, new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string, or,
-    pretty_print, print, println, str_append, str_length, string_to_bytevector, string_to_downcase,
-    string_to_list, string_to_num, string_to_symbol, string_to_upcase, string_to_vector, sub,
+    pretty_print, print, println, str_append, str_length, string_to_downcase, string_to_list,
+    string_to_num, string_to_symbol, string_to_upcase, string_to_utf8, string_to_vector, sub,
     symbol_to_string, utf8_to_string, vector_append, vector_copy, vector_fill, vector_len,
     vector_ref, vector_set, vector_to_list, vector_to_string,
 };
@@ -107,7 +107,7 @@ impl Env {
             env.insert_proc("bytevector-set", bytevector_set);
             env.insert_proc("bytevector-copy", bytevector_copy);
             env.insert_proc("bytevector-append", bytevector_append);
-
+            env.insert_proc("bytevector-copy!", bytevector_copy_from);
             // Conversions
             env.insert_proc("number->string", num_to_string);
             env.insert_proc("symbol->string", symbol_to_string);
@@ -115,7 +115,7 @@ impl Env {
             env.insert_proc("string->symbol", string_to_symbol);
             env.insert_proc("string->list", string_to_list);
             env.insert_proc("string->vector", string_to_vector);
-            env.insert_proc("string->utf8", string_to_bytevector);
+            env.insert_proc("string->utf8", string_to_utf8);
             env.insert_proc("list->string", list_to_string);
             env.insert_proc("list->vector", list_to_vector);
             env.insert_proc("vector->list", vector_to_list);

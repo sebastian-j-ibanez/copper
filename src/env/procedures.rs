@@ -772,6 +772,91 @@ pub fn bytevector_copy(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Copy elements from one `ByteVector` into another using range indexes.
+pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [
+            Expr::ByteVector(dest),
+            Expr::Number(at),
+            Expr::ByteVector(from),
+        ] => {
+            let at = at
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if at > from.len() {
+                return Err(Error::new("out of range"));
+            }
+
+            for (i, byte) in from.to_slice().iter().enumerate() {
+                dest.set(i + at, *byte)?;
+            }
+
+            Ok(Expr::Void())
+        }
+        [
+            Expr::ByteVector(dest),
+            Expr::Number(at),
+            Expr::ByteVector(from),
+            Expr::Number(start),
+        ] => {
+            let at = at
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if at > dest.len() || (dest.len() - at) < (from.len() - start) {
+                return Err(Error::new("out of range"));
+            }
+
+            let from_slice = from.to_slice();
+            for (i, byte) in from_slice[start..].iter().enumerate() {
+                dest.set(i + at, *byte)?;
+            }
+
+            Ok(Expr::Void())
+        }
+        [
+            Expr::ByteVector(dest),
+            Expr::Number(at),
+            Expr::ByteVector(from),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let at = at
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if at > dest.len()
+                || end > from.len()
+                || start > from.len()
+                || (dest.len() - at) < (end - start)
+            {
+                return Err(Error::new("out of range"));
+            }
+
+            let from_slice = from.to_slice();
+            for (i, byte) in from_slice[start..end].iter().enumerate() {
+                dest.set(i + at, *byte)?;
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("this blew up")),
+    }
+}
+
 /// Return a newly allocated `ByteVector` created from concatenating 2 `ByteVector`.
 pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
     match args {
@@ -837,7 +922,7 @@ pub fn string_to_vector(args: &[Expr], _: EnvRef) -> Result {
 }
 
 /// Convert a `String` into a `ByteVector`.
-pub fn string_to_bytevector(args: &[Expr], _: EnvRef) -> Result {
+pub fn string_to_utf8(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::ByteVector(ByteVector::from_string(s.clone()))),
         [Expr::String(s), Expr::Number(start)] => {
