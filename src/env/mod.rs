@@ -105,7 +105,7 @@ impl Env {
             env.insert_proc("make-bytevector", make_bytevector);
             env.insert_proc("bytevector-length", bytevector_length);
             env.insert_proc("bytevector-u8-ref", bytevector_ref);
-            env.insert_proc("bytevector-set", bytevector_set);
+            env.insert_proc("bytevector-u8-set!", bytevector_set);
             env.insert_proc("bytevector-copy", bytevector_copy);
             env.insert_proc("bytevector-append", bytevector_append);
             env.insert_proc("bytevector-copy!", bytevector_copy_from);
