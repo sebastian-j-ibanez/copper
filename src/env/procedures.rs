@@ -581,6 +581,87 @@ pub fn vector_copy(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Copy elements from one `ByteVector` into another using range indexes.
+pub fn vector_copy_from(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Vector(dest), Expr::Number(at), Expr::Vector(from)] => {
+            let at = at
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if at > dest.len() {
+                return Err(Error::new("out of range"));
+            }
+
+            for (i, expr) in from.elements.borrow().iter().enumerate() {
+                dest.set(i + at, expr.clone())?;
+            }
+
+            Ok(Expr::Void())
+        }
+        [
+            Expr::Vector(dest),
+            Expr::Number(at),
+            Expr::Vector(from),
+            Expr::Number(start),
+        ] => {
+            let at = at
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if at > dest.len() || (dest.len() - at) < (from.len() - start) {
+                return Err(Error::new("out of range"));
+            }
+
+            let from_ref = from.elements.borrow();
+            for (i, expr) in from_ref.as_slice()[start..].iter().enumerate() {
+                dest.set(i + at, expr.clone())?;
+            }
+
+            Ok(Expr::Void())
+        }
+        [
+            Expr::Vector(dest),
+            Expr::Number(at),
+            Expr::Vector(from),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let at = at
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+
+            if at > dest.len()
+                || end > from.len()
+                || start > from.len()
+                || (dest.len() - at) < (end - start)
+            {
+                return Err(Error::new("out of range"));
+            }
+
+            let from_ref = from.elements.borrow();
+            for (i, expr) in from_ref.as_slice()[start..end].iter().enumerate() {
+                dest.set(i + at, expr.clone())?;
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected a vector, index, and vector")),
+    }
+}
+
 /// Fill a vector with the given argument.
 pub fn vector_fill(args: &[Expr], _: EnvRef) -> Result {
     match args {
@@ -853,7 +934,7 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        _ => Err(Error::new("this blew up")),
+        _ => Err(Error::new("expected a bytevector, index, and bytevector")),
     }
 }
 

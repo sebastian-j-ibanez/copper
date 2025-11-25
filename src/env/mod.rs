@@ -17,8 +17,8 @@ use crate::env::procedures::{
     mult, new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string, or,
     pretty_print, print, println, str_append, str_length, string_to_downcase, string_to_list,
     string_to_num, string_to_symbol, string_to_upcase, string_to_utf8, string_to_vector, sub,
-    symbol_to_string, utf8_to_string, vector_append, vector_copy, vector_fill, vector_len,
-    vector_ref, vector_set, vector_to_list, vector_to_string,
+    symbol_to_string, utf8_to_string, vector_append, vector_copy, vector_copy_from, vector_fill,
+    vector_len, vector_ref, vector_set, vector_to_list, vector_to_string,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::{Expr, Procedure};
@@ -97,6 +97,7 @@ impl Env {
             env.insert_proc("vector-set!", vector_set);
             env.insert_proc("vector-length", vector_len);
             env.insert_proc("vector-copy", vector_copy);
+            env.insert_proc("vector-copy!", vector_copy_from);
             env.insert_proc("vector-fill!", vector_fill);
             env.insert_proc("vector-append", vector_append);
             // Bytevectors

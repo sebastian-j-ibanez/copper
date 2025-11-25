@@ -484,7 +484,7 @@ impl Vector {
                 vec_ref[index] = new_value;
                 Ok(())
             }
-            None => Err(Error::new("")),
+            None => Err(Error::new("index out of range")),
         }
     }
 
