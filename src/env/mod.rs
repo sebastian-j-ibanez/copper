@@ -15,11 +15,11 @@ use crate::env::procedures::{
     is_rational, is_real, is_string, is_symbol, is_vector, list_append, list_length, list_reverse,
     list_to_string, list_to_vector, load_file, make_bytevector, make_vector, max, min, modulo,
     mult, new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string,
-    open_input_file, or, pretty_print, print, println, read_char, str_append, str_length,
-    string_to_downcase, string_to_list, string_to_num, string_to_symbol, string_to_upcase,
-    string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string, vector_append,
-    vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set, vector_to_list,
-    vector_to_string,
+    open_input_file, open_output_file, or, pretty_print, print, println, read_char, str_append,
+    str_length, string_to_downcase, string_to_list, string_to_num, string_to_symbol,
+    string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string,
+    vector_append, vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set,
+    vector_to_list, vector_to_string, write_char,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::{Expr, Procedure};
@@ -112,7 +112,9 @@ impl Env {
             env.insert_proc("bytevector-copy!", bytevector_copy_from);
             // Ports
             env.insert_proc("open-input-file", open_input_file);
+            env.insert_proc("open-output-file", open_output_file);
             env.insert_proc("read-char", read_char);
+            env.insert_proc("write-char", write_char);
             // Conversions
             env.insert_proc("number->string", num_to_string);
             env.insert_proc("symbol->string", symbol_to_string);

@@ -13,7 +13,7 @@ pub(crate) use number::Number;
 use std::cell::RefCell;
 use std::fmt;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::rc::Rc;
 
 pub const BOOLEAN_TRUE_STR: &str = "#t";
@@ -665,26 +665,6 @@ impl ByteVector {
     }
 }
 
-pub trait PortHandler: fmt::Debug {
-    fn close(&mut self);
-    fn is_open(&self) -> bool;
-}
-
-pub trait TextInputPort: PortHandler {
-    fn read_char(&mut self) -> std::result::Result<char, Error>;
-}
-
-pub trait TextOutputPort: PortHandler {
-    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
-}
-
-pub trait BinaryInputPort: PortHandler {
-    fn read_char(&mut self) -> std::result::Result<u8, Error>;
-}
-pub trait BinaryOutputPort: PortHandler {
-    fn write_char(&mut self, byte: u8) -> std::result::Result<(), Error>;
-}
-
 #[derive(Debug, Clone)]
 pub enum Port {
     TextInput(Rc<RefCell<dyn TextInputPort>>),
@@ -698,6 +678,48 @@ impl Port {
     pub fn text_input<T: TextInputPort + 'static>(port: T) -> Port {
         Port::TextInput(Rc::new(RefCell::new(port)))
     }
+
+    pub fn text_output<T: TextOutputPort + 'static>(port: T) -> Port {
+        Port::TextOutput(Rc::new(RefCell::new(port)))
+    }
+}
+
+pub trait PortHandler: fmt::Debug {
+    fn close(&mut self);
+    fn is_open(&self) -> bool;
+}
+
+/// Macro to implement `PortHandler`. Types require a `bool` field called `open`.
+macro_rules! impl_port_handler {
+    ($ty:ty) => {
+        impl PortHandler for $ty {
+            /// Close `Port`.
+            fn close(&mut self) {
+                self.open = false
+            }
+
+            /// Return if `Port` is open.
+            fn is_open(&self) -> bool {
+                self.open
+            }
+        }
+    };
+}
+
+pub trait TextInputPort: PortHandler {
+    fn read_char(&mut self) -> std::result::Result<char, Error>;
+}
+
+pub trait TextOutputPort: PortHandler {
+    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
+    fn flush(&mut self) -> std::result::Result<(), Error>;
+}
+
+pub trait BinaryInputPort: PortHandler {
+    fn read_char(&mut self) -> std::result::Result<u8, Error>;
+}
+pub trait BinaryOutputPort: PortHandler {
+    fn write_char(&mut self, byte: u8) -> std::result::Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -706,17 +728,22 @@ pub struct TextFileInput {
     open: bool,
 }
 
-impl PortHandler for TextFileInput {
-    /// Close `Port`.
-    fn close(&mut self) {
-        self.open = false
-    }
+impl TextFileInput {
+    /// Open a new `File` from `path`.
+    pub fn open(path: &String) -> std::result::Result<TextFileInput, Error> {
+        let file =
+            File::open(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
 
-    /// Return if `Port` is open.
-    fn is_open(&self) -> bool {
-        self.open
+        let file_input = TextFileInput {
+            reader: BufReader::new(file),
+            open: true,
+        };
+
+        Ok(file_input)
     }
 }
+
+impl_port_handler!(TextFileInput);
 
 impl TextInputPort for TextFileInput {
     /// Read a char from `&self.writer`. Return `Err` if no char was read.
@@ -732,17 +759,43 @@ impl TextInputPort for TextFileInput {
     }
 }
 
-impl TextFileInput {
-    /// Open a new `File` from `path`.
-    pub fn open(path: &String) -> std::result::Result<TextFileInput, Error> {
-        let file =
-            File::open(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
+#[derive(Debug)]
+pub struct TextFileOutput {
+    writer: BufWriter<File>,
+    open: bool,
+}
 
-        let new_file_input = TextFileInput {
-            reader: BufReader::new(file),
+impl TextFileOutput {
+    /// Open a new `File` from `path`.
+    pub fn open(path: &String) -> std::result::Result<TextFileOutput, Error> {
+        let file =
+            File::create(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
+
+        let file_output = TextFileOutput {
+            writer: BufWriter::new(file),
             open: true,
         };
 
-        Ok(new_file_input)
+        Ok(file_output)
+    }
+}
+
+impl_port_handler!(TextFileOutput);
+
+impl TextOutputPort for TextFileOutput {
+    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error> {
+        let buffer = &[ch as u8];
+        self.writer
+            .write(buffer)
+            .map_err(|e| Error::Message(format!("unable to write char: {}", e.to_string())))?;
+
+        Ok(())
+    }
+
+    /// Flush the `writer` stream.
+    fn flush(&mut self) -> std::result::Result<(), Error> {
+        self.writer
+            .flush()
+            .map_err(|_| Error::new("unable to flush port"))
     }
 }

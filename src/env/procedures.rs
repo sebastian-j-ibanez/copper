@@ -8,7 +8,8 @@ use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
 use crate::types::{
-    ByteVector, Expr, Number, Pair, PairIter, Port, Result, TextFileInput, Vector, format_pair,
+    ByteVector, Expr, Number, Pair, PairIter, Port, Result, TextFileInput, TextFileOutput, Vector,
+    format_pair,
 };
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
@@ -954,12 +955,23 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
 
 // Ports
 
-/// Open new `Port` for textual input file.
+/// Open textual input file `Port`.
 pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_input_port = TextFileInput::open(path)?;
-            Ok(Expr::Port(Port::text_input(file_input_port)))
+            let file_input = TextFileInput::open(path)?;
+            Ok(Expr::Port(Port::text_input(file_input)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual output file `Port`.
+pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_output = TextFileOutput::open(path)?;
+            Ok(Expr::Port(Port::text_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
     }
@@ -968,19 +980,32 @@ pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
 /// Read a char from a `Port`.
 pub fn read_char(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Port(port)] => match port {
-            Port::TextInput(port_ref) => {
-                let mut port = port_ref.borrow_mut();
-                match port.read_char() {
-                    Ok(c) => Ok(Expr::Char(c)),
-                    Err(e) => Err(e),
-                }
+        [Expr::Port(Port::TextInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.read_char() {
+                Ok(c) => Ok(Expr::Char(c)),
+                Err(e) => Err(e),
             }
-            _ => todo!(),
-        },
-        _ => Err(Error::new("expected file path string")),
+        }
+        _ => Err(Error::new("expected textual file input port")),
     }
 }
+
+/// Write `char` to a textual `Port`.
+pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Char(ch), Expr::Port(Port::TextOutput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            port.write_char(*ch)?;
+            match port.flush() {
+                Ok(_) => Ok(Expr::Void()),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected textual file output port")),
+    }
+}
+
 // Conversion
 
 /// Convert a `Number` into a `String`.
