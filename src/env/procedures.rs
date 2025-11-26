@@ -7,7 +7,9 @@ use num_traits::ToPrimitive;
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
-use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
+use crate::types::{
+    ByteVector, Expr, Number, Pair, PairIter, Port, Result, TextFileInput, Vector, format_pair,
+};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -950,6 +952,35 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+// Ports
+
+/// Open new `Port` for textual input file.
+pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_input_port = TextFileInput::open(path)?;
+            Ok(Expr::Port(Port::text_input(file_input_port)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Read a char from a `Port`.
+pub fn read_char(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(port)] => match port {
+            Port::TextInput(port_ref) => {
+                let mut port = port_ref.borrow_mut();
+                match port.read_char() {
+                    Ok(c) => Ok(Expr::Char(c)),
+                    Err(e) => Err(e),
+                }
+            }
+            _ => todo!(),
+        },
+        _ => Err(Error::new("expected file path string")),
+    }
+}
 // Conversion
 
 /// Convert a `Number` into a `String`.

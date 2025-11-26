@@ -12,6 +12,8 @@ use num_integer::div_floor;
 pub(crate) use number::Number;
 use std::cell::RefCell;
 use std::fmt;
+use std::fs::File;
+use std::io::{BufReader, Read};
 use std::rc::Rc;
 
 pub const BOOLEAN_TRUE_STR: &str = "#t";
@@ -33,6 +35,7 @@ pub enum Expr {
     ByteVector(ByteVector),
     Procedure(Procedure),
     Closure(Box<Closure>),
+    Port(Port),
     Void(),
 }
 
@@ -48,8 +51,9 @@ impl fmt::Display for Expr {
             Expr::Null => format_null(),
             Expr::Vector(v) => format_vector(v, true),
             Expr::ByteVector(bv) => format_bytevector(bv, true),
-            Expr::Procedure(_) => "#<function {}".to_string(),
+            Expr::Procedure(_) => "#<function {}>".to_string(),
             Expr::Closure(_) => "#<procedure {}>".to_string(),
+            Expr::Port(p) => format_port(p),
             Expr::Void() => return Ok(()),
         };
         write!(f, "{}", s)
@@ -136,6 +140,15 @@ fn format_bytevector(vec: &ByteVector, literal: bool) -> String {
 /// Return literal representation of a null list.
 pub fn format_null() -> String {
     String::from("()")
+}
+
+pub fn format_port(p: &Port) -> String {
+    match *p {
+        Port::TextInput(_) => "#<input-port (string)>".to_string(),
+        Port::TextOutput(_) => "#<output-port (string)>".to_string(),
+        Port::BinaryInput(_) => "#<input-port (binary)>".to_string(),
+        Port::BinaryOutput(_) => "#<output-port (binary)>".to_string(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -649,5 +662,87 @@ impl ByteVector {
         }
 
         format!("\\x{};", byte)
+    }
+}
+
+pub trait PortHandler: fmt::Debug {
+    fn close(&mut self);
+    fn is_open(&self) -> bool;
+}
+
+pub trait TextInputPort: PortHandler {
+    fn read_char(&mut self) -> std::result::Result<char, Error>;
+}
+
+pub trait TextOutputPort: PortHandler {
+    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
+}
+
+pub trait BinaryInputPort: PortHandler {
+    fn read_char(&mut self) -> std::result::Result<u8, Error>;
+}
+pub trait BinaryOutputPort: PortHandler {
+    fn write_char(&mut self, byte: u8) -> std::result::Result<(), Error>;
+}
+
+#[derive(Debug, Clone)]
+pub enum Port {
+    TextInput(Rc<RefCell<dyn TextInputPort>>),
+    TextOutput(Rc<RefCell<dyn TextOutputPort>>),
+    BinaryInput(Rc<RefCell<dyn BinaryInputPort>>),
+    BinaryOutput(Rc<RefCell<dyn BinaryOutputPort>>),
+}
+
+impl Port {
+    /// Create a new `Port` from a `TextInputPort`.
+    pub fn text_input<T: TextInputPort + 'static>(port: T) -> Port {
+        Port::TextInput(Rc::new(RefCell::new(port)))
+    }
+}
+
+#[derive(Debug)]
+pub struct TextFileInput {
+    reader: BufReader<File>,
+    open: bool,
+}
+
+impl PortHandler for TextFileInput {
+    /// Close `Port`.
+    fn close(&mut self) {
+        self.open = false
+    }
+
+    /// Return if `Port` is open.
+    fn is_open(&self) -> bool {
+        self.open
+    }
+}
+
+impl TextInputPort for TextFileInput {
+    /// Read a char from `&self.writer`. Return `Err` if no char was read.
+    fn read_char(&mut self) -> std::result::Result<char, Error> {
+        let mut buf: [u8; 1] = [0; 1];
+        if let Ok(size) = self.reader.read(&mut buf)
+            && size == 1
+        {
+            return Ok(buf[0] as char);
+        }
+
+        Err(Error::new("read 0 characters from file"))
+    }
+}
+
+impl TextFileInput {
+    /// Open a new `File` from `path`.
+    pub fn open(path: &String) -> std::result::Result<TextFileInput, Error> {
+        let file =
+            File::open(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
+
+        let new_file_input = TextFileInput {
+            reader: BufReader::new(file),
+            open: true,
+        };
+
+        Ok(new_file_input)
     }
 }
