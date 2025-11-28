@@ -215,6 +215,16 @@ impl Number {
         Int(IntVariant::Small(size as i64))
     }
 
+    pub fn to_u8(&self) -> Option<u8> {
+        match self {
+            Int(IntVariant::Small(i)) => i.to_u8(),
+            Int(IntVariant::Big(i)) => i.to_u8(),
+            Float(f) => f.to_u8(),
+            Rational(r) => r.to_u8(),
+            Complex(c) => c.to_u8(),
+        }
+    }
+
     pub fn from_u8(value: u8) -> Self {
         Int(IntVariant::Small(value as i64))
     }

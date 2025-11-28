@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
+#![feature(bufreader_peek)]
+
 pub mod cli;
 pub mod env;
 pub mod error;
@@ -13,7 +15,7 @@ pub mod types;
 
 use repl_lib::{LineCompletionFunc, ProcessLineFunc};
 
-use crate::cli::{parse_args, Flag};
+use crate::cli::{Flag, parse_args};
 use crate::env::{Env, EnvRef};
 use crate::error::Error;
 use crate::parser::parse_and_eval;

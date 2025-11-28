@@ -682,6 +682,14 @@ impl Port {
     pub fn text_output<T: TextOutputPort + 'static>(port: T) -> Port {
         Port::TextOutput(Rc::new(RefCell::new(port)))
     }
+
+    pub fn binary_input<B: BinaryInputPort + 'static>(port: B) -> Port {
+        Port::BinaryInput(Rc::new(RefCell::new(port)))
+    }
+
+    pub fn binary_output<B: BinaryOutputPort + 'static>(port: B) -> Port {
+        Port::BinaryOutput(Rc::new(RefCell::new(port)))
+    }
 }
 
 pub trait PortHandler: fmt::Debug {
@@ -707,19 +715,35 @@ macro_rules! impl_port_handler {
 }
 
 pub trait TextInputPort: PortHandler {
+    /// Read `char` from `&self.reader`.
     fn read_char(&mut self) -> std::result::Result<char, Error>;
+
+    /// Read `char` to `&self.writer` without incrementing position in `Port` buffer.
+    fn peek_char(&mut self) -> std::result::Result<char, Error>;
 }
 
 pub trait TextOutputPort: PortHandler {
+    /// Write `char` to `&self.writer`.
     fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
+
+    /// Flush `&self.writer`. Must be called to write data to port.
     fn flush(&mut self) -> std::result::Result<(), Error>;
 }
 
 pub trait BinaryInputPort: PortHandler {
-    fn read_char(&mut self) -> std::result::Result<u8, Error>;
+    /// Read `u8` to `&self.writer`.
+    fn read_byte(&mut self) -> std::result::Result<u8, Error>;
+
+    /// Read `u8` to `&self.writer` without incrementing position in `Port` buffer.
+    fn peek_byte(&mut self) -> std::result::Result<u8, Error>;
 }
+
 pub trait BinaryOutputPort: PortHandler {
-    fn write_char(&mut self, byte: u8) -> std::result::Result<(), Error>;
+    /// Write `u8` to `&self.reader`.
+    fn write_byte(&mut self, byte: u8) -> std::result::Result<(), Error>;
+
+    /// Flush `&self.reader`.
+    fn flush(&mut self) -> std::result::Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -757,6 +781,16 @@ impl TextInputPort for TextFileInput {
 
         Err(Error::new("read 0 characters from file"))
     }
+
+    fn peek_char(&mut self) -> std::result::Result<char, Error> {
+        match self.reader.peek(1) {
+            Ok(bytes) => Ok(bytes[0] as char),
+            Err(e) => Err(Error::Message(format!(
+                "unable to read byte: {}",
+                e.to_string()
+            ))),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -768,8 +802,8 @@ pub struct TextFileOutput {
 impl TextFileOutput {
     /// Open a new `File` from `path`.
     pub fn open(path: &String) -> std::result::Result<TextFileOutput, Error> {
-        let file =
-            File::create(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
+        let file = File::create(path)
+            .map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
 
         let file_output = TextFileOutput {
             writer: BufWriter::new(file),
@@ -793,6 +827,108 @@ impl TextOutputPort for TextFileOutput {
     }
 
     /// Flush the `writer` stream.
+    fn flush(&mut self) -> std::result::Result<(), Error> {
+        self.writer
+            .flush()
+            .map_err(|_| Error::new("unable to flush port"))
+    }
+}
+
+#[derive(Debug)]
+pub struct BinaryFileInput {
+    reader: BufReader<File>,
+    open: bool,
+}
+
+impl BinaryFileInput {
+    /// Open a new `File` from `path`.
+    pub fn open(path: &String) -> std::result::Result<BinaryFileInput, Error> {
+        let file =
+            File::open(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
+
+        let file_output = BinaryFileInput {
+            reader: BufReader::new(file),
+            open: true,
+        };
+
+        Ok(file_output)
+    }
+}
+
+impl PortHandler for BinaryFileInput {
+    fn close(&mut self) {
+        self.open = false
+    }
+
+    fn is_open(&self) -> bool {
+        self.open
+    }
+}
+
+impl BinaryInputPort for BinaryFileInput {
+    fn read_byte(&mut self) -> std::result::Result<u8, Error> {
+        let mut buffer: [u8; 1] = [0; 1];
+        match self.reader.read(&mut buffer) {
+            Ok(_) => Ok(buffer[0]),
+            Err(e) => Err(Error::Message(format!(
+                "unable to read byte: {}",
+                e.to_string()
+            ))),
+        }
+    }
+
+    fn peek_byte(&mut self) -> std::result::Result<u8, Error> {
+        match self.reader.peek(1) {
+            Ok(bytes) => Ok(bytes[0]),
+            Err(e) => Err(Error::Message(format!(
+                "unable to read byte: {}",
+                e.to_string()
+            ))),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BinaryFileOutput {
+    writer: BufWriter<File>,
+    open: bool,
+}
+
+impl BinaryFileOutput {
+    /// Open a new `File` from `path`.
+    pub fn open(path: &String) -> std::result::Result<BinaryFileOutput, Error> {
+        let file = File::create(path)
+            .map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
+
+        let file_output = BinaryFileOutput {
+            writer: BufWriter::new(file),
+            open: true,
+        };
+
+        Ok(file_output)
+    }
+}
+
+impl PortHandler for BinaryFileOutput {
+    fn close(&mut self) {
+        self.open = false
+    }
+
+    fn is_open(&self) -> bool {
+        self.open
+    }
+}
+
+impl BinaryOutputPort for BinaryFileOutput {
+    fn write_byte(&mut self, byte: u8) -> std::result::Result<(), Error> {
+        let buffer = &[byte];
+        self.writer
+            .write(buffer)
+            .map_err(|e| Error::Message(format!("unable to write to port: {}", e.to_string())))?;
+
+        Ok(())
+    }
+
     fn flush(&mut self) -> std::result::Result<(), Error> {
         self.writer
             .flush()

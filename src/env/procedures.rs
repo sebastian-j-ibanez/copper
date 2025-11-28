@@ -2,14 +2,12 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
-use num_traits::ToPrimitive;
-
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
 use crate::types::{
-    ByteVector, Expr, Number, Pair, PairIter, Port, Result, TextFileInput, TextFileOutput, Vector,
-    format_pair,
+    BinaryFileInput, BinaryFileOutput, ByteVector, Expr, Number, Pair, PairIter, Port, Result,
+    TextFileInput, TextFileOutput, Vector, format_pair,
 };
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
@@ -966,12 +964,34 @@ pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Open textual input file `Port`.
+pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_input = BinaryFileInput::open(path)?;
+            Ok(Expr::Port(Port::binary_input(file_input)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
 /// Open textual output file `Port`.
 pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
             let file_output = TextFileOutput::open(path)?;
             Ok(Expr::Port(Port::text_output(file_output)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual output file `Port`.
+pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_output = BinaryFileOutput::open(path)?;
+            Ok(Expr::Port(Port::binary_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
     }
@@ -991,18 +1011,74 @@ pub fn read_char(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Peek a char from a `Port` without modifying the buffer.
+pub fn peek_char(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::TextInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.peek_char() {
+                Ok(c) => Ok(Expr::Char(c)),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected textual file input port")),
+    }
+}
+
 /// Write `char` to a textual `Port`.
 pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Char(ch), Expr::Port(Port::TextOutput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
             port.write_char(*ch)?;
-            match port.flush() {
-                Ok(_) => Ok(Expr::Void()),
+            port.flush().map_err(|e| e)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected binary file output port")),
+    }
+}
+
+/// Read a byte from a `Port`.
+pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.read_byte() {
+                Ok(byte) => Ok(Expr::Number(Number::from_u8(byte))),
                 Err(e) => Err(e),
             }
         }
-        _ => Err(Error::new("expected textual file output port")),
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Read a byte from a `Port` without modifying the buffer.
+pub fn peek_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.peek_byte() {
+                Ok(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Write `u8` to a binary `Port`.
+pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            let byte = byte
+                .to_u8()
+                .ok_or_else(|| Error::new("unable to convert num to byte"))?;
+            port.write_byte(byte)?;
+            port.flush().map_err(|e| e)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected byte and binary port")),
     }
 }
 
