@@ -98,6 +98,11 @@ pub trait PortHandler: fmt::Debug {
     fn is_open(&self) -> bool;
 }
 
+pub trait OutputPort: PortHandler {
+    /// Flush `&self.writer`. Must be called to write data to port.
+    fn flush(&mut self) -> std::result::Result<(), Error>;
+}
+
 pub trait TextInputPort: PortHandler {
     /// Read `char` from `&self.reader`.
     fn read_char(&mut self) -> std::result::Result<char, Error>;
@@ -106,12 +111,9 @@ pub trait TextInputPort: PortHandler {
     fn peek_char(&mut self) -> std::result::Result<char, Error>;
 }
 
-pub trait TextOutputPort: PortHandler {
+pub trait TextOutputPort: OutputPort {
     /// Write `char` to `&self.writer`.
     fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
-
-    /// Flush `&self.writer`. Must be called to write data to port.
-    fn flush(&mut self) -> std::result::Result<(), Error>;
 }
 
 pub trait BinaryInputPort: PortHandler {
@@ -122,12 +124,9 @@ pub trait BinaryInputPort: PortHandler {
     fn peek_byte(&mut self) -> std::result::Result<u8, Error>;
 }
 
-pub trait BinaryOutputPort: PortHandler {
+pub trait BinaryOutputPort: OutputPort {
     /// Write `u8` to `&self.reader`.
     fn write_byte(&mut self, byte: u8) -> std::result::Result<(), Error>;
-
-    /// Flush `&self.reader`.
-    fn flush(&mut self) -> std::result::Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -237,7 +236,9 @@ impl TextOutputPort for TextFileOutput {
             Err(e) => Err(Error::Message(format!("write failed: {}", e.to_string()))),
         }
     }
+}
 
+impl OutputPort for TextFileOutput {
     fn flush(&mut self) -> std::result::Result<(), Error> {
         let stream = self
             .stream
@@ -358,7 +359,9 @@ impl BinaryOutputPort for BinaryFileOutput {
             ))),
         }
     }
+}
 
+impl OutputPort for BinaryFileOutput {
     fn flush(&mut self) -> std::result::Result<(), Error> {
         let stream = self
             .stream
