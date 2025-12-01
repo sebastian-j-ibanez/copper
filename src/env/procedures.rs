@@ -5,10 +5,9 @@
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
-use crate::types::{
-    BinaryFileInput, BinaryFileOutput, ByteVector, Expr, Number, Pair, PairIter, Port, Result,
-    TextFileInput, TextFileOutput, Vector, format_pair,
-};
+use crate::types::ports;
+use crate::types::ports::Port;
+use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -957,7 +956,7 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_input = TextFileInput::open(path)?;
+            let file_input = ports::TextFileInput::open(path)?;
             Ok(Expr::Port(Port::text_input(file_input)))
         }
         _ => Err(Error::new("expected file path string")),
@@ -968,7 +967,7 @@ pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_input = BinaryFileInput::open(path)?;
+            let file_input = ports::BinaryFileInput::open(path)?;
             Ok(Expr::Port(Port::binary_input(file_input)))
         }
         _ => Err(Error::new("expected file path string")),
@@ -979,7 +978,7 @@ pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_output = TextFileOutput::open(path)?;
+            let file_output = ports::TextFileOutput::open(path)?;
             Ok(Expr::Port(Port::text_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
@@ -990,10 +989,21 @@ pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_output = BinaryFileOutput::open(path)?;
+            let file_output = ports::BinaryFileOutput::open(path)?;
             Ok(Expr::Port(Port::binary_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Close `Port`.
+pub fn close_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(port)] => {
+            port.close();
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected port")),
     }
 }
 
@@ -1729,6 +1739,52 @@ pub fn is_procedure(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_bytevector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::ByteVector(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is an output `Port`.
+pub fn is_output_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_output())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is an input `Port`.
+pub fn is_input_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_input())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+/// Return true if arg is a textual `Port`.
+pub fn is_textual_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_textual())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+/// Return true if arg is a binary `Port`.
+pub fn is_binary_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_binary())),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",
