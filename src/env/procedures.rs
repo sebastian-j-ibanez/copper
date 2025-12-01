@@ -1092,6 +1092,11 @@ pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return a new `Eof` object.
+pub fn eof_object(_: &[Expr], _: EnvRef) -> Result {
+    Ok(Expr::Eof)
+}
+
 // Conversion
 
 /// Convert a `Number` into a `String`.
@@ -1785,6 +1790,18 @@ pub fn is_textual_port(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_binary_port(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Port(p)] => Ok(Expr::Boolean(p.is_binary())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is `Eof`.
+pub fn is_eof_object(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Eof] => Ok(Expr::Boolean(true)),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",

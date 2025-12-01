@@ -36,6 +36,7 @@ pub enum Expr {
     Procedure(Procedure),
     Closure(Box<Closure>),
     Port(Port),
+    Eof,
     Void(),
 }
 
@@ -51,9 +52,10 @@ impl fmt::Display for Expr {
             Expr::Null => format_null(),
             Expr::Vector(v) => format_vector(v, true),
             Expr::ByteVector(bv) => format_bytevector(bv, true),
-            Expr::Procedure(_) => "#<function {}>".to_string(),
-            Expr::Closure(_) => "#<procedure {}>".to_string(),
+            Expr::Procedure(_) => String::from("#<function {}>"),
+            Expr::Closure(_) => String::from("#<procedure {}>"),
             Expr::Port(p) => format_port(p),
+            Expr::Eof => String::from("#!eof"),
             Expr::Void() => return Ok(()),
         };
         write!(f, "{}", s)

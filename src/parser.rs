@@ -68,6 +68,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             }
         }
         Expr::Void() => Ok(Expr::Void()),
+        Expr::Eof => Ok(Expr::Eof),
         Expr::Null => Ok(Expr::Null),
         _ => Err(Error::new("unexpected form")),
     }
@@ -99,6 +100,7 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
             let (bytevector_expr, remaining) = parse_literal(right_expr, "bytevector".to_string())?;
             Ok((bytevector_expr, remaining))
         }
+        "#!eof" => Ok((Expr::Eof, right_expr)),
         _ => match eval_atom(token) {
             Ok(atom) => Ok((atom, right_expr)),
             Err(e) => Err(e),
@@ -256,6 +258,9 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 } else if i + 3 < chars.len() && chars[i + 1..i + 4] == ['u', '8', '('] {
                     tokens.push("#u8(".to_string());
                     i += 4;
+                } else if i + 4 < chars.len() && chars[i + 1..i + 5] == ['!', 'e', 'o', 'f'] {
+                    tokens.push("#!eof".to_string());
+                    i += 5;
                 } else {
                     // Atom: '#\char', '#t', or '#f'.
                     let start = i;
