@@ -1062,6 +1062,41 @@ pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Execute procedure with `Port`.
+pub fn call_with_port(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [port @ Expr::Port(_), proc @ Expr::Procedure(_)] => {
+            let expr = Pair::list(&[proc.clone(), port.clone()]);
+            parser::eval(&expr, env)
+        }
+        _ => Err(Error::new("expected port and procedure")),
+    }
+}
+
+/// Run procedure on new input port.
+pub fn call_with_input_file(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [s @ Expr::String(_), proc @ Expr::Procedure(_)] => {
+            let port = open_input_file(&[s.clone()], env.clone())?;
+            let expr = Pair::list(&[proc.clone(), port]);
+            parser::eval(&expr, env)
+        }
+        _ => Err(Error::new("expected port and procedure")),
+    }
+}
+
+/// Run procedure on new input port.
+pub fn call_with_output_file(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [s @ Expr::String(_), proc @ Expr::Procedure(_)] => {
+            let port = open_output_file(&[s.clone()], env.clone())?;
+            let expr = Pair::list(&[proc.clone(), port]);
+            parser::eval(&expr, env)
+        }
+        _ => Err(Error::new("expected port and procedure")),
+    }
+}
+
 /// Read a byte from a `Port` without modifying the buffer.
 pub fn peek_u8(args: &[Expr], _: EnvRef) -> Result {
     match args {

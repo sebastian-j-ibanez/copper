@@ -19,7 +19,15 @@ pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
 /// Evaluate an s-expression.
 pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     match expr {
-        Expr::Number(_) | Expr::String(_) | Expr::Char(_) | Expr::Boolean(_) => Ok(expr.clone()),
+        Expr::Number(_)
+        | Expr::String(_)
+        | Expr::Char(_)
+        | Expr::Boolean(_)
+        | Expr::Vector(_)
+        | Expr::ByteVector(_)
+        | Expr::Procedure(_)
+        | Expr::Closure(_)
+        | Expr::Port(_) => Ok(expr.clone()),
         Expr::Symbol(k) => env
             .borrow()
             .find_var(k)
@@ -70,7 +78,6 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         Expr::Void() => Ok(Expr::Void()),
         Expr::Eof => Ok(Expr::Eof),
         Expr::Null => Ok(Expr::Null),
-        _ => Err(Error::new("unexpected form")),
     }
 }
 

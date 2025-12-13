@@ -11,48 +11,6 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::rc::Rc;
 
-pub trait PortHandler: fmt::Debug {
-    fn close(&mut self);
-    fn is_open(&self) -> bool;
-}
-
-pub trait OutputPort: PortHandler {
-    /// Flush `&self.writer`. Must be called to write data to port.
-    fn flush(&mut self) -> std::result::Result<(), Error>;
-}
-
-pub trait TextInputPort: PortHandler {
-    /// Read `char` from `&self.reader`.
-    fn read_char(&mut self) -> std::result::Result<char, Error>;
-
-    /// Read `char` to `&self.writer` without incrementing position in `Port` buffer.
-    fn peek_char(&mut self) -> std::result::Result<char, Error>;
-
-    /// Read `char` from `&self.reader`.
-    fn read_line(&mut self) -> std::result::Result<String, Error>;
-
-    /// Read lines from `&self.reader`.
-    fn read_lines(&mut self) -> std::result::Result<Vec<String>, Error>;
-}
-
-pub trait TextOutputPort: OutputPort {
-    /// Write `char` to `&self.writer`.
-    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
-}
-
-pub trait BinaryInputPort: PortHandler {
-    /// Read `u8` to `&self.writer`.
-    fn read_byte(&mut self) -> std::result::Result<u8, Error>;
-
-    /// Read `u8` to `&self.writer` without incrementing position in `Port` buffer.
-    fn peek_byte(&mut self) -> std::result::Result<u8, Error>;
-}
-
-pub trait BinaryOutputPort: OutputPort {
-    /// Write `u8` to `&self.reader`.
-    fn write_byte(&mut self, byte: u8) -> std::result::Result<(), Error>;
-}
-
 #[derive(Debug, Clone)]
 pub enum Port {
     TextInput(Rc<RefCell<dyn TextInputPort>>),
@@ -133,6 +91,48 @@ impl Port {
             Self::BinaryInput(_) | Self::BinaryOutput(_) => true,
         }
     }
+}
+
+pub trait PortHandler: fmt::Debug {
+    fn close(&mut self);
+    fn is_open(&self) -> bool;
+}
+
+pub trait OutputPort: PortHandler {
+    /// Flush `&self.writer`. Must be called to write data to port.
+    fn flush(&mut self) -> std::result::Result<(), Error>;
+}
+
+pub trait TextInputPort: PortHandler {
+    /// Read `char` from `&self.reader`.
+    fn read_char(&mut self) -> std::result::Result<char, Error>;
+
+    /// Read `char` to `&self.writer` without incrementing position in `Port` buffer.
+    fn peek_char(&mut self) -> std::result::Result<char, Error>;
+
+    /// Read `char` from `&self.reader`.
+    fn read_line(&mut self) -> std::result::Result<String, Error>;
+
+    /// Read lines from `&self.reader`.
+    fn read_lines(&mut self) -> std::result::Result<Vec<String>, Error>;
+}
+
+pub trait TextOutputPort: OutputPort {
+    /// Write `char` to `&self.writer`.
+    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
+}
+
+pub trait BinaryInputPort: PortHandler {
+    /// Read `u8` to `&self.writer`.
+    fn read_byte(&mut self) -> std::result::Result<u8, Error>;
+
+    /// Read `u8` to `&self.writer` without incrementing position in `Port` buffer.
+    fn peek_byte(&mut self) -> std::result::Result<u8, Error>;
+}
+
+pub trait BinaryOutputPort: OutputPort {
+    /// Write `u8` to `&self.reader`.
+    fn write_byte(&mut self, byte: u8) -> std::result::Result<(), Error>;
 }
 
 #[derive(Debug)]
