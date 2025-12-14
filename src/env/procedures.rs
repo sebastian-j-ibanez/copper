@@ -1833,6 +1833,30 @@ pub fn is_binary_port(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return true if input port is open.
+pub fn is_input_port_open(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_open())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if output port is open.
+pub fn is_output_port_open(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_open())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
 /// Return true if arg is `Eof`.
 pub fn is_eof_object(args: &[Expr], _: EnvRef) -> Result {
     match args {

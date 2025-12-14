@@ -12,11 +12,12 @@ use crate::env::procedures::{
     call_with_port, car, cdr, ceil, close_port, cons_proc, display, div, eof_object, exit,
     exponent, floor, is_binary_port, is_boolean, is_bytevector, is_char, is_char_alphabetic,
     is_char_lowercase, is_char_numeric, is_char_uppercase, is_char_whitespace, is_complex,
-    is_eof_object, is_even, is_exact, is_exact_integer, is_inexact, is_input_port, is_integer,
-    is_list, is_number, is_odd, is_output_port, is_pair, is_procedure, is_rational, is_real,
-    is_string, is_symbol, is_textual_port, is_vector, list_append, list_length, list_reverse,
-    list_to_string, list_to_vector, load_file, make_bytevector, make_vector, max, min, modulo,
-    mult, new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string,
+    is_eof_object, is_even, is_exact, is_exact_integer, is_inexact, is_input_port,
+    is_input_port_open, is_integer, is_list, is_number, is_odd, is_output_port,
+    is_output_port_open, is_pair, is_procedure, is_rational, is_real, is_string, is_symbol,
+    is_textual_port, is_vector, list_append, list_length, list_reverse, list_to_string,
+    list_to_vector, load_file, make_bytevector, make_vector, max, min, modulo, mult,
+    new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string,
     open_binary_input_file, open_binary_output_file, open_input_file, open_output_file, or,
     peek_char, peek_u8, pretty_print, print, println, read_char, read_u8, str_append, str_length,
     string_to_downcase, string_to_list, string_to_num, string_to_symbol, string_to_upcase,
@@ -171,6 +172,8 @@ impl Env {
             env.insert_proc("output-port?", is_output_port);
             env.insert_proc("textual-port?", is_textual_port);
             env.insert_proc("binary-port?", is_binary_port);
+            env.insert_proc("input-port-open?", is_input_port_open);
+            env.insert_proc("output-port-open?", is_output_port_open);
             env.insert_proc("eof-object?", is_eof_object);
             // Misc
             env.insert_proc("exit", exit);
