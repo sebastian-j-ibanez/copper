@@ -6,37 +6,40 @@
 
 use crate::error::Error;
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::rc::Rc;
 
+type RcRef<T> = Rc<RefCell<T>>;
+
 #[derive(Debug, Clone)]
 pub enum Port {
-    TextInput(Rc<RefCell<dyn TextInputPort>>),
-    TextOutput(Rc<RefCell<dyn TextOutputPort>>),
-    BinaryInput(Rc<RefCell<dyn BinaryInputPort>>),
-    BinaryOutput(Rc<RefCell<dyn BinaryOutputPort>>),
+    TextInput(RcRef<dyn TextInputPort>),
+    TextOutput(RcRef<dyn TextOutputPort>),
+    BinaryInput(RcRef<dyn BinaryInputPort>),
+    BinaryOutput(RcRef<dyn BinaryOutputPort>),
 }
 
 impl Port {
     /// Create a new `Port` from a `TextInputPort`.
-    pub fn text_input<T: TextInputPort + 'static>(port: T) -> Port {
+    pub fn from_text_input<T: TextInputPort + 'static>(port: T) -> Port {
         Port::TextInput(Rc::new(RefCell::new(port)))
     }
 
     /// Create a new `Port` from a `TextOutputPort`.
-    pub fn text_output<T: TextOutputPort + 'static>(port: T) -> Port {
+    pub fn from_text_output<T: TextOutputPort + 'static>(port: T) -> Port {
         Port::TextOutput(Rc::new(RefCell::new(port)))
     }
 
     /// Create a new `Port` from a `BinaryInputPort`.
-    pub fn binary_input<B: BinaryInputPort + 'static>(port: B) -> Port {
+    pub fn from_binary_input<B: BinaryInputPort + 'static>(port: B) -> Port {
         Port::BinaryInput(Rc::new(RefCell::new(port)))
     }
 
     /// Create a new `Port` from a `BinaryOutputPort`.
-    pub fn binary_output<B: BinaryOutputPort + 'static>(port: B) -> Port {
+    pub fn from_binary_output<B: BinaryOutputPort + 'static>(port: B) -> Port {
         Port::BinaryOutput(Rc::new(RefCell::new(port)))
     }
 
@@ -98,11 +101,6 @@ pub trait PortHandler: fmt::Debug {
     fn is_open(&self) -> bool;
 }
 
-pub trait OutputPort: PortHandler {
-    /// Flush `&self.writer`. Must be called to write data to port.
-    fn flush(&mut self) -> std::result::Result<(), Error>;
-}
-
 pub trait TextInputPort: PortHandler {
     /// Read `char` from `&self.reader`.
     fn read_char(&mut self) -> std::result::Result<char, Error>;
@@ -117,9 +115,14 @@ pub trait TextInputPort: PortHandler {
     fn read_lines(&mut self) -> std::result::Result<Vec<String>, Error>;
 }
 
-pub trait TextOutputPort: OutputPort {
+pub trait TextOutputPort: PortHandler {
     /// Write `char` to `&self.writer`.
     fn write_char(&mut self, ch: char) -> std::result::Result<(), Error>;
+
+    /// Flush `&self.writer`. Defaults to no-op if port is not buffered.
+    fn flush(&mut self) -> std::result::Result<(), Error> {
+        Ok(())
+    }
 }
 
 pub trait BinaryInputPort: PortHandler {
@@ -130,9 +133,14 @@ pub trait BinaryInputPort: PortHandler {
     fn peek_byte(&mut self) -> std::result::Result<u8, Error>;
 }
 
-pub trait BinaryOutputPort: OutputPort {
+pub trait BinaryOutputPort: PortHandler {
     /// Write `u8` to `&self.reader`.
     fn write_byte(&mut self, byte: u8) -> std::result::Result<(), Error>;
+
+    /// Flush `&self.writer`. Defaults to no-op if port is not buffered.
+    fn flush(&mut self) -> std::result::Result<(), Error> {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -250,9 +258,7 @@ impl TextOutputPort for TextFileOutput {
             Err(e) => Err(Error::Message(format!("write failed: {}", e.to_string()))),
         }
     }
-}
 
-impl OutputPort for TextFileOutput {
     fn flush(&mut self) -> std::result::Result<(), Error> {
         let stream = self
             .stream
@@ -373,9 +379,7 @@ impl BinaryOutputPort for BinaryFileOutput {
             ))),
         }
     }
-}
 
-impl OutputPort for BinaryFileOutput {
     fn flush(&mut self) -> std::result::Result<(), Error> {
         let stream = self
             .stream
@@ -385,5 +389,127 @@ impl OutputPort for BinaryFileOutput {
         stream
             .flush()
             .map_err(|_| Error::new("unable to flush port"))
+    }
+}
+
+#[derive(Debug)]
+pub struct StringInputPort {
+    stream: Option<VecDeque<char>>,
+}
+
+impl StringInputPort {
+    pub fn open(s: String) -> Self {
+        let mut dq = VecDeque::new();
+        s.chars().for_each(|c| dq.push_back(c));
+        Self { stream: Some(dq) }
+    }
+}
+
+impl PortHandler for StringInputPort {
+    fn close(&mut self) {
+        if let Some(s) = self.stream.take() {
+            drop(s)
+        }
+    }
+
+    fn is_open(&self) -> bool {
+        self.stream.is_some()
+    }
+}
+
+impl TextInputPort for StringInputPort {
+    fn read_char(&mut self) -> std::result::Result<char, Error> {
+        let stream = self
+            .stream
+            .as_mut()
+            .ok_or_else(|| Error::new("port is closed"))?;
+
+        match stream.pop_front() {
+            Some(c) => Ok(c),
+            None => Err(Error::new("port is empty")),
+        }
+    }
+
+    fn peek_char(&mut self) -> std::result::Result<char, Error> {
+        let stream = self
+            .stream
+            .as_mut()
+            .ok_or_else(|| Error::new("port is closed"))?;
+
+        match stream.front() {
+            Some(c) => Ok(*c),
+            None => Err(Error::new("port is empty")),
+        }
+    }
+
+    fn read_line(&mut self) -> std::result::Result<String, Error> {
+        let stream = self
+            .stream
+            .as_mut()
+            .ok_or_else(|| Error::new("port is closed"))?;
+
+        let mut line = String::new();
+        while let Some(c) = stream.pop_front_if(|c| *c != '\n') {
+            line.push(c);
+        }
+        Ok(line)
+    }
+
+    fn read_lines(&mut self) -> std::result::Result<Vec<String>, Error> {
+        let stream = self
+            .stream
+            .as_mut()
+            .ok_or_else(|| Error::new("port is closed"))?;
+
+        let mut lines = Vec::new();
+        let mut line = String::new();
+        while let Some(c) = stream.pop_front() {
+            line.push(c);
+            if c == '\n' {
+                lines.push(line.clone());
+                line.clear();
+            }
+        }
+        Ok(lines)
+    }
+}
+
+#[derive(Debug)]
+pub struct StringOutputPort {
+    stream: Option<String>,
+}
+
+impl StringOutputPort {
+    pub fn new() -> Self {
+        Self {
+            stream: Some(String::new()),
+        }
+    }
+
+    pub fn open(s: String) -> Self {
+        Self { stream: Some(s) }
+    }
+}
+
+impl PortHandler for StringOutputPort {
+    fn close(&mut self) {
+        if let Some(s) = self.stream.take() {
+            drop(s)
+        }
+    }
+
+    fn is_open(&self) -> bool {
+        self.stream.is_some()
+    }
+}
+
+impl TextOutputPort for StringOutputPort {
+    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error> {
+        self.stream
+            .as_mut()
+            .ok_or_else(|| Error::new("port is closed"))?
+            .push(ch);
+
+        Ok(())
     }
 }

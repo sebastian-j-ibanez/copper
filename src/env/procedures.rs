@@ -5,8 +5,8 @@
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
-use crate::types::ports;
-use crate::types::ports::Port;
+use crate::types::ports::{self, StringInputPort};
+use crate::types::ports::{Port, StringOutputPort};
 use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
@@ -957,7 +957,29 @@ pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
             let file_input = ports::TextFileInput::open(path)?;
-            Ok(Expr::Port(Port::text_input(file_input)))
+            Ok(Expr::Port(Port::from_text_input(file_input)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual input file `Port`.
+pub fn open_input_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let port = StringInputPort::open(s.clone());
+            Ok(Expr::Port(Port::from_text_input(port)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual input file `Port`.
+pub fn open_output_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let port = StringOutputPort::open(s.clone());
+            Ok(Expr::Port(Port::from_text_output(port)))
         }
         _ => Err(Error::new("expected file path string")),
     }
@@ -968,7 +990,7 @@ pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
             let file_input = ports::BinaryFileInput::open(path)?;
-            Ok(Expr::Port(Port::binary_input(file_input)))
+            Ok(Expr::Port(Port::from_binary_input(file_input)))
         }
         _ => Err(Error::new("expected file path string")),
     }
@@ -979,7 +1001,7 @@ pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
             let file_output = ports::TextFileOutput::open(path)?;
-            Ok(Expr::Port(Port::text_output(file_output)))
+            Ok(Expr::Port(Port::from_text_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
     }
@@ -990,7 +1012,7 @@ pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
             let file_output = ports::BinaryFileOutput::open(path)?;
-            Ok(Expr::Port(Port::binary_output(file_output)))
+            Ok(Expr::Port(Port::from_binary_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
     }
