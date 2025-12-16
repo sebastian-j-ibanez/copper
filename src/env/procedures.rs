@@ -5,7 +5,9 @@
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::types::number::IntVariant::Small;
-use crate::types::ports::{self, StringInputPort};
+use crate::types::ports::{
+    self, BinaryFileInput, BinaryFileOutput, StringInputPort, TextFileOutput,
+};
 use crate::types::ports::{Port, StringOutputPort};
 use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
 use crate::{io, parser};
@@ -989,7 +991,7 @@ pub fn open_output_string(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_input = ports::BinaryFileInput::open(path)?;
+            let file_input = BinaryFileInput::open(path)?;
             Ok(Expr::Port(Port::from_binary_input(file_input)))
         }
         _ => Err(Error::new("expected file path string")),
@@ -1000,7 +1002,7 @@ pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_output = ports::TextFileOutput::open(path)?;
+            let file_output = TextFileOutput::open(path)?;
             Ok(Expr::Port(Port::from_text_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
@@ -1011,7 +1013,7 @@ pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
 pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => {
-            let file_output = ports::BinaryFileOutput::open(path)?;
+            let file_output = BinaryFileOutput::open(path)?;
             Ok(Expr::Port(Port::from_binary_output(file_output)))
         }
         _ => Err(Error::new("expected file path string")),
@@ -1048,9 +1050,9 @@ pub fn peek_char(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Port(Port::TextInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
-            match port.peek_char() {
-                Ok(c) => Ok(Expr::Char(c)),
-                Err(e) => Err(e),
+            match port.peek_char()? {
+                Some(c) => Ok(Expr::Char(c)),
+                None => Ok(Expr::Eof),
             }
         }
         _ => Err(Error::new("expected textual file input port")),
@@ -1078,6 +1080,20 @@ pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
             match port.read_byte() {
                 Ok(byte) => Ok(Expr::Number(Number::from_u8(byte))),
                 Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Read a byte from a `Port` without modifying the buffer.
+pub fn peek_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.peek_byte()? {
+                Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                None => Ok(Expr::Eof),
             }
         }
         _ => Err(Error::new("expected binary file input port")),
@@ -1116,20 +1132,6 @@ pub fn call_with_output_file(args: &[Expr], env: EnvRef) -> Result {
             parser::eval(&expr, env)
         }
         _ => Err(Error::new("expected port and procedure")),
-    }
-}
-
-/// Read a byte from a `Port` without modifying the buffer.
-pub fn peek_u8(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Port(Port::BinaryInput(port_ref))] => {
-            let mut port = port_ref.borrow_mut();
-            match port.peek_byte() {
-                Ok(byte) => Ok(Expr::Number(Number::from_u8(byte))),
-                Err(e) => Err(e),
-            }
-        }
-        _ => Err(Error::new("expected binary file input port")),
     }
 }
 
@@ -1843,10 +1845,43 @@ pub fn is_textual_port(args: &[Expr], _: EnvRef) -> Result {
         ))),
     }
 }
+
 /// Return true if arg is a binary `Port`.
 pub fn is_binary_port(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Port(p)] => Ok(Expr::Boolean(p.is_binary())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if `Port` has a readable character.
+pub fn is_char_ready(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::TextInput(p))] => match p.borrow_mut().peek_char().map_err(|e| e) {
+            Ok(None) => Ok(Expr::Boolean(false)),
+            Ok(_) => Ok(Expr::Boolean(true)),
+            Err(e) => Err(e),
+        },
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if `Port` has a readable byte.
+pub fn is_byte_ready(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(p))] => match p.borrow_mut().peek_byte().map_err(|e| e) {
+            Ok(None) => Ok(Expr::Boolean(false)),
+            Ok(_) => Ok(Expr::Boolean(true)),
+            Err(e) => Err(e),
+        },
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",

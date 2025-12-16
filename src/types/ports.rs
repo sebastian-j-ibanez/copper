@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::rc::Rc;
 
 type RcRef<T> = Rc<RefCell<T>>;
@@ -106,7 +106,7 @@ pub trait TextInputPort: PortHandler {
     fn read_char(&mut self) -> std::result::Result<char, Error>;
 
     /// Read `char` to `&self.writer` without incrementing position in `Port` buffer.
-    fn peek_char(&mut self) -> std::result::Result<char, Error>;
+    fn peek_char(&mut self) -> std::result::Result<Option<char>, Error>;
 
     /// Read `char` from `&self.reader`.
     fn read_line(&mut self) -> std::result::Result<String, Error>;
@@ -130,7 +130,7 @@ pub trait BinaryInputPort: PortHandler {
     fn read_byte(&mut self) -> std::result::Result<u8, Error>;
 
     /// Read `u8` to `&self.writer` without incrementing position in `Port` buffer.
-    fn peek_byte(&mut self) -> std::result::Result<u8, Error>;
+    fn peek_byte(&mut self) -> std::result::Result<Option<u8>, Error>;
 }
 
 pub trait BinaryOutputPort: PortHandler {
@@ -190,14 +190,15 @@ impl TextInputPort for TextFileInput {
         }
     }
 
-    fn peek_char(&mut self) -> std::result::Result<char, Error> {
+    fn peek_char(&mut self) -> std::result::Result<Option<char>, Error> {
         let reader = self
             .stream
             .as_mut()
             .ok_or_else(|| Error::Message(format!("port is closed")))?;
 
-        match reader.peek(1) {
-            Ok(bytes) => Ok(bytes[0] as char),
+        match reader.fill_buf() {
+            Ok(bytes) if bytes.is_empty() => Ok(None),
+            Ok(bytes) => Ok(Some(bytes[0] as char)),
             Err(e) => Err(Error::Message(format!(
                 "unable to read byte: {}",
                 e.to_string()
@@ -316,14 +317,15 @@ impl BinaryInputPort for BinaryFileInput {
         }
     }
 
-    fn peek_byte(&mut self) -> std::result::Result<u8, Error> {
+    fn peek_byte(&mut self) -> std::result::Result<Option<u8>, Error> {
         let reader = self
             .stream
             .as_mut()
             .ok_or_else(|| Error::Message(format!("port is closed")))?;
 
-        match reader.peek(1) {
-            Ok(bytes) => Ok(bytes[0]),
+        match reader.fill_buf() {
+            Ok(bytes) if bytes.is_empty() => Ok(None),
+            Ok(bytes) => Ok(Some(bytes[0])),
             Err(e) => Err(Error::Message(format!(
                 "unable to read byte: {}",
                 e.to_string()
@@ -430,14 +432,14 @@ impl TextInputPort for StringInputPort {
         }
     }
 
-    fn peek_char(&mut self) -> std::result::Result<char, Error> {
+    fn peek_char(&mut self) -> std::result::Result<Option<char>, Error> {
         let stream = self
             .stream
             .as_mut()
             .ok_or_else(|| Error::new("port is closed"))?;
 
         match stream.front() {
-            Some(c) => Ok(*c),
+            Some(c) => Ok(Some(*c)),
             None => Err(Error::new("port is empty")),
         }
     }
