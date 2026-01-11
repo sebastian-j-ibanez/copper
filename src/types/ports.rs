@@ -7,10 +7,10 @@
 use crate::error::Error;
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::rc::Rc;
+use std::{fmt, io};
 
 type RcRef<T> = Rc<RefCell<T>>;
 
@@ -97,7 +97,10 @@ impl Port {
 }
 
 pub trait PortHandler: fmt::Debug {
+    /// Close port.
     fn close(&mut self);
+
+    /// Return true if `Port` is open.
     fn is_open(&self) -> bool;
 }
 
@@ -140,6 +143,68 @@ pub trait BinaryOutputPort: PortHandler {
     /// Flush `&self.writer`. Defaults to no-op if port is not buffered.
     fn flush(&mut self) -> std::result::Result<(), Error> {
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct StdInput;
+
+impl PortHandler for StdInput {
+    fn close(&mut self) {}
+
+    fn is_open(&self) -> bool {
+        true
+    }
+}
+
+impl TextInputPort for StdInput {
+    fn read_char(&mut self) -> std::result::Result<char, Error> {
+        let mut stdin = io::stdin();
+        let mut buf = [0; 1];
+        match stdin.read_exact(&mut buf) {
+            Ok(_) => Ok(buf[0] as char),
+            Err(_) => Err(Error::new("unable to read char")),
+        }
+    }
+
+    fn peek_char(&mut self) -> std::result::Result<Option<char>, Error> {
+        Ok(None)
+    }
+
+    fn read_line(&mut self) -> std::result::Result<String, Error> {
+        let stdin = io::stdin();
+        let mut line = String::new();
+        match stdin.read_line(&mut line) {
+            Ok(_) => Ok(line),
+            Err(_) => Err(Error::new("unable to read char")),
+        }
+    }
+
+    fn read_lines(&mut self) -> std::result::Result<Vec<String>, Error> {
+        let stdin = io::stdin();
+        stdin
+            .lines()
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| Error::new(&format!("unable to get lines: {}", e)))
+    }
+}
+
+#[derive(Debug)]
+pub struct StdOutput;
+
+impl PortHandler for StdOutput {
+    fn close(&mut self) {}
+
+    fn is_open(&self) -> bool {
+        true
+    }
+}
+
+impl TextOutputPort for StdOutput {
+    fn write_char(&mut self, ch: char) -> std::result::Result<(), Error> {
+        io::stdout()
+            .write_all(&[ch as u8])
+            .map_err(|e| Error::new(&format!("unable to write char to stdout: {e}")))
     }
 }
 
@@ -451,8 +516,10 @@ impl TextInputPort for StringInputPort {
             .ok_or_else(|| Error::new("port is closed"))?;
 
         let mut line = String::new();
-        while let Some(c) = stream.pop_front_if(|c| *c != '\n') {
-            line.push(c);
+        while let Some(c) = stream.front() {
+            if *c != '\n' {
+                line.push(*c);
+            }
         }
         Ok(line)
     }

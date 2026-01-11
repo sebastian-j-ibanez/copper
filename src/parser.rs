@@ -6,8 +6,8 @@
 
 use crate::env::EnvRef;
 use crate::error::Error;
-use crate::macros::{apply_lambda, define, if_statement, lambda, quote, set_car};
-use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair};
+use crate::macros::{apply_lambda, define, if_statement, lambda, parameterize, quote, set_car};
+use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter};
 
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
@@ -27,7 +27,8 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         | Expr::ByteVector(_)
         | Expr::Procedure(_)
         | Expr::Closure(_)
-        | Expr::Port(_) => Ok(expr.clone()),
+        | Expr::Port(_)
+        | Expr::Parameter(_) => Ok(expr.clone()),
         Expr::Symbol(k) => env
             .borrow()
             .find_var(k)
@@ -47,7 +48,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                 return Ok(Expr::Null);
             };
 
-            // Check for special forms (like define)
+            // Check for special forms (like define).
             if let Expr::Symbol(s) = first {
                 match s.as_str() {
                     "define" => return define(args, env),
@@ -55,6 +56,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     "lambda" => return lambda(args, env),
                     "quote" => return quote(args, env),
                     "if" => return if_statement(args, env),
+                    "parameterize" => return parameterize(args, env),
                     _ => {}
                 }
             }
@@ -69,6 +71,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             match func_val {
                 Expr::Procedure(f) => f(&arg_vals, env),
                 Expr::Closure(c) => apply_lambda(&c, arg_vals),
+                Expr::Parameter(p) => apply_parameter(&p, arg_vals, env),
                 e => {
                     let msg = format!("not a function: {}", e);
                     Err(Error::Message(msg))
@@ -78,6 +81,39 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         Expr::Void() => Ok(Expr::Void()),
         Expr::Eof => Ok(Expr::Eof),
         Expr::Null => Ok(Expr::Null),
+    }
+}
+
+/// Apply a parameter object.
+/// With no args: returns current value
+/// With one arg: sets new value (through converter if present)
+fn apply_parameter(param: &Parameter, args: Vec<Expr>, env: EnvRef) -> Result<Expr, Error> {
+    let key = param.id.to_string();
+
+    match args.as_slice() {
+        // Get current value
+        [] => env
+            .borrow()
+            .find_param(&key)
+            .ok_or_else(|| Error::Message(format!("parameter {} not initialized", param.id))),
+        // Set new value
+        [new_value] => {
+            let value_to_store = if let Some(ref converter) = param.converter {
+                // Apply converter
+                match converter.as_ref() {
+                    Expr::Procedure(f) => f(&[new_value.clone()], env.clone())?,
+                    Expr::Closure(c) => apply_lambda(c, vec![new_value.clone()])?,
+                    _ => return Err(Error::new("invalid converter")),
+                }
+            } else {
+                new_value.clone()
+            };
+
+            // Set in the current environment.
+            env.borrow_mut().set_param(&key, &value_to_store);
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("parameter: expected 0 or 1 arguments")),
     }
 }
 

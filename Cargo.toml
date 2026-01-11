@@ -12,5 +12,3 @@ num-integer = "0.1.46"
 colored = "3.0.0"
 repl_lib = "0.3.3"
 
-[toolchain]
-channel = "nightly"

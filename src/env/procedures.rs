@@ -2,14 +2,15 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
-use crate::env::EnvRef;
+use crate::env::{next_parameter_id, EnvRef};
 use crate::error::Error;
+use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
 use crate::types::ports::{
     self, BinaryFileInput, BinaryFileOutput, StringInputPort, TextFileOutput,
 };
 use crate::types::ports::{Port, StringOutputPort};
-use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
+use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -1923,5 +1924,66 @@ pub fn is_eof_object(args: &[Expr], _: EnvRef) -> Result {
             "expected 1 argument, got {}",
             args.len()
         ))),
+    }
+}
+
+/// Returns true if arg is a parameter object.
+pub fn is_parameter(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Parameter(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+// Parameters
+
+/// Apply a converter function to a value.
+fn apply_converter(converter: &Expr, value: &Expr, env: EnvRef) -> Result {
+    match converter {
+        Expr::Procedure(f) => f(&[value.clone()], env),
+        Expr::Closure(c) => apply_lambda(c, vec![value.clone()]),
+        _ => Err(Error::new("converter must be a procedure")),
+    }
+}
+
+/// Create a new parameter object.
+/// (make-parameter init) or (make-parameter init converter)
+pub fn make_parameter(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [init] => {
+            let id = next_parameter_id();
+            let param = Parameter::new(id, None);
+
+            // Store initial value in the environment's params
+            env.borrow_mut()
+                .set_param(&id.to_string(), init);
+
+            Ok(Expr::Parameter(param))
+        }
+        [init, converter] => {
+            // Validate converter is callable
+            match converter {
+                Expr::Procedure(_) | Expr::Closure(_) => {}
+                _ => return Err(Error::new("make-parameter: converter must be a procedure")),
+            }
+
+            let id = next_parameter_id();
+
+            // Apply converter to initial value
+            let converted_init = apply_converter(converter, init, env.clone())?;
+
+            let param = Parameter::new(id, Some(converter.clone()));
+
+            // Store converted initial value
+            env.borrow_mut()
+                .set_param(&id.to_string(), &converted_init);
+
+            Ok(Expr::Parameter(param))
+        }
+        _ => Err(Error::new("make-parameter: expected 1 or 2 arguments")),
     }
 }

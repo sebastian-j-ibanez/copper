@@ -2,8 +2,6 @@
 // Author: Sebastian Ibanez
 // Created: 2025-07-10
 
-#![feature(bufreader_peek)]
-
 pub mod cli;
 pub mod env;
 pub mod error;

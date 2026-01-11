@@ -16,6 +16,21 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
+#[derive(Debug, Clone)]
+pub struct Parameter {
+    pub id: u64,
+    pub converter: Option<Box<Expr>>,
+}
+
+impl Parameter {
+    pub fn new(id: u64, converter: Option<Expr>) -> Parameter {
+        Parameter {
+            id,
+            converter: converter.map(Box::new),
+        }
+    }
+}
+
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
@@ -36,6 +51,7 @@ pub enum Expr {
     Procedure(Procedure),
     Closure(Box<Closure>),
     Port(Port),
+    Parameter(Parameter),
     Eof,
     Void(),
 }
@@ -55,6 +71,7 @@ impl fmt::Display for Expr {
             Expr::Procedure(_) => String::from("#<function {}>"),
             Expr::Closure(_) => String::from("#<procedure {}>"),
             Expr::Port(p) => format_port(p),
+            Expr::Parameter(p) => format!("#<parameter {}>", p.id),
             Expr::Eof => String::from("#!eof"),
             Expr::Void() => return Ok(()),
         };
@@ -631,6 +648,7 @@ impl ByteVector {
         Err(Error::new("index out of range"))
     }
 
+    /// Get byte at index. Returns `None` if index is outside vector bounds.
     pub fn get(&self, index: usize) -> Option<u8> {
         self.buffer.borrow().get(index).copied()
     }
