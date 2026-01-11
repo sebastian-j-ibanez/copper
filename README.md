@@ -6,7 +6,7 @@ A Scheme interpreter written in Rust with [repl_lib](https://crates.io/crates/re
 
 ### Goal
 
-Create an `R7RS` compliant Lisp interpreter. The plan is to release`v1.0.0` when copper is fully `R7RS` compliant.
+Create an `R7RS-small` compliant Lisp interpreter. The plan is to release`v1.0.0` when copper is fully `R7RS-small` compliant.
 
 ### Status
 
