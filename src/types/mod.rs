@@ -5,14 +5,31 @@
 //! Copper data types.
 
 pub mod number;
+pub mod ports;
 
 use crate::env::EnvRef;
 use crate::error::Error;
+use crate::types::ports::Port;
 use num_integer::div_floor;
 pub(crate) use number::Number;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
+
+#[derive(Debug, Clone)]
+pub struct Parameter {
+    pub id: u64,
+    pub converter: Option<Box<Expr>>,
+}
+
+impl Parameter {
+    pub fn new(id: u64, converter: Option<Expr>) -> Parameter {
+        Parameter {
+            id,
+            converter: converter.map(Box::new),
+        }
+    }
+}
 
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
@@ -33,6 +50,9 @@ pub enum Expr {
     ByteVector(ByteVector),
     Procedure(Procedure),
     Closure(Box<Closure>),
+    Port(Port),
+    Parameter(Parameter),
+    Eof,
     Void(),
 }
 
@@ -48,8 +68,11 @@ impl fmt::Display for Expr {
             Expr::Null => format_null(),
             Expr::Vector(v) => format_vector(v, true),
             Expr::ByteVector(bv) => format_bytevector(bv, true),
-            Expr::Procedure(_) => "#<function {}".to_string(),
-            Expr::Closure(_) => "#<procedure {}>".to_string(),
+            Expr::Procedure(_) => String::from("#<function {}>"),
+            Expr::Closure(_) => String::from("#<procedure {}>"),
+            Expr::Port(p) => format_port(p),
+            Expr::Parameter(p) => format!("#<parameter {}>", p.id),
+            Expr::Eof => String::from("#!eof"),
             Expr::Void() => return Ok(()),
         };
         write!(f, "{}", s)
@@ -136,6 +159,15 @@ fn format_bytevector(vec: &ByteVector, literal: bool) -> String {
 /// Return literal representation of a null list.
 pub fn format_null() -> String {
     String::from("()")
+}
+
+pub fn format_port(p: &Port) -> String {
+    match *p {
+        Port::TextInput(_) => "#<input-port (string)>".to_string(),
+        Port::TextOutput(_) => "#<output-port (string)>".to_string(),
+        Port::BinaryInput(_) => "#<input-port (binary)>".to_string(),
+        Port::BinaryOutput(_) => "#<output-port (binary)>".to_string(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -616,6 +648,7 @@ impl ByteVector {
         Err(Error::new("index out of range"))
     }
 
+    /// Get byte at index. Returns `None` if index is outside vector bounds.
     pub fn get(&self, index: usize) -> Option<u8> {
         self.buffer.borrow().get(index).copied()
     }

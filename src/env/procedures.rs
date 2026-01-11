@@ -2,12 +2,15 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
-use num_traits::ToPrimitive;
-
-use crate::env::EnvRef;
+use crate::env::{next_parameter_id, EnvRef};
 use crate::error::Error;
+use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
-use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Result, Vector, format_pair};
+use crate::types::ports::{
+    self, BinaryFileInput, BinaryFileOutput, StringInputPort, TextFileOutput,
+};
+use crate::types::ports::{Port, StringOutputPort};
+use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -950,6 +953,210 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+// Ports
+
+/// Open textual input file `Port`.
+pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_input = ports::TextFileInput::open(path)?;
+            Ok(Expr::Port(Port::from_text_input(file_input)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual input file `Port`.
+pub fn open_input_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let port = StringInputPort::open(s.clone());
+            Ok(Expr::Port(Port::from_text_input(port)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual input file `Port`.
+pub fn open_output_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let port = StringOutputPort::open(s.clone());
+            Ok(Expr::Port(Port::from_text_output(port)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual input file `Port`.
+pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_input = BinaryFileInput::open(path)?;
+            Ok(Expr::Port(Port::from_binary_input(file_input)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual output file `Port`.
+pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_output = TextFileOutput::open(path)?;
+            Ok(Expr::Port(Port::from_text_output(file_output)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open textual output file `Port`.
+pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => {
+            let file_output = BinaryFileOutput::open(path)?;
+            Ok(Expr::Port(Port::from_binary_output(file_output)))
+        }
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Close `Port`.
+pub fn close_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(port)] => {
+            port.close();
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected port")),
+    }
+}
+
+/// Read a char from a `Port`.
+pub fn read_char(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::TextInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.read_char() {
+                Ok(c) => Ok(Expr::Char(c)),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected textual file input port")),
+    }
+}
+
+/// Peek a char from a `Port` without modifying the buffer.
+pub fn peek_char(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::TextInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.peek_char()? {
+                Some(c) => Ok(Expr::Char(c)),
+                None => Ok(Expr::Eof),
+            }
+        }
+        _ => Err(Error::new("expected textual file input port")),
+    }
+}
+
+/// Write `char` to a textual `Port`.
+pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Char(ch), Expr::Port(Port::TextOutput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            port.write_char(*ch)?;
+            port.flush().map_err(|e| e)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected binary file output port")),
+    }
+}
+
+/// Read a byte from a `Port`.
+pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.read_byte() {
+                Ok(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Read a byte from a `Port` without modifying the buffer.
+pub fn peek_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.peek_byte()? {
+                Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                None => Ok(Expr::Eof),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Execute procedure with `Port`.
+pub fn call_with_port(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [port @ Expr::Port(_), proc @ Expr::Procedure(_)] => {
+            let expr = Pair::list(&[proc.clone(), port.clone()]);
+            parser::eval(&expr, env)
+        }
+        _ => Err(Error::new("expected port and procedure")),
+    }
+}
+
+/// Run procedure on new input port.
+pub fn call_with_input_file(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [s @ Expr::String(_), proc @ Expr::Procedure(_)] => {
+            let port = open_input_file(&[s.clone()], env.clone())?;
+            let expr = Pair::list(&[proc.clone(), port]);
+            parser::eval(&expr, env)
+        }
+        _ => Err(Error::new("expected port and procedure")),
+    }
+}
+
+/// Run procedure on new input port.
+pub fn call_with_output_file(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [s @ Expr::String(_), proc @ Expr::Procedure(_)] => {
+            let port = open_output_file(&[s.clone()], env.clone())?;
+            let expr = Pair::list(&[proc.clone(), port]);
+            parser::eval(&expr, env)
+        }
+        _ => Err(Error::new("expected port and procedure")),
+    }
+}
+
+/// Write `u8` to a binary `Port`.
+pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            let byte = byte
+                .to_u8()
+                .ok_or_else(|| Error::new("unable to convert num to byte"))?;
+            port.write_byte(byte)?;
+            port.flush().map_err(|e| e)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected byte and binary port")),
+    }
+}
+
+/// Return a new `Eof` object.
+pub fn eof_object(_: &[Expr], _: EnvRef) -> Result {
+    Ok(Expr::Eof)
+}
+
 // Conversion
 
 /// Convert a `Number` into a `String`.
@@ -1602,5 +1809,181 @@ pub fn is_bytevector(args: &[Expr], _: EnvRef) -> Result {
             "expected 1 argument, got {}",
             args.len()
         ))),
+    }
+}
+
+/// Return true if arg is an output `Port`.
+pub fn is_output_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_output())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is an input `Port`.
+pub fn is_input_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_input())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+/// Return true if arg is a textual `Port`.
+pub fn is_textual_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_textual())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is a binary `Port`.
+pub fn is_binary_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_binary())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if `Port` has a readable character.
+pub fn is_char_ready(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::TextInput(p))] => match p.borrow_mut().peek_char().map_err(|e| e) {
+            Ok(None) => Ok(Expr::Boolean(false)),
+            Ok(_) => Ok(Expr::Boolean(true)),
+            Err(e) => Err(e),
+        },
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if `Port` has a readable byte.
+pub fn is_byte_ready(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryInput(p))] => match p.borrow_mut().peek_byte().map_err(|e| e) {
+            Ok(None) => Ok(Expr::Boolean(false)),
+            Ok(_) => Ok(Expr::Boolean(true)),
+            Err(e) => Err(e),
+        },
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if input port is open.
+pub fn is_input_port_open(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_open())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if output port is open.
+pub fn is_output_port_open(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(p)] => Ok(Expr::Boolean(p.is_open())),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is `Eof`.
+pub fn is_eof_object(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Eof] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Returns true if arg is a parameter object.
+pub fn is_parameter(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Parameter(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+// Parameters
+
+/// Apply a converter function to a value.
+fn apply_converter(converter: &Expr, value: &Expr, env: EnvRef) -> Result {
+    match converter {
+        Expr::Procedure(f) => f(&[value.clone()], env),
+        Expr::Closure(c) => apply_lambda(c, vec![value.clone()]),
+        _ => Err(Error::new("converter must be a procedure")),
+    }
+}
+
+/// Create a new parameter object.
+/// (make-parameter init) or (make-parameter init converter)
+pub fn make_parameter(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [init] => {
+            let id = next_parameter_id();
+            let param = Parameter::new(id, None);
+
+            // Store initial value in the environment's params
+            env.borrow_mut()
+                .set_param(&id.to_string(), init);
+
+            Ok(Expr::Parameter(param))
+        }
+        [init, converter] => {
+            // Validate converter is callable
+            match converter {
+                Expr::Procedure(_) | Expr::Closure(_) => {}
+                _ => return Err(Error::new("make-parameter: converter must be a procedure")),
+            }
+
+            let id = next_parameter_id();
+
+            // Apply converter to initial value
+            let converted_init = apply_converter(converter, init, env.clone())?;
+
+            let param = Parameter::new(id, Some(converter.clone()));
+
+            // Store converted initial value
+            env.borrow_mut()
+                .set_param(&id.to_string(), &converted_init);
+
+            Ok(Expr::Parameter(param))
+        }
+        _ => Err(Error::new("make-parameter: expected 1 or 2 arguments")),
     }
 }

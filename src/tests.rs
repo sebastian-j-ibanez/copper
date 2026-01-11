@@ -1147,3 +1147,458 @@ fn test_empty_list_format() {
     assert_eq!(format!("{}", empty), "()");
     assert!(matches!(empty, Expr::Null));
 }
+
+#[test]
+fn test_make_parameter_basic() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-parameter 10)".to_string(), env);
+    assert!(matches!(result, Ok(Expr::Parameter(_))));
+}
+
+#[test]
+fn test_make_parameter_with_string() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-parameter \"hello\")".to_string(), env);
+    assert!(matches!(result, Ok(Expr::Parameter(_))));
+}
+
+#[test]
+fn test_make_parameter_with_list() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-parameter (list 1 2 3))".to_string(), env);
+    assert!(matches!(result, Ok(Expr::Parameter(_))));
+}
+
+#[test]
+fn test_parameter_predicate_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter? (make-parameter 5))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "#t");
+}
+
+#[test]
+fn test_parameter_predicate_false_number() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter? 42)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "#f");
+}
+
+#[test]
+fn test_parameter_predicate_false_string() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter? \"hello\")".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "#f");
+}
+
+#[test]
+fn test_parameter_predicate_false_list() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter? (list 1 2 3))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "#f");
+}
+
+#[test]
+fn test_parameter_predicate_false_procedure() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter? +)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "#f");
+}
+
+#[test]
+fn test_parameter_get_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 42))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "42");
+}
+
+#[test]
+fn test_parameter_get_string_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define p (make-parameter \"hello\"))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "\"hello\"");
+}
+
+#[test]
+fn test_parameter_set_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p 20)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "20");
+}
+
+#[test]
+fn test_parameter_set_different_type() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p \"now a string\")".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "\"now a string\"");
+}
+
+#[test]
+fn test_parameter_multiple_sets() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 1))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p 2)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p 3)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p 4)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "4");
+}
+
+#[test]
+fn test_make_parameter_with_converter() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // Converter doubles the value
+    parse_and_eval(
+        "(define p (make-parameter 5 (lambda (x) (* x 2))))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "10");
+}
+
+#[test]
+fn test_parameter_converter_on_set() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define p (make-parameter 5 (lambda (x) (* x 2))))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    parse_and_eval("(p 10)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "20");
+}
+
+#[test]
+fn test_parameter_converter_string_to_upper() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define p (make-parameter \"hello\" string-upcase))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "\"HELLO\"");
+}
+
+#[test]
+fn test_parameter_converter_validates() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // Converter that ensures value is non-negative using abs
+    parse_and_eval(
+        "(define p (make-parameter -5 abs))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env.clone());
+    assert_eq!(result.unwrap().to_string(), "5");
+    // Set to negative, should be converted to positive
+    parse_and_eval("(p -10)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "10");
+}
+
+#[test]
+fn test_parameterize_basic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(parameterize ((p 20)) (p))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "20");
+}
+
+#[test]
+fn test_parameterize_restores_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(parameterize ((p 20)) (p))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "10");
+}
+
+#[test]
+fn test_parameterize_multiple_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p1 (make-parameter 1))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define p2 (make-parameter 2))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval(
+        "(parameterize ((p1 10) (p2 20)) (+ (p1) (p2)))".to_string(),
+        env,
+    );
+    assert_eq!(result.unwrap().to_string(), "30");
+}
+
+#[test]
+fn test_parameterize_multiple_bindings_restore() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p1 (make-parameter 1))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define p2 (make-parameter 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(parameterize ((p1 10) (p2 20)) (+ (p1) (p2)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(+ (p1) (p2))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "3");
+}
+
+#[test]
+fn test_parameterize_nested() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval(
+        "(parameterize ((p 10)) (parameterize ((p 100)) (p)))".to_string(),
+        env,
+    );
+    assert_eq!(result.unwrap().to_string(), "100");
+}
+
+#[test]
+fn test_parameterize_nested_restore_inner() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 1))".to_string(), env.clone()).unwrap();
+
+    let inner_result = parse_and_eval(
+        "(parameterize ((p 10)) (parameterize ((p 100)) (p)))".to_string(),
+        env.clone(),
+    );
+    assert_eq!(inner_result.unwrap().to_string(), "100");
+
+    let outer_result = parse_and_eval(
+        "(parameterize ((p 10)) (parameterize ((p 100)) (+ 0 0)) (p))".to_string(),
+        env.clone(),
+    );
+    assert_eq!(outer_result.unwrap().to_string(), "10");
+
+    let original_result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(original_result.unwrap().to_string(), "1");
+}
+
+#[test]
+fn test_parameterize_with_converter() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define p (make-parameter 5 (lambda (x) (* x 2))))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(parameterize ((p 10)) (p))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "20");
+}
+
+#[test]
+fn test_parameterize_empty_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameterize () (+ 1 2))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "3");
+}
+
+#[test]
+fn test_parameterize_multiple_body_exprs() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 0))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval(
+        "(parameterize ((p 10)) (+ (p) 0) (+ (p) 5))".to_string(),
+        env,
+    );
+    assert_eq!(result.unwrap().to_string(), "15");
+}
+
+#[test]
+fn test_parameter_in_lambda() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define get-p (lambda (unused) (p)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(get-p 0)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "10");
+}
+
+#[test]
+fn test_parameter_set_in_lambda() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define set-p (lambda (v) (p v)))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-p 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_parameterize_affects_lambda_call() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval(
+        "(parameterize ((p 50)) ((lambda (unused) (p)) 0))".to_string(),
+        env,
+    );
+    assert_eq!(result.unwrap().to_string(), "50");
+}
+
+#[test]
+fn test_make_parameter_wrong_args() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-parameter)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_make_parameter_too_many_args() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-parameter 1 + 2)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_make_parameter_invalid_converter() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-parameter 10 42)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parameter_predicate_wrong_args() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter?)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parameter_predicate_too_many_args() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameter? 1 2)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parameterize_non_parameter() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(parameterize ((42 10)) (+ 1 1))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parameterize_malformed_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(parameterize ((p)) (p))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parameterize_no_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(parameterize ((p 10)))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parameter_with_boolean() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (make-parameter #f))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p #t)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "#t");
+}
+
+#[test]
+fn test_parameter_with_null() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define p (make-parameter (list)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "()");
+}
+
+#[test]
+fn test_multiple_parameters_independent() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p1 (make-parameter 1))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define p2 (make-parameter 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(p1 10)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(list (p1) (p2))".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "(10 2)");
+}
+
+#[test]
+fn test_parameter_closure_converter() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define multiplier 3)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define p (make-parameter 5 (lambda (x) (* x multiplier))))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "15");
+}
+
+#[test]
+fn test_parameter_procedure_converter() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define p (make-parameter -5 abs))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(p)".to_string(), env);
+    assert_eq!(result.unwrap().to_string(), "5");
+}
