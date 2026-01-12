@@ -2,15 +2,14 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
-use crate::env::{next_parameter_id, EnvRef};
+use crate::env::{EnvRef, next_parameter_id};
 use crate::error::Error;
 use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
-use crate::types::ports::{
-    self, BinaryFileInput, BinaryFileOutput, StringInputPort, TextFileOutput,
+use crate::types::ports::Port;
+use crate::types::{
+    ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair,
 };
-use crate::types::ports::{Port, StringOutputPort};
-use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair};
 use crate::{io, parser};
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -958,43 +957,42 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
 /// Open textual input file `Port`.
 pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::String(path)] => {
-            let file_input = ports::TextFileInput::open(path)?;
-            Ok(Expr::Port(Port::from_text_input(file_input)))
-        }
+        [Expr::String(path)] => Ok(Expr::Port(Port::text_input_file(path)?)),
         _ => Err(Error::new("expected file path string")),
     }
 }
 
-/// Open textual input file `Port`.
+/// Open textual string input `Port`.
 pub fn open_input_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::String(s)] => {
-            let port = StringInputPort::open(s.clone());
-            Ok(Expr::Port(Port::from_text_input(port)))
-        }
-        _ => Err(Error::new("expected file path string")),
+        [Expr::String(s)] => Ok(Expr::Port(Port::text_input_string(s.clone()))),
+        _ => Err(Error::new("expected string")),
     }
 }
 
-/// Open textual input file `Port`.
+/// Open textual string output `Port`.
 pub fn open_output_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::String(s)] => {
-            let port = StringOutputPort::open(s.clone());
-            Ok(Expr::Port(Port::from_text_output(port)))
-        }
-        _ => Err(Error::new("expected file path string")),
+        [] => Ok(Expr::Port(Port::text_output_string())),
+        _ => Err(Error::new("expected no arguments")),
     }
 }
 
-/// Open textual input file `Port`.
+/// Get string output of `Port`.
+pub fn get_output_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::TextOutput(p))] => match p.borrow().get_output_string() {
+            Some(s) => Ok(Expr::String(s.to_string())),
+            None => Err(Error::new("not a string output port")),
+        },
+        _ => Err(Error::new("expected string output port")),
+    }
+}
+
+/// Open binary input file `Port`.
 pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::String(path)] => {
-            let file_input = BinaryFileInput::open(path)?;
-            Ok(Expr::Port(Port::from_binary_input(file_input)))
-        }
+        [Expr::String(path)] => Ok(Expr::Port(Port::binary_input_file(path)?)),
         _ => Err(Error::new("expected file path string")),
     }
 }
@@ -1002,21 +1000,15 @@ pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
 /// Open textual output file `Port`.
 pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::String(path)] => {
-            let file_output = TextFileOutput::open(path)?;
-            Ok(Expr::Port(Port::from_text_output(file_output)))
-        }
+        [Expr::String(path)] => Ok(Expr::Port(Port::text_output_file(path)?)),
         _ => Err(Error::new("expected file path string")),
     }
 }
 
-/// Open textual output file `Port`.
+/// Open binary output file `Port`.
 pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::String(path)] => {
-            let file_output = BinaryFileOutput::open(path)?;
-            Ok(Expr::Port(Port::from_binary_output(file_output)))
-        }
+        [Expr::String(path)] => Ok(Expr::Port(Port::binary_output_file(path)?)),
         _ => Err(Error::new("expected file path string")),
     }
 }
@@ -1959,8 +1951,7 @@ pub fn make_parameter(args: &[Expr], env: EnvRef) -> Result {
             let param = Parameter::new(id, None);
 
             // Store initial value in the environment's params
-            env.borrow_mut()
-                .set_param(&id.to_string(), init);
+            env.borrow_mut().set_param(&id.to_string(), init);
 
             Ok(Expr::Parameter(param))
         }
@@ -1979,8 +1970,7 @@ pub fn make_parameter(args: &[Expr], env: EnvRef) -> Result {
             let param = Parameter::new(id, Some(converter.clone()));
 
             // Store converted initial value
-            env.borrow_mut()
-                .set_param(&id.to_string(), &converted_init);
+            env.borrow_mut().set_param(&id.to_string(), &converted_init);
 
             Ok(Expr::Parameter(param))
         }

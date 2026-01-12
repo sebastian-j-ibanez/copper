@@ -10,23 +10,24 @@ use crate::env::procedures::{
     abs, add, and, bytevector_append, bytevector_copy, bytevector_copy_from, bytevector_length,
     bytevector_ref, bytevector_set, cadr, call_with_input_file, call_with_output_file,
     call_with_port, car, cdr, ceil, close_port, cons_proc, display, div, eof_object, exit,
-    exponent, floor, is_binary_port, is_boolean, is_byte_ready, is_bytevector, is_char,
-    is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_ready, is_char_uppercase,
-    is_char_whitespace, is_complex, is_eof_object, is_even, is_exact, is_exact_integer, is_inexact,
-    is_input_port, is_input_port_open, is_integer, is_list, is_number, is_odd, is_output_port,
-    is_output_port_open, is_pair, is_parameter, is_procedure, is_rational, is_real, is_string,
-    is_symbol, is_textual_port, is_vector, list_append, list_length, list_reverse, list_to_string,
-    list_to_vector, load_file, make_bytevector, make_parameter, make_vector, max, min, modulo,
-    mult, new_bytevector, new_list, new_string, new_vector, newline, not, num_to_string,
-    open_binary_input_file, open_binary_output_file, open_input_file, open_input_string,
-    open_output_file, open_output_string, or, peek_char, peek_u8, pretty_print, print, println,
-    read_char, read_u8, str_append, str_length, string_to_downcase, string_to_list, string_to_num,
-    string_to_symbol, string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string,
-    utf8_to_string, vector_append, vector_copy, vector_copy_from, vector_fill, vector_len,
-    vector_ref, vector_set, vector_to_list, vector_to_string, write_char, write_u8,
+    exponent, floor, get_output_string, is_binary_port, is_boolean, is_byte_ready, is_bytevector,
+    is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_ready,
+    is_char_uppercase, is_char_whitespace, is_complex, is_eof_object, is_even, is_exact,
+    is_exact_integer, is_inexact, is_input_port, is_input_port_open, is_integer, is_list,
+    is_number, is_odd, is_output_port, is_output_port_open, is_pair, is_parameter, is_procedure,
+    is_rational, is_real, is_string, is_symbol, is_textual_port, is_vector, list_append,
+    list_length, list_reverse, list_to_string, list_to_vector, load_file, make_bytevector,
+    make_parameter, make_vector, max, min, modulo, mult, new_bytevector, new_list, new_string,
+    new_vector, newline, not, num_to_string, open_binary_input_file, open_binary_output_file,
+    open_input_file, open_input_string, open_output_file, open_output_string, or, peek_char,
+    peek_u8, pretty_print, print, println, read_char, read_u8, str_append, str_length,
+    string_to_downcase, string_to_list, string_to_num, string_to_symbol, string_to_upcase,
+    string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string, vector_append,
+    vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set, vector_to_list,
+    vector_to_string, write_char, write_u8,
 };
 use crate::macros::{quote, set_car, set_cdr};
-use crate::types::ports::{Port, StdInput, StdOutput};
+use crate::types::ports::Port;
 use crate::types::{Expr, Parameter, Procedure};
 
 use std::cell::RefCell;
@@ -131,6 +132,7 @@ impl Env {
             env.insert_proc("open-binary-input-file", open_binary_input_file);
             env.insert_proc("open-output-file", open_output_file);
             env.insert_proc("open-output-string", open_output_string);
+            env.insert_proc("get-output-string", get_output_string);
             env.insert_proc("open-binary-output-file", open_binary_output_file);
             env.insert_proc("close-port", close_port);
             env.insert_proc("read-char", read_char);
@@ -286,13 +288,10 @@ impl Env {
     /// - current-input-port
     /// - current-output-port
     fn init_default_ports(&mut self) {
-        self.new_param(
-            "current-input-port",
-            &Expr::Port(Port::from_text_input(StdInput)),
-        );
+        self.new_param("current-input-port", &Expr::Port(Port::text_input_stdin()));
         self.new_param(
             "current-output-port",
-            &Expr::Port(Port::from_text_output(StdOutput)),
+            &Expr::Port(Port::text_output_stdout()),
         );
     }
 }
