@@ -6,7 +6,7 @@ use crate::env::{EnvRef, next_parameter_id};
 use crate::error::Error;
 use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
-use crate::types::ports::Port;
+use crate::types::ports::{BinaryInputPort, Port};
 use crate::types::{
     ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair,
 };
@@ -962,6 +962,14 @@ pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Open textual output file `Port`.
+pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(path)] => Ok(Expr::Port(Port::text_output_file(path)?)),
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
 /// Open textual string input `Port`.
 pub fn open_input_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
@@ -997,18 +1005,18 @@ pub fn open_binary_input_file(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Open textual output file `Port`.
-pub fn open_output_file(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::String(path)] => Ok(Expr::Port(Port::text_output_file(path)?)),
-        _ => Err(Error::new("expected file path string")),
-    }
-}
-
 /// Open binary output file `Port`.
 pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(path)] => Ok(Expr::Port(Port::binary_output_file(path)?)),
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open binary input `Port` from bytevector.
+pub fn open_bytevector_input(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => Ok(Expr::Port(Port::binary_input_bytevector(bv)?)),
         _ => Err(Error::new("expected file path string")),
     }
 }

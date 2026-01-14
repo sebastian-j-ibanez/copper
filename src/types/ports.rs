@@ -5,6 +5,7 @@
 //! I/O port types.
 
 use crate::error::Error;
+use crate::types::ByteVector;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fs::File;
@@ -15,6 +16,7 @@ use std::rc::Rc;
 type RcRef<T> = Rc<RefCell<T>>;
 pub type FileInputBuf = BufReader<File>;
 pub type FileOutputBuf = BufWriter<File>;
+pub type BinaryInputBuf = BufReader<Box<[u8]>>;
 
 #[derive(Debug, Clone)]
 pub enum Port {
@@ -64,6 +66,14 @@ impl Port {
             BinaryOutputPort::from_file(path)?,
         ))))
     }
+
+    pub fn binary_input_bytevector(bv: &ByteVector) -> Result<Self, Error> {
+        Ok(Port::BinaryInput(Rc::new(RefCell::new(
+            BinaryInputPort::from_bytes(bv)?,
+        ))))
+    }
+
+    // TODO make binary_output_bytevector constructor
 
     pub fn close(&self) {
         match self {
@@ -331,9 +341,55 @@ impl TextOutputPort {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ByteVecReader {
+    byte_vec: Option<ByteVector>,
+    cursor: usize,
+}
+
+impl ByteVecReader {
+    pub fn from(bv: &ByteVector) -> ByteVecReader {
+        Self {
+            byte_vec: Some(bv.clone()),
+            cursor: 0,
+        }
+    }
+
+    /// Return next byte in `ByteVector`. Does not increment position in `ByteVector`.
+    /// Return `None` if there are no bytes to read.
+    pub fn peek(&self) -> Option<u8> {
+        if let Some(bv) = self.byte_vec.as_ref() {
+            let buf = bv.buffer.borrow();
+            if self.cursor < buf.len() {
+                return Some(buf[self.cursor]);
+            }
+        }
+        None
+    }
+
+    /// Consume and return the next byte in `ByteVector`.
+    /// Return `None` if there are no bytes to read.
+    pub fn read(&mut self) -> Option<u8> {
+        if let Some(bv) = self.byte_vec.as_ref() {
+            let buf = bv.buffer.borrow();
+            if self.cursor < buf.len() {
+                self.cursor += 1;
+                return Some(buf[self.cursor]);
+            }
+        }
+        None
+    }
+
+    /// Return if `ByteVectorReader` is open.
+    pub fn is_open(&self) -> bool {
+        self.byte_vec.is_some()
+    }
+}
+
 #[derive(Debug)]
 pub enum BinaryInputPort {
     File(Option<FileInputBuf>),
+    ByteVector(ByteVecReader),
 }
 
 impl BinaryInputPort {
@@ -343,10 +399,17 @@ impl BinaryInputPort {
         Ok(Self::File(Some(BufReader::new(file))))
     }
 
+    pub fn from_bytes(bv: &ByteVector) -> Result<Self, Error> {
+        Ok(Self::ByteVector(ByteVecReader::from(&bv)))
+    }
+
     pub fn close(&mut self) {
         match self {
             Self::File(stream) => {
                 stream.take();
+            }
+            Self::ByteVector(bv) => {
+                bv.byte_vec.take();
             }
         }
     }
@@ -354,6 +417,7 @@ impl BinaryInputPort {
     pub fn is_open(&self) -> bool {
         match self {
             Self::File(stream) => stream.is_some(),
+            Self::ByteVector(bv) => bv.byte_vec.is_some(),
         }
     }
 
@@ -367,21 +431,33 @@ impl BinaryInputPort {
                     _ => Err(Error::new("unable to read from file")),
                 }
             }
-            Self::File(None) => Err(Error::new("port is closed")),
+            Self::File(None) => Err(Error::new("file port is closed")),
+            Self::ByteVector(bv) if bv.is_open() => match bv.read() {
+                Some(b) => Ok(b),
+                _ => Err(Error::new("end of bytevector")),
+            },
+            Self::ByteVector(_) => Err(Error::new("bytevector port is closed")),
         }
     }
 
     pub fn peek_byte(&mut self) -> Result<Option<u8>, Error> {
         match self {
             Self::File(Some(reader)) => match reader.fill_buf() {
-                Ok(bytes) if bytes.is_empty() => Ok(None),
-                Ok(bytes) => Ok(Some(bytes[0])),
+                Ok(bytes) if !bytes.is_empty() => Ok(Some(bytes[0])),
+                Ok(_) => Ok(None),
                 Err(e) => Err(Error::Message(format!("unable to peek: {}", e))),
             },
             Self::File(None) => Err(Error::new("port is closed")),
+            Self::ByteVector(bv) if bv.is_open() => match bv.peek() {
+                Some(b) => Ok(Some(b)),
+                _ => Ok(None),
+            },
+            Self::ByteVector(_) => Err(Error::new("bytevector port is closed")),
         }
     }
 }
+
+// TODO implement ByteVector binary output port variant
 
 #[derive(Debug)]
 pub enum BinaryOutputPort {
