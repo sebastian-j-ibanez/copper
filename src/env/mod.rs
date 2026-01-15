@@ -10,21 +10,21 @@ use crate::env::procedures::{
     abs, add, and, bytevector_append, bytevector_copy, bytevector_copy_from, bytevector_length,
     bytevector_ref, bytevector_set, cadr, call_with_input_file, call_with_output_file,
     call_with_port, car, cdr, ceil, close_port, cons_proc, display, div, eof_object, exit,
-    exponent, floor, get_output_string, is_binary_port, is_boolean, is_byte_ready, is_bytevector,
-    is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric, is_char_ready,
-    is_char_uppercase, is_char_whitespace, is_complex, is_eof_object, is_even, is_exact,
-    is_exact_integer, is_inexact, is_input_port, is_input_port_open, is_integer, is_list,
+    exponent, floor, get_output_bytevector, get_output_string, is_binary_port, is_boolean,
+    is_byte_ready, is_bytevector, is_char, is_char_alphabetic, is_char_lowercase, is_char_numeric,
+    is_char_ready, is_char_uppercase, is_char_whitespace, is_complex, is_eof_object, is_even,
+    is_exact, is_exact_integer, is_inexact, is_input_port, is_input_port_open, is_integer, is_list,
     is_number, is_odd, is_output_port, is_output_port_open, is_pair, is_parameter, is_procedure,
     is_rational, is_real, is_string, is_symbol, is_textual_port, is_vector, list_append,
     list_length, list_reverse, list_to_string, list_to_vector, load_file, make_bytevector,
     make_parameter, make_vector, max, min, modulo, mult, new_bytevector, new_list, new_string,
     new_vector, newline, not, num_to_string, open_binary_input_file, open_binary_output_file,
-    open_input_file, open_input_string, open_output_file, open_output_string, or, peek_char,
-    peek_u8, pretty_print, print, println, read_char, read_u8, str_append, str_length,
-    string_to_downcase, string_to_list, string_to_num, string_to_symbol, string_to_upcase,
-    string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string, vector_append,
-    vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set, vector_to_list,
-    vector_to_string, write_char, write_u8,
+    open_input_bytevector, open_input_file, open_input_string, open_output_bytevector,
+    open_output_file, open_output_string, or, peek_char, peek_u8, pretty_print, print, println,
+    read_char, read_u8, str_append, str_length, string_to_downcase, string_to_list, string_to_num,
+    string_to_symbol, string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string,
+    utf8_to_string, vector_append, vector_copy, vector_copy_from, vector_fill, vector_len,
+    vector_ref, vector_set, vector_to_list, vector_to_string, write_char, write_u8,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::ports::Port;
@@ -128,12 +128,15 @@ impl Env {
             env.insert_proc("bytevector-copy!", bytevector_copy_from);
             // Ports
             env.insert_proc("open-input-file", open_input_file);
-            env.insert_proc("open-input-string", open_input_string);
-            env.insert_proc("open-binary-input-file", open_binary_input_file);
             env.insert_proc("open-output-file", open_output_file);
+            env.insert_proc("open-input-string", open_input_string);
             env.insert_proc("open-output-string", open_output_string);
             env.insert_proc("get-output-string", get_output_string);
+            env.insert_proc("open-binary-input-file", open_binary_input_file);
             env.insert_proc("open-binary-output-file", open_binary_output_file);
+            env.insert_proc("open-input-bytevector", open_input_bytevector);
+            env.insert_proc("open-output-bytevector", open_output_bytevector);
+            env.insert_proc("get-output-bytevector", get_output_bytevector);
             env.insert_proc("close-port", close_port);
             env.insert_proc("read-char", read_char);
             env.insert_proc("peek-char", peek_char);
@@ -201,30 +204,6 @@ impl Env {
 
             // Setup ports
             env.init_default_ports();
-
-            // // Create built-in parameters for I/O ports
-            // let input_port_id = next_parameter_id();
-            // let output_port_id = next_parameter_id();
-
-            // // Store the parameter objects in data (accessible by name)
-            // env.data.insert(
-            //     "current-input-port".to_string(),
-            //     Expr::Parameter(Parameter::new(input_port_id, None)),
-            // );
-            // env.data.insert(
-            //     "current-output-port".to_string(),
-            //     Expr::Parameter(Parameter::new(output_port_id, None)),
-            // );
-
-            // // Store the actual port values in params (keyed by ID)
-            // env.params.insert(
-            //     input_port_id.to_string(),
-            //     Expr::Port(Port::from_text_input(StdInput)),
-            // );
-            // env.params.insert(
-            //     output_port_id.to_string(),
-            //     Expr::Port(Port::from_text_output(StdOutput)),
-            // );
         }
         env_ref
     }

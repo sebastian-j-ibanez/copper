@@ -28,27 +28,25 @@ pub enum Port {
 
 impl Port {
     pub fn text_input_file(path: &str) -> Result<Self, Error> {
-        Ok(Port::TextInput(Rc::new(RefCell::new(
-            TextInputPort::from_file(path)?,
-        ))))
+        let input = TextInputPort::from_file(path)?;
+        Ok(Port::TextInput(Rc::new(RefCell::new(input))))
+    }
+
+    pub fn text_output_file(path: &str) -> Result<Self, Error> {
+        let output = TextOutputPort::from_file(path)?;
+        Ok(Port::TextOutput(Rc::new(RefCell::new(output))))
     }
 
     pub fn text_input_string(s: String) -> Self {
         Port::TextInput(Rc::new(RefCell::new(TextInputPort::from_string(s))))
     }
 
-    pub fn text_input_stdin() -> Self {
-        Port::TextInput(Rc::new(RefCell::new(TextInputPort::Stdin)))
-    }
-
-    pub fn text_output_file(path: &str) -> Result<Self, Error> {
-        Ok(Port::TextOutput(Rc::new(RefCell::new(
-            TextOutputPort::from_file(path)?,
-        ))))
-    }
-
     pub fn text_output_string() -> Self {
         Port::TextOutput(Rc::new(RefCell::new(TextOutputPort::new_string())))
+    }
+
+    pub fn text_input_stdin() -> Self {
+        Port::TextInput(Rc::new(RefCell::new(TextInputPort::Stdin)))
     }
 
     pub fn text_output_stdout() -> Self {
@@ -56,24 +54,24 @@ impl Port {
     }
 
     pub fn binary_input_file(path: &str) -> Result<Self, Error> {
-        Ok(Port::BinaryInput(Rc::new(RefCell::new(
-            BinaryInputPort::from_file(path)?,
-        ))))
+        let input = BinaryInputPort::from_file(path)?;
+        Ok(Port::BinaryInput(Rc::new(RefCell::new(input))))
     }
 
     pub fn binary_output_file(path: &str) -> Result<Self, Error> {
-        Ok(Port::BinaryOutput(Rc::new(RefCell::new(
-            BinaryOutputPort::from_file(path)?,
-        ))))
+        let output = BinaryOutputPort::from_file(path)?;
+        Ok(Port::BinaryOutput(Rc::new(RefCell::new(output))))
     }
 
     pub fn binary_input_bytevector(bv: &ByteVector) -> Result<Self, Error> {
-        Ok(Port::BinaryInput(Rc::new(RefCell::new(
-            BinaryInputPort::from_bytes(bv)?,
-        ))))
+        let input = BinaryInputPort::from_bytes(bv)?;
+        Ok(Port::BinaryInput(Rc::new(RefCell::new(input))))
     }
 
-    // TODO make binary_output_bytevector constructor
+    pub fn binary_output_bytevector(bv: &ByteVector) -> Result<Self, Error> {
+        let output = BinaryOutputPort::from_bytes(bv)?;
+        Ok(Port::BinaryOutput(Rc::new(RefCell::new(output))))
+    }
 
     pub fn close(&self) {
         match self {
@@ -183,10 +181,8 @@ impl TextInputPort {
                 Err(e) => Err(Error::Message(format!("unable to peek: {}", e))),
             },
             Self::File(None) => Err(Error::new("port is closed")),
-
             Self::String(Some(stream)) => Ok(stream.front().copied()),
             Self::String(None) => Err(Error::new("port is closed")),
-
             Self::Stdin => Ok(None), // stdin doesn't support peek
         }
     }
@@ -348,11 +344,22 @@ pub struct ByteVecReader {
 }
 
 impl ByteVecReader {
+    /// Create `ByteVecReader` from `ByteVector`.
     pub fn from(bv: &ByteVector) -> ByteVecReader {
         Self {
             byte_vec: Some(bv.clone()),
             cursor: 0,
         }
+    }
+
+    /// Return if `ByteVectorReader` is open.
+    pub fn is_open(&self) -> bool {
+        self.byte_vec.is_some()
+    }
+
+    /// Delete `ByteVector`.
+    pub fn close(&mut self) {
+        self.byte_vec.take();
     }
 
     /// Return next byte in `ByteVector`. Does not increment position in `ByteVector`.
@@ -379,11 +386,6 @@ impl ByteVecReader {
         }
         None
     }
-
-    /// Return if `ByteVectorReader` is open.
-    pub fn is_open(&self) -> bool {
-        self.byte_vec.is_some()
-    }
 }
 
 #[derive(Debug)]
@@ -393,16 +395,19 @@ pub enum BinaryInputPort {
 }
 
 impl BinaryInputPort {
+    /// Create `BinaryInputPort` from file path.
     pub fn from_file(path: &str) -> Result<Self, Error> {
         let file =
             File::open(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
         Ok(Self::File(Some(BufReader::new(file))))
     }
 
+    /// Create `BinaryInputPort` from `ByteVector`.
     pub fn from_bytes(bv: &ByteVector) -> Result<Self, Error> {
         Ok(Self::ByteVector(ByteVecReader::from(&bv)))
     }
 
+    /// Close `BinaryInputPort`.
     pub fn close(&mut self) {
         match self {
             Self::File(stream) => {
@@ -414,6 +419,7 @@ impl BinaryInputPort {
         }
     }
 
+    /// Return if port is open.
     pub fn is_open(&self) -> bool {
         match self {
             Self::File(stream) => stream.is_some(),
@@ -421,21 +427,21 @@ impl BinaryInputPort {
         }
     }
 
-    pub fn read_byte(&mut self) -> Result<u8, Error> {
+    /// Read next byte from input port.
+    /// Returns `Ok(None)` if port is empty.
+    /// Returns `Error` if byte could not be read.
+    pub fn read_byte(&mut self) -> Result<Option<u8>, Error> {
         match self {
             Self::File(Some(reader)) => {
                 let mut buf = [0u8; 1];
                 match reader.read(&mut buf) {
-                    Ok(1) => Ok(buf[0]),
-                    Ok(0) => Err(Error::new("end of file")),
+                    Ok(1) => Ok(Some(buf[0])),
+                    Ok(0) => Ok(None),
                     _ => Err(Error::new("unable to read from file")),
                 }
             }
             Self::File(None) => Err(Error::new("file port is closed")),
-            Self::ByteVector(bv) if bv.is_open() => match bv.read() {
-                Some(b) => Ok(b),
-                _ => Err(Error::new("end of bytevector")),
-            },
+            Self::ByteVector(bv) if bv.is_open() => Ok(bv.read()),
             Self::ByteVector(_) => Err(Error::new("bytevector port is closed")),
         }
     }
@@ -457,43 +463,106 @@ impl BinaryInputPort {
     }
 }
 
-// TODO implement ByteVector binary output port variant
+#[derive(Debug, Clone)]
+pub struct ByteVecWriter {
+    byte_vec: Option<ByteVector>,
+    cursor: usize,
+}
+
+impl ByteVecWriter {
+    /// Create `ByteVecWriter` from `ByteVector`.
+    pub fn from(bv: &ByteVector) -> Self {
+        Self {
+            byte_vec: Some(bv.clone()),
+            cursor: 0,
+        }
+    }
+
+    /// Return if `ByteVectorReader` is open.
+    pub fn is_open(&self) -> bool {
+        self.byte_vec.is_some()
+    }
+
+    /// Delete `ByteVector`.
+    pub fn close(&mut self) {
+        self.byte_vec.take();
+    }
+
+    /// Write byte to next position in `ByteVector` buffer.
+    /// Returns `Error` if port is closed or `ByteVector` is full.
+    pub fn write(&mut self, byte: u8) -> Result<(), Error> {
+        if let Some(bv) = self.byte_vec.as_ref() {
+            let mut buf = bv.buffer.borrow_mut();
+            if self.cursor == buf.len() - 1 {
+                return Err(Error::new("bytevector buffer is full"));
+            }
+            buf[self.cursor] = byte;
+        }
+        Err(Error::new("bytevector output port is closed"))
+    }
+
+    /// Return bytes written to `ByteVector` so far.
+    pub fn get_bytes(&self) -> Option<ByteVector> {
+        if let Some(bv) = self.byte_vec.as_ref() {
+            let buf = bv.buffer.borrow();
+            assert!(self.cursor < buf.len());
+            let new_bv = ByteVector::from(&buf[..self.cursor + 1]); // range upper bound is exclusive.
+            return Some(new_bv);
+        }
+        None
+    }
+}
 
 #[derive(Debug)]
 pub enum BinaryOutputPort {
     File(Option<FileOutputBuf>),
+    ByteVector(ByteVecWriter),
 }
 
 impl BinaryOutputPort {
+    /// Create `BinaryOutputPort` from file path.
     pub fn from_file(path: &str) -> Result<Self, Error> {
         let file = File::create(path)
             .map_err(|e| Error::Message(format!("unable to create file: {}", e)))?;
         Ok(Self::File(Some(BufWriter::new(file))))
     }
 
+    /// Create `BinaryOutputPort` from `ByteVector`.
+    pub fn from_bytes(bv: &ByteVector) -> Result<Self, Error> {
+        Ok(Self::ByteVector(ByteVecWriter::from(&bv)))
+    }
+
+    /// Close `BinaryOutputPort`.
     pub fn close(&mut self) {
         match self {
             Self::File(stream) => {
                 stream.take();
             }
+            Self::ByteVector(bv) => bv.close(),
         }
     }
 
+    /// Return if port is open.
     pub fn is_open(&self) -> bool {
         match self {
             Self::File(stream) => stream.is_some(),
+            Self::ByteVector(bv) => bv.is_open(),
         }
     }
 
+    /// Write byte to output port.
     pub fn write_byte(&mut self, byte: u8) -> Result<(), Error> {
         match self {
             Self::File(Some(writer)) => writer
                 .write_all(&[byte])
                 .map_err(|e| Error::Message(format!("write failed: {}", e))),
             Self::File(None) => Err(Error::new("port is closed")),
+            Self::ByteVector(bv) => bv.write(byte),
         }
     }
 
+    /// Flush output port buffer.
+    /// Note: Only used for `Self::File`.
     pub fn flush(&mut self) -> Result<(), Error> {
         match self {
             Self::File(Some(writer)) => writer.flush().map_err(|_| Error::new("unable to flush")),

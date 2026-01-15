@@ -6,12 +6,12 @@ use crate::env::{EnvRef, next_parameter_id};
 use crate::error::Error;
 use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
-use crate::types::ports::{BinaryInputPort, Port};
+use crate::types::ports::{BinaryOutputPort, Port};
 use crate::types::{
     ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair,
 };
 use crate::{io, parser};
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Deref, Div, Mul, Sub};
 
 // I/O
 
@@ -1014,9 +1014,36 @@ pub fn open_binary_output_file(args: &[Expr], _: EnvRef) -> Result {
 }
 
 /// Open binary input `Port` from bytevector.
-pub fn open_bytevector_input(args: &[Expr], _: EnvRef) -> Result {
+pub fn open_input_bytevector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::ByteVector(bv)] => Ok(Expr::Port(Port::binary_input_bytevector(bv)?)),
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Open binary output `Port` from bytevector.
+pub fn open_output_bytevector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => Ok(Expr::Port(Port::binary_output_bytevector(bv)?)),
+        _ => Err(Error::new("expected file path string")),
+    }
+}
+
+/// Return `ByteVector` from bytes read in output port.
+pub fn get_output_bytevector(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(Port::BinaryOutput(output))] => match output.borrow().deref() {
+            BinaryOutputPort::ByteVector(bv) => {
+                let new_byte_vec = match bv.get_bytes() {
+                    Some(b) => b,
+                    None => ByteVector::new(0),
+                };
+                Ok(Expr::ByteVector(new_byte_vec))
+            }
+            _ => Err(Error::new(
+                "expected binary output port created from bytevector",
+            )),
+        },
         _ => Err(Error::new("expected file path string")),
     }
 }
@@ -1079,7 +1106,8 @@ pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
         [Expr::Port(Port::BinaryInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
             match port.read_byte() {
-                Ok(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                Ok(Some(byte)) => Ok(Expr::Number(Number::from_u8(byte))),
+                Ok(None) => Err(Error::new("port is empty")),
                 Err(e) => Err(e),
             }
         }
