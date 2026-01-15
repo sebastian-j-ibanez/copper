@@ -1193,8 +1193,29 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
             let chars: Vec<Expr> = s.chars().map(|c| Expr::Char(c)).collect::<Vec<Expr>>();
             Ok(Pair::list(chars.as_slice()))
         }
-        // [Expr::String(s), Expr::Number(n_start)] => todo!(),
-        // [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
+        [Expr::String(s), Expr::Number(start)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start < s.len() {
+                let chars: Vec<Expr> = s[start..].chars().map(|c| Expr::Char(c)).collect();
+                return Ok(Pair::list(chars.as_slice()));
+            }
+            Err(Error::new("out of range"))
+        }
+        [Expr::String(s), Expr::Number(start), Expr::Number(end)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start < s.len() && end < s.len() {
+                let chars: Vec<Expr> = s[start..end].chars().map(|c| Expr::Char(c)).collect();
+                return Ok(Pair::list(chars.as_slice()));
+            }
+            Err(Error::new("out of range"))
+        }
         _ => Err(Error::new("expected string")),
     }
 }
@@ -1203,8 +1224,29 @@ pub fn string_to_list(args: &[Expr], _: EnvRef) -> Result {
 pub fn string_to_vector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(s)] => Ok(Expr::Vector(Vector::from_string(s.clone()))),
-        // [Expr::String(s), Expr::Number(n_start)] => todo!(),
-        // [Expr::String(s), Expr::Number(n_start), Expr::Number(n_end)] => todo!(),
+        [Expr::String(s), Expr::Number(start)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start < s.len() {
+                let chars: Vec<Expr> = s[start..].chars().map(|c| Expr::Char(c)).collect();
+                return Ok(Expr::Vector(Vector::from(chars.as_slice())));
+            }
+            Err(Error::new("out of range"))
+        }
+        [Expr::String(s), Expr::Number(start), Expr::Number(end)] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start < s.len() && end < s.len() {
+                let chars: Vec<Expr> = s[start..end].chars().map(|c| Expr::Char(c)).collect();
+                return Ok(Expr::Vector(Vector::from(chars.as_slice())));
+            }
+            Err(Error::new("out of range"))
+        }
         _ => Err(Error::new("expected string")),
     }
 }
