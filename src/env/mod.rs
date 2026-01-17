@@ -245,7 +245,7 @@ impl Env {
         let id = next_parameter_id();
         let env_placeholder = Expr::Parameter(Parameter::new(id, None));
         self.data.insert(name.to_string(), env_placeholder);
-        self.set_param(name, param);
+        self.set_param(&id.to_string(), param);
     }
 
     /// Find parameter value in environment. Checks self before outer env.

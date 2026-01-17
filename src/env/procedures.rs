@@ -1102,9 +1102,49 @@ pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
 
 pub fn write_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
+        // Write string to stdout.
+        [Expr::String(s)] => {
+            print!("{}", s);
+            Ok(Expr::Void())
+        }
+        // Write string to output port.
         [Expr::String(s), Expr::Port(Port::TextOutput(input))] => {
             let mut port = input.borrow_mut();
             port.write_string(s)?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::String(s),
+            Expr::Port(Port::TextOutput(input)),
+            Expr::Number(start),
+        ] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start >= s.len() {
+                return Err(Error::new("index out of range"));
+            }
+            let mut port = input.borrow_mut();
+            port.write_string(&s[start..])?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::String(s),
+            Expr::Port(Port::TextOutput(input)),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start > end || start >= s.len() || end >= s.len() {
+                return Err(Error::new("index out of range"));
+            }
+            let mut port = input.borrow_mut();
+            port.write_string(&s[start..end + 1])?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected string and text output port")),
@@ -1332,7 +1372,7 @@ pub fn symbol_to_string(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// WIP! Convert `Pair` list to `String`.
+/// Convert `Pair` list to `String`.
 pub fn list_to_string(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Pair(p)] if p.is_list() => p.to_expr_string(),
