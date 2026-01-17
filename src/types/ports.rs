@@ -27,52 +27,63 @@ pub enum Port {
 }
 
 impl Port {
+    /// Create new `Port::TextInput` from file path.
     pub fn text_input_file(path: &str) -> Result<Self, Error> {
         let input = TextInputPort::from_file(path)?;
         Ok(Port::TextInput(Rc::new(RefCell::new(input))))
     }
 
+    /// Create new `Port::TextOutput` from file path.
     pub fn text_output_file(path: &str) -> Result<Self, Error> {
         let output = TextOutputPort::from_file(path)?;
         Ok(Port::TextOutput(Rc::new(RefCell::new(output))))
     }
 
+    /// Create new `Port::TextInput` from string.
     pub fn text_input_string(s: String) -> Self {
         Port::TextInput(Rc::new(RefCell::new(TextInputPort::from_string(s))))
     }
 
+    /// Create new `Port::TextOutput` from string.
     pub fn text_output_string() -> Self {
-        Port::TextOutput(Rc::new(RefCell::new(TextOutputPort::new_string())))
+        Port::TextOutput(Rc::new(RefCell::new(TextOutputPort::from_new_string())))
     }
 
+    /// Create new `Port::TextInput` from stdin.
     pub fn text_input_stdin() -> Self {
         Port::TextInput(Rc::new(RefCell::new(TextInputPort::Stdin)))
     }
 
+    /// Create new `Port::TextOutput` to stdout.
     pub fn text_output_stdout() -> Self {
         Port::TextOutput(Rc::new(RefCell::new(TextOutputPort::Stdout)))
     }
 
+    /// Create new `Port::BinaryInput` from file path.
     pub fn binary_input_file(path: &str) -> Result<Self, Error> {
         let input = BinaryInputPort::from_file(path)?;
         Ok(Port::BinaryInput(Rc::new(RefCell::new(input))))
     }
 
+    /// Create new `Port::BinaryOutput` from file path.
     pub fn binary_output_file(path: &str) -> Result<Self, Error> {
         let output = BinaryOutputPort::from_file(path)?;
         Ok(Port::BinaryOutput(Rc::new(RefCell::new(output))))
     }
 
+    /// Create new `Port::BinaryInput` from bytevector.
     pub fn binary_input_bytevector(bv: &ByteVector) -> Result<Self, Error> {
         let input = BinaryInputPort::from_bytes(bv)?;
         Ok(Port::BinaryInput(Rc::new(RefCell::new(input))))
     }
 
+    /// Create new `Port::BinaryOutput` from bytevector.
     pub fn binary_output_bytevector(bv: &ByteVector) -> Result<Self, Error> {
         let output = BinaryOutputPort::from_bytes(bv)?;
         Ok(Port::BinaryOutput(Rc::new(RefCell::new(output))))
     }
 
+    /// Close port.
     pub fn close(&self) {
         match self {
             Self::TextInput(p) => p.borrow_mut().close(),
@@ -82,6 +93,7 @@ impl Port {
         }
     }
 
+    /// Return if port is open.
     pub fn is_open(&self) -> bool {
         match self {
             Self::TextInput(p) => p.borrow().is_open(),
@@ -91,18 +103,22 @@ impl Port {
         }
     }
 
+    /// Return if `self` is an input port.
     pub fn is_input(&self) -> bool {
         matches!(self, Self::TextInput(_) | Self::BinaryInput(_))
     }
 
+    /// Return if `self` is an output port.
     pub fn is_output(&self) -> bool {
         matches!(self, Self::TextOutput(_) | Self::BinaryOutput(_))
     }
 
+    /// Return if `self` is a textual port.
     pub fn is_textual(&self) -> bool {
         matches!(self, Self::TextInput(_) | Self::TextOutput(_))
     }
 
+    /// Return if `self` is a binary port.
     pub fn is_binary(&self) -> bool {
         matches!(self, Self::BinaryInput(_) | Self::BinaryOutput(_))
     }
@@ -116,16 +132,19 @@ pub enum TextInputPort {
 }
 
 impl TextInputPort {
+    /// Create new `TextInputPort::File` from file path.
     pub fn from_file(path: &str) -> Result<Self, Error> {
         let file =
             File::open(path).map_err(|e| Error::Message(format!("unable to open file: {}", e)))?;
         Ok(Self::File(Some(BufReader::new(file))))
     }
 
+    /// Create new `TextInputPort::String` from string.
     pub fn from_string(s: String) -> Self {
         Self::String(Some(s.chars().collect()))
     }
 
+    /// Close port.
     pub fn close(&mut self) {
         match self {
             Self::File(stream) => {
@@ -138,6 +157,7 @@ impl TextInputPort {
         }
     }
 
+    /// Return if port is open.
     pub fn is_open(&self) -> bool {
         match self {
             Self::File(stream) => stream.is_some(),
@@ -146,6 +166,8 @@ impl TextInputPort {
         }
     }
 
+    /// Read next char from input port.
+    /// Returns `Error` if port is empty or byte could not be read.
     pub fn read_char(&mut self) -> Result<char, Error> {
         match self {
             Self::File(Some(reader)) => {
@@ -173,6 +195,8 @@ impl TextInputPort {
         }
     }
 
+    /// Peek next char from input port without consuming it.
+    /// Returns `Error` if port is empty or byte could not be read.
     pub fn peek_char(&mut self) -> Result<Option<char>, Error> {
         match self {
             Self::File(Some(reader)) => match reader.fill_buf() {
@@ -187,6 +211,7 @@ impl TextInputPort {
         }
     }
 
+    /// Peek next line from port. Returns `None` if port has reached `eof`.
     pub fn read_line(&mut self) -> Result<String, Error> {
         match self {
             Self::File(Some(reader)) => {
@@ -220,6 +245,7 @@ impl TextInputPort {
         }
     }
 
+    /// Peek all lines from port. Returns `None` if port has reached `eof`.
     pub fn read_lines(&mut self) -> Result<Vec<String>, Error> {
         match self {
             Self::File(Some(reader)) => {
@@ -265,20 +291,24 @@ pub enum TextOutputPort {
 }
 
 impl TextOutputPort {
+    /// Create `TextOutputPort::File` from file path.
     pub fn from_file(path: &str) -> Result<Self, Error> {
         let file = File::create(path)
             .map_err(|e| Error::Message(format!("unable to create file: {}", e)))?;
         Ok(Self::File(Some(BufWriter::new(file))))
     }
 
+    /// Create `TextOutputPort::String` from string.
     pub fn from_string(s: String) -> Self {
         Self::String(Some(s))
     }
 
-    pub fn new_string() -> Self {
+    /// Create `TextOutputPort::String` from new string.
+    pub fn from_new_string() -> Self {
         Self::String(Some(String::new()))
     }
 
+    /// Close port.
     pub fn close(&mut self) {
         match self {
             Self::File(stream) => {
@@ -291,6 +321,7 @@ impl TextOutputPort {
         }
     }
 
+    /// Return if port is open.
     pub fn is_open(&self) -> bool {
         match self {
             Self::File(stream) => stream.is_some(),
@@ -299,6 +330,7 @@ impl TextOutputPort {
         }
     }
 
+    /// Write `char` to `TextOutputPort`.
     pub fn write_char(&mut self, ch: char) -> Result<(), Error> {
         match self {
             Self::File(Some(writer)) => writer
@@ -319,6 +351,16 @@ impl TextOutputPort {
         }
     }
 
+    /// Write `String` to `TextOutputPort`.
+    pub fn write_string(&mut self, s: &str) -> Result<(), Error> {
+        for c in s.chars() {
+            self.write_char(c)?;
+        }
+        Ok(())
+    }
+
+    /// Flush port buffer.
+    /// Note: only used for `TextOutputPort::File`.
     pub fn flush(&mut self) -> Result<(), Error> {
         match self {
             Self::File(Some(writer)) => writer.flush().map_err(|_| Error::new("unable to flush")),
@@ -329,6 +371,7 @@ impl TextOutputPort {
         }
     }
 
+    /// Create `String` from `TextOutputPort` buffer.
     pub fn get_output_string(&self) -> Option<&str> {
         match self {
             Self::String(Some(s)) => Some(s),
@@ -427,8 +470,7 @@ impl BinaryInputPort {
         }
     }
 
-    /// Read next byte from input port.
-    /// Returns `Ok(None)` if port is empty.
+    /// Read next byte from input port. Returns `Ok(None)` if port is empty.
     /// Returns `Error` if byte could not be read.
     pub fn read_byte(&mut self) -> Result<Option<u8>, Error> {
         match self {
@@ -446,6 +488,8 @@ impl BinaryInputPort {
         }
     }
 
+    /// Peek next byte from input port. Returns `Ok(None)` if port is empty.
+    /// Returns `Error` if byte could not be read.
     pub fn peek_byte(&mut self) -> Result<Option<u8>, Error> {
         match self {
             Self::File(Some(reader)) => match reader.fill_buf() {

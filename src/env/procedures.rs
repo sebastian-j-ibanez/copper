@@ -1100,6 +1100,17 @@ pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+pub fn write_string(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s), Expr::Port(Port::TextOutput(input))] => {
+            let mut port = input.borrow_mut();
+            port.write_string(s)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected string and text output port")),
+    }
+}
+
 /// Read a byte from a `Port`.
 pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
     match args {
@@ -1112,6 +1123,22 @@ pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
             }
         }
         _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Write `u8` to a binary `Port`.
+pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            let byte = byte
+                .to_u8()
+                .ok_or_else(|| Error::new("unable to convert num to byte"))?;
+            port.write_byte(byte)?;
+            port.flush().map_err(|e| e)?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected byte and binary port")),
     }
 }
 
@@ -1161,22 +1188,6 @@ pub fn call_with_output_file(args: &[Expr], env: EnvRef) -> Result {
             parser::eval(&expr, env)
         }
         _ => Err(Error::new("expected port and procedure")),
-    }
-}
-
-/// Write `u8` to a binary `Port`.
-pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
-            let mut port = port_ref.borrow_mut();
-            let byte = byte
-                .to_u8()
-                .ok_or_else(|| Error::new("unable to convert num to byte"))?;
-            port.write_byte(byte)?;
-            port.flush().map_err(|e| e)?;
-            Ok(Expr::Void())
-        }
-        _ => Err(Error::new("expected byte and binary port")),
     }
 }
 

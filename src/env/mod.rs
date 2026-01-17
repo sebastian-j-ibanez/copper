@@ -24,7 +24,7 @@ use crate::env::procedures::{
     read_char, read_u8, str_append, str_length, string_to_downcase, string_to_list, string_to_num,
     string_to_symbol, string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string,
     utf8_to_string, vector_append, vector_copy, vector_copy_from, vector_fill, vector_len,
-    vector_ref, vector_set, vector_to_list, vector_to_string, write_char, write_u8,
+    vector_ref, vector_set, vector_to_list, vector_to_string, write_char, write_string, write_u8,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::ports::Port;
@@ -141,6 +141,7 @@ impl Env {
             env.insert_proc("read-char", read_char);
             env.insert_proc("peek-char", peek_char);
             env.insert_proc("write-char", write_char);
+            env.insert_proc("write-string", write_string);
             env.insert_proc("read-u8", read_u8);
             env.insert_proc("peek-u8", peek_u8);
             env.insert_proc("write-u8", write_u8);
