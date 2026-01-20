@@ -1266,10 +1266,9 @@ pub fn read_bytevector(args: &[Expr], env: EnvRef) -> Result {
         }
         [Expr::Port(Port::BinaryInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
-            match port.read_bytevector() {
-                Ok(Some(bv)) => Ok(Expr::ByteVector(bv)),
-                Ok(None) => Ok(Expr::Eof),
-                Err(e) => Err(e),
+            match port.read_bytevector()? {
+                Some(bv) => Ok(Expr::ByteVector(bv)),
+                None => Ok(Expr::Eof),
             }
         }
         _ => Err(Error::new("expected binary file input port")),

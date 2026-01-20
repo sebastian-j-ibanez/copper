@@ -505,7 +505,7 @@ impl ByteVecReader {
 
     /// Consume and return the next byte in `ByteVector`.
     /// Return `None` if there are no bytes to read.
-    pub fn read(&mut self) -> Option<u8> {
+    pub fn read_byte(&mut self) -> Option<u8> {
         if let Some(bv) = self.byte_vec.as_ref() {
             let buf = bv.buffer.borrow();
             if self.cursor < buf.len() {
@@ -569,7 +569,7 @@ impl BinaryInputPort {
                 }
             }
             Self::File(None) => Err(Error::new("file port is closed")),
-            Self::ByteVector(bv) if bv.is_open() => Ok(bv.read()),
+            Self::ByteVector(bv) if bv.is_open() => Ok(bv.read_byte()),
             Self::ByteVector(_) => Err(Error::new("bytevector port is closed")),
         }
     }
@@ -592,13 +592,40 @@ impl BinaryInputPort {
         }
     }
 
+    /// Read all bytes from input port into `ByteVector`.
+    /// Returns `Error` if byte could not be read.
     pub fn read_bytevector(&mut self) -> Result<Option<ByteVector>, Error> {
         match self {
-            Self::File(file_reader) => {
-                todo!()
+            Self::File(Some(file_reader)) => {
+                let mut buf = [0u8; 1];
+                let mut bytes = Vec::new();
+                loop {
+                    match file_reader.read(&mut buf) {
+                        Ok(1) => bytes.push(buf[0]),
+                        Ok(_) => break,
+                        Err(e) => {
+                            return Err(Error::Message(format!(
+                                "unable to read bytevector: {}",
+                                &e.to_string()
+                            )));
+                        }
+                    }
+                }
+                if bytes.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(ByteVector::from(bytes.as_slice())))
             }
+            Self::File(None) => Err(Error::new("port is closed")),
             Self::ByteVector(bvec_reader) => {
-                todo!()
+                let mut bytes = Vec::new();
+                while let Some(byte) = bvec_reader.read_byte() {
+                    bytes.push(byte);
+                }
+                if bytes.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(ByteVector::from(bytes.as_slice())))
             }
         }
     }
