@@ -166,6 +166,7 @@ impl TextInputPort {
         }
     }
 
+    // TODO: make optional
     /// Read next char from input port.
     /// Returns `Error` if port is empty or byte could not be read.
     pub fn read_char(&mut self) -> Result<char, Error> {
@@ -211,6 +212,63 @@ impl TextInputPort {
         }
     }
 
+    // TODO: make optional
+    /// Read next string from input port.
+    /// Returns `Error` if port is empty or byte could not be read.
+    pub fn read_string(&mut self) -> Result<String, Error> {
+        match self {
+            Self::File(Some(reader)) => {
+                let mut word = String::new();
+                let mut buf = [0u8; 1];
+                loop {
+                    match reader.read(&mut buf) {
+                        Ok(1) => {
+                            let ch = buf[0] as char;
+                            if ch.is_whitespace() {
+                                break;
+                            }
+                            word.push(ch);
+                        }
+                        Ok(0) => break,
+                        _ => return Err(Error::new("unable to read from file")),
+                    }
+                }
+                Ok(word)
+            }
+            Self::File(None) => Err(Error::new("port is closed")),
+            Self::String(Some(stream)) => {
+                let mut line = String::new();
+                while let Some(c) = stream.pop_front() {
+                    if c.is_whitespace() {
+                        break;
+                    }
+                    line.push(c);
+                }
+                Ok(line)
+            }
+            Self::String(None) => Err(Error::new("port is closed")),
+            Self::Stdin => {
+                let mut word = String::new();
+                let mut buf = [0u8; 1];
+                loop {
+                    match io::stdin().read(&mut buf) {
+                        Ok(1) => {
+                            let ch = buf[0] as char;
+                            if ch.is_whitespace() {
+                                break;
+                            }
+                            word.push(ch);
+                        }
+                        Ok(0) => break,
+                        _ => return Err(Error::new("unable to read from stdin")),
+                    }
+                }
+                Ok(word)
+            }
+        }
+    }
+
+    // TODO: make optional
     /// Peek next line from port. Returns `None` if port has reached `eof`.
     pub fn read_line(&mut self) -> Result<String, Error> {
         match self {
@@ -245,6 +303,7 @@ impl TextInputPort {
         }
     }
 
+    // TODO: make optional
     /// Peek all lines from port. Returns `None` if port has reached `eof`.
     pub fn read_lines(&mut self) -> Result<Vec<String>, Error> {
         match self {
@@ -503,6 +562,17 @@ impl BinaryInputPort {
                 _ => Ok(None),
             },
             Self::ByteVector(_) => Err(Error::new("bytevector port is closed")),
+        }
+    }
+
+    pub fn read_bytevector(&mut self) -> Result<Option<ByteVector>, Error> {
+        match self {
+            Self::File(file_reader) => {
+                todo!()
+            }
+            Self::ByteVector(bvec_reader) => {
+                todo!()
+            }
         }
     }
 }

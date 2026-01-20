@@ -1059,9 +1059,26 @@ pub fn close_port(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+// Ports input
+
 /// Read a char from a `Port`.
-pub fn read_char(args: &[Expr], _: EnvRef) -> Result {
+/// Defaults to `current-input-port` if port is not specified.
+pub fn read_char(args: &[Expr], env: EnvRef) -> Result {
     match args {
+        [] => {
+            let port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextInput(port)) = port {
+                let mut port = port.borrow_mut();
+                let c = port.read_char()?;
+                return Ok(Expr::Char(c));
+            }
+
+            Err(Error::new("expected textual input port"))
+        }
         [Expr::Port(Port::TextInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
             match port.read_char() {
@@ -1069,13 +1086,30 @@ pub fn read_char(args: &[Expr], _: EnvRef) -> Result {
                 Err(e) => Err(e),
             }
         }
-        _ => Err(Error::new("expected textual file input port")),
+        _ => Err(Error::new("expected textual input port")),
     }
 }
 
 /// Peek a char from a `Port` without modifying the buffer.
-pub fn peek_char(args: &[Expr], _: EnvRef) -> Result {
+/// Defaults to `current-input-port` if port is not specified.
+pub fn peek_char(args: &[Expr], env: EnvRef) -> Result {
     match args {
+        [] => {
+            let port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextInput(port)) = port {
+                let mut port = port.borrow_mut();
+                return match port.peek_char()? {
+                    Some(c) => Ok(Expr::Char(c)),
+                    None => Ok(Expr::Eof),
+                };
+            }
+
+            Err(Error::new("expected textual input port"))
+        }
         [Expr::Port(Port::TextInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
             match port.peek_char()? {
@@ -1087,9 +1121,174 @@ pub fn peek_char(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Write `char` to a textual `Port`.
-pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
+/// Read a string from a `Port`.
+/// Defaults to `current-input-port` if port is not specified.
+pub fn read_string(args: &[Expr], env: EnvRef) -> Result {
     match args {
+        [] => {
+            let port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextInput(port)) = port {
+                let mut port = port.borrow_mut();
+                let s = port.read_string()?;
+                return Ok(Expr::String(s));
+            }
+
+            Err(Error::new("expected textual input port"))
+        }
+        [Expr::Port(Port::TextInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            let s = port.read_string()?;
+            Ok(Expr::String(s))
+        }
+        _ => Err(Error::new("expected textual file input port")),
+    }
+}
+
+/// Read a line from a `Port`.
+/// Defaults to `current-input-port` if port is not specified.
+pub fn read_line(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [] => {
+            let port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextInput(port)) = port {
+                let line = port.borrow_mut().read_line()?;
+                return Ok(Expr::String(line));
+            }
+
+            Err(Error::new("expected textual input port"))
+        }
+        [Expr::Port(Port::TextInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            let s = port.read_line()?;
+            Ok(Expr::String(s))
+        }
+        _ => Err(Error::new("expected textual input port")),
+    }
+}
+
+/// Read a byte from a `Port`.
+/// Defaults to `current-input-port` if port is not specified.
+pub fn read_u8(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [] => {
+            let input_port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::BinaryInput(port)) = input_port {
+                let mut port = port.borrow_mut();
+                return match port.read_byte()? {
+                    Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                    None => Ok(Expr::Eof),
+                };
+            }
+
+            Err(Error::new("expected binary input port"))
+        }
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.read_byte() {
+                Ok(Some(byte)) => Ok(Expr::Number(Number::from_u8(byte))),
+                Ok(None) => Ok(Expr::Eof),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Read a byte from a `Port` without modifying the buffer.
+/// Defaults to `current-input-port` if port is not specified.
+pub fn peek_u8(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [] => {
+            let input_port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::BinaryInput(port)) = input_port {
+                let mut port = port.borrow_mut();
+                return match port.peek_byte()? {
+                    Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                    None => Ok(Expr::Eof),
+                };
+            }
+
+            Err(Error::new("expected binary input port"))
+        }
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.peek_byte()? {
+                Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
+                None => Ok(Expr::Eof),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Read a bytevector from a `Port`.
+/// Defaults to `current-input-port` if port is not specified.
+pub fn read_bytevector(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [] => {
+            let input_port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::BinaryInput(port)) = input_port {
+                let mut port = port.borrow_mut();
+                return match port.read_bytevector()? {
+                    Some(bv) => Ok(Expr::ByteVector(bv)),
+                    None => Ok(Expr::Eof),
+                };
+            }
+
+            Err(Error::new("expected binary input port"))
+        }
+        [Expr::Port(Port::BinaryInput(port_ref))] => {
+            let mut port = port_ref.borrow_mut();
+            match port.read_bytevector() {
+                Ok(Some(bv)) => Ok(Expr::ByteVector(bv)),
+                Ok(None) => Ok(Expr::Eof),
+                Err(e) => Err(e),
+            }
+        }
+        _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+// Ports output
+
+/// Write `char` to a textual `Port`.
+/// Defaults to `current-output-port` if port is not specified.
+pub fn write_char(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Char(c)] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_char(*c)?;
+                return Ok(Expr::Void());
+            }
+
+            Err(Error::new("expected textual input port"))
+        }
         [Expr::Char(ch), Expr::Port(Port::TextOutput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
             port.write_char(*ch)?;
@@ -1100,14 +1299,24 @@ pub fn write_char(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-pub fn write_string(args: &[Expr], _: EnvRef) -> Result {
+/// Write `String` to textual `Port`.
+/// Defaults to `current-output-port` if port is not specified.
+pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
     match args {
-        // Write string to stdout.
         [Expr::String(s)] => {
-            print!("{}", s);
-            Ok(Expr::Void())
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_string(s)?;
+                return Ok(Expr::Void());
+            }
+
+            Err(Error::new("expected textual input port"))
         }
-        // Write string to output port.
         [Expr::String(s), Expr::Port(Port::TextOutput(input))] => {
             let mut port = input.borrow_mut();
             port.write_string(s)?;
@@ -1151,24 +1360,27 @@ pub fn write_string(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Read a byte from a `Port`.
-pub fn read_u8(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Port(Port::BinaryInput(port_ref))] => {
-            let mut port = port_ref.borrow_mut();
-            match port.read_byte() {
-                Ok(Some(byte)) => Ok(Expr::Number(Number::from_u8(byte))),
-                Ok(None) => Err(Error::new("port is empty")),
-                Err(e) => Err(e),
-            }
-        }
-        _ => Err(Error::new("expected binary file input port")),
-    }
-}
-
 /// Write `u8` to a binary `Port`.
-pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
+/// Defaults to `current-output-port` if port is not specified.
+pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
     match args {
+        [Expr::Number(byte)] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+            let byte = byte
+                .to_u8()
+                .ok_or_else(|| Error::new("unable to convert num to byte"))?;
+
+            if let Expr::Port(Port::BinaryOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_byte(byte)?;
+                return Ok(Expr::Void());
+            }
+
+            Err(Error::new("expected textual input port"))
+        }
         [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
             let byte = byte
@@ -1179,20 +1391,6 @@ pub fn write_u8(args: &[Expr], _: EnvRef) -> Result {
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected byte and binary port")),
-    }
-}
-
-/// Read a byte from a `Port` without modifying the buffer.
-pub fn peek_u8(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Port(Port::BinaryInput(port_ref))] => {
-            let mut port = port_ref.borrow_mut();
-            match port.peek_byte()? {
-                Some(byte) => Ok(Expr::Number(Number::from_u8(byte))),
-                None => Ok(Expr::Eof),
-            }
-        }
-        _ => Err(Error::new("expected binary file input port")),
     }
 }
 

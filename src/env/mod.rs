@@ -21,10 +21,11 @@ use crate::env::procedures::{
     new_vector, newline, not, num_to_string, open_binary_input_file, open_binary_output_file,
     open_input_bytevector, open_input_file, open_input_string, open_output_bytevector,
     open_output_file, open_output_string, or, peek_char, peek_u8, pretty_print, print, println,
-    read_char, read_u8, str_append, str_length, string_to_downcase, string_to_list, string_to_num,
-    string_to_symbol, string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string,
-    utf8_to_string, vector_append, vector_copy, vector_copy_from, vector_fill, vector_len,
-    vector_ref, vector_set, vector_to_list, vector_to_string, write_char, write_string, write_u8,
+    read_char, read_line, read_string, read_u8, str_append, str_length, string_to_downcase,
+    string_to_list, string_to_num, string_to_symbol, string_to_upcase, string_to_utf8,
+    string_to_vector, sub, symbol_to_string, utf8_to_string, vector_append, vector_copy,
+    vector_copy_from, vector_fill, vector_len, vector_ref, vector_set, vector_to_list,
+    vector_to_string, write_char, write_string, write_u8,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::ports::Port;
@@ -140,11 +141,14 @@ impl Env {
             env.insert_proc("close-port", close_port);
             env.insert_proc("read-char", read_char);
             env.insert_proc("peek-char", peek_char);
-            env.insert_proc("write-char", write_char);
-            env.insert_proc("write-string", write_string);
+            env.insert_proc("read-string", read_string);
+            env.insert_proc("read-line", read_line);
             env.insert_proc("read-u8", read_u8);
             env.insert_proc("peek-u8", peek_u8);
+            env.insert_proc("write-char", write_char);
+            env.insert_proc("write-string", write_string);
             env.insert_proc("write-u8", write_u8);
+            // env.insert_proc("read-bytevector", read_bytevector);
             env.insert_proc("eof-object", eof_object);
             env.insert_proc("call-with-port", call_with_port);
             env.insert_proc("call-with-input-file", call_with_input_file);
@@ -241,19 +245,19 @@ impl Env {
     }
 
     /// Initialize parameter and set in environment. Created to clean up boilerplate in `env::standard_env()`.
-    fn new_param(&mut self, name: &str, param: &Expr) {
+    fn new_param(&mut self, name: &str, value: &Expr) {
         let id = next_parameter_id();
         let env_placeholder = Expr::Parameter(Parameter::new(id, None));
         self.data.insert(name.to_string(), env_placeholder);
-        self.set_param(&id.to_string(), param);
+        self.set_param(&id.to_string(), value);
     }
 
     /// Find parameter value in environment. Checks self before outer env.
-    pub fn find_param(&self, param_id: &str) -> Option<Expr> {
-        if let Some(val) = self.params.get(param_id) {
+    pub fn find_param(&self, param_name: &str) -> Option<Expr> {
+        if let Some(val) = self.params.get(param_name) {
             Some(val.clone())
         } else if let Some(outer) = &self.outer {
-            outer.borrow().find_param(param_id)
+            outer.borrow().find_param(param_name)
         } else {
             None
         }
