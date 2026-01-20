@@ -1073,17 +1073,19 @@ pub fn read_char(args: &[Expr], env: EnvRef) -> Result {
 
             if let Expr::Port(Port::TextInput(port)) = port {
                 let mut port = port.borrow_mut();
-                let c = port.read_char()?;
-                return Ok(Expr::Char(c));
+                return match port.read_char()? {
+                    Some(c) => Ok(Expr::Char(c)),
+                    None => Ok(Expr::Eof),
+                };
             }
 
             Err(Error::new("expected textual input port"))
         }
         [Expr::Port(Port::TextInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
-            match port.read_char() {
-                Ok(c) => Ok(Expr::Char(c)),
-                Err(e) => Err(e),
+            match port.read_char()? {
+                Some(c) => Ok(Expr::Char(c)),
+                None => Ok(Expr::Eof),
             }
         }
         _ => Err(Error::new("expected textual input port")),
@@ -1133,16 +1135,20 @@ pub fn read_string(args: &[Expr], env: EnvRef) -> Result {
 
             if let Expr::Port(Port::TextInput(port)) = port {
                 let mut port = port.borrow_mut();
-                let s = port.read_string()?;
-                return Ok(Expr::String(s));
+                return match port.read_string()? {
+                    Some(s) => Ok(Expr::String(s)),
+                    None => Ok(Expr::Eof),
+                };
             }
 
             Err(Error::new("expected textual input port"))
         }
         [Expr::Port(Port::TextInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
-            let s = port.read_string()?;
-            Ok(Expr::String(s))
+            return match port.read_string()? {
+                Some(s) => Ok(Expr::String(s)),
+                None => Ok(Expr::Eof),
+            };
         }
         _ => Err(Error::new("expected textual file input port")),
     }
@@ -1159,17 +1165,18 @@ pub fn read_line(args: &[Expr], env: EnvRef) -> Result {
                 .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
 
             if let Expr::Port(Port::TextInput(port)) = port {
-                let line = port.borrow_mut().read_line()?;
-                return Ok(Expr::String(line));
+                return match port.borrow_mut().read_line()? {
+                    Some(line) => Ok(Expr::String(line)),
+                    None => Ok(Expr::Eof),
+                };
             }
 
             Err(Error::new("expected textual input port"))
         }
-        [Expr::Port(Port::TextInput(port_ref))] => {
-            let mut port = port_ref.borrow_mut();
-            let s = port.read_line()?;
-            Ok(Expr::String(s))
-        }
+        [Expr::Port(Port::TextInput(port))] => match port.borrow_mut().read_line()? {
+            Some(line) => Ok(Expr::String(line)),
+            None => Ok(Expr::Eof),
+        },
         _ => Err(Error::new("expected textual input port")),
     }
 }

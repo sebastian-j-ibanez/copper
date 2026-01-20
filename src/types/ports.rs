@@ -166,32 +166,34 @@ impl TextInputPort {
         }
     }
 
-    // TODO: make optional
     /// Read next char from input port.
     /// Returns `Error` if port is empty or byte could not be read.
-    pub fn read_char(&mut self) -> Result<char, Error> {
+    pub fn read_char(&mut self) -> Result<Option<char>, Error> {
         match self {
             Self::File(Some(reader)) => {
                 let mut buf = [0u8; 1];
                 match reader.read(&mut buf) {
-                    Ok(1) => Ok(buf[0] as char),
-                    Ok(0) => Err(Error::new("end of file")),
+                    Ok(1) => Ok(Some(buf[0] as char)),
+                    Ok(0) => Ok(None),
                     _ => Err(Error::new("unable to read from file")),
                 }
             }
             Self::File(None) => Err(Error::new("port is closed")),
-
-            Self::String(Some(stream)) => stream
-                .pop_front()
-                .ok_or_else(|| Error::new("port is empty")),
+            Self::String(Some(stream)) => {
+                let c = stream
+                    .pop_front()
+                    .ok_or_else(|| Error::new("port is empty"))?;
+                Ok(Some(c))
+            }
             Self::String(None) => Err(Error::new("port is closed")),
-
             Self::Stdin => {
                 let mut buf = [0u8; 1];
+                // Returns error if byte can't be read from stdin.
+                // I don't think it's possible to get an EoF from stdin.
                 io::stdin()
                     .read_exact(&mut buf)
                     .map_err(|_| Error::new("unable to read from stdin"))?;
-                Ok(buf[0] as char)
+                Ok(Some(buf[0] as char))
             }
         }
     }
@@ -212,10 +214,9 @@ impl TextInputPort {
         }
     }
 
-    // TODO: make optional
     /// Read next string from input port.
     /// Returns `Error` if port is empty or byte could not be read.
-    pub fn read_string(&mut self) -> Result<String, Error> {
+    pub fn read_string(&mut self) -> Result<Option<String>, Error> {
         match self {
             Self::File(Some(reader)) => {
                 let mut word = String::new();
@@ -233,7 +234,10 @@ impl TextInputPort {
                         _ => return Err(Error::new("unable to read from file")),
                     }
                 }
-                Ok(word)
+                if word.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(word))
             }
             Self::File(None) => Err(Error::new("port is closed")),
             Self::String(Some(stream)) => {
@@ -244,7 +248,10 @@ impl TextInputPort {
                     }
                     line.push(c);
                 }
-                Ok(line)
+                if line.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(line))
             }
             Self::String(None) => Err(Error::new("port is closed")),
             Self::Stdin => {
@@ -263,21 +270,26 @@ impl TextInputPort {
                         _ => return Err(Error::new("unable to read from stdin")),
                     }
                 }
-                Ok(word)
+                if word.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(word))
             }
         }
     }
 
-    // TODO: make optional
     /// Peek next line from port. Returns `None` if port has reached `eof`.
-    pub fn read_line(&mut self) -> Result<String, Error> {
+    pub fn read_line(&mut self) -> Result<Option<String>, Error> {
         match self {
             Self::File(Some(reader)) => {
                 let mut line = String::new();
                 reader
                     .read_line(&mut line)
                     .map_err(|e| Error::Message(format!("unable to read line: {}", e)))?;
-                Ok(line)
+                if line.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(line))
             }
             Self::File(None) => Err(Error::new("port is closed")),
 
@@ -289,7 +301,10 @@ impl TextInputPort {
                     }
                     line.push(c);
                 }
-                Ok(line)
+                if line.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(line))
             }
             Self::String(None) => Err(Error::new("port is closed")),
 
@@ -298,24 +313,28 @@ impl TextInputPort {
                 io::stdin()
                     .read_line(&mut line)
                     .map_err(|_| Error::new("unable to read from stdin"))?;
-                Ok(line)
+                if line.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(line))
             }
         }
     }
 
-    // TODO: make optional
     /// Peek all lines from port. Returns `None` if port has reached `eof`.
-    pub fn read_lines(&mut self) -> Result<Vec<String>, Error> {
+    pub fn read_lines(&mut self) -> Result<Option<Vec<String>>, Error> {
         match self {
             Self::File(Some(reader)) => {
                 let mut lines = Vec::new();
                 for line in reader.lines() {
                     lines.push(line.map_err(|e| Error::Message(format!("read error: {}", e)))?);
                 }
-                Ok(lines)
+                if lines.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(lines))
             }
             Self::File(None) => Err(Error::new("port is closed")),
-
             Self::String(Some(stream)) => {
                 let mut lines = Vec::new();
                 let mut line = String::new();
@@ -330,14 +349,22 @@ impl TextInputPort {
                 if !line.is_empty() {
                     lines.push(line);
                 }
-                Ok(lines)
+                if lines.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(lines))
             }
             Self::String(None) => Err(Error::new("port is closed")),
-
-            Self::Stdin => io::stdin()
-                .lines()
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| Error::Message(format!("unable to read lines: {}", e))),
+            Self::Stdin => {
+                let lines = io::stdin()
+                    .lines()
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| Error::Message(format!("unable to read lines: {}", e)))?;
+                if lines.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(lines))
+            }
         }
     }
 }
