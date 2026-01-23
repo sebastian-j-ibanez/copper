@@ -1244,7 +1244,7 @@ pub fn peek_u8(args: &[Expr], env: EnvRef) -> Result {
     }
 }
 
-/// Read a bytevector from a `Port`.
+/// Read bytes from `Port` into new bytevector.
 /// Defaults to `current-input-port` if port is not specified.
 pub fn read_bytevector(args: &[Expr], env: EnvRef) -> Result {
     match args {
@@ -1256,7 +1256,7 @@ pub fn read_bytevector(args: &[Expr], env: EnvRef) -> Result {
 
             if let Expr::Port(Port::BinaryInput(port)) = input_port {
                 let mut port = port.borrow_mut();
-                return match port.read_bytevector()? {
+                return match port.read_bytevector(None)? {
                     Some(bv) => Ok(Expr::ByteVector(bv)),
                     None => Ok(Expr::Eof),
                 };
@@ -1266,12 +1266,55 @@ pub fn read_bytevector(args: &[Expr], env: EnvRef) -> Result {
         }
         [Expr::Port(Port::BinaryInput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
-            match port.read_bytevector()? {
+            match port.read_bytevector(None)? {
                 Some(bv) => Ok(Expr::ByteVector(bv)),
                 None => Ok(Expr::Eof),
             }
         }
         _ => Err(Error::new("expected binary file input port")),
+    }
+}
+
+/// Read bytes from `Port` into given bytevector.
+/// Defaults to `current-input-port` if port is not specified.
+pub fn read_into_bytevector(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => {
+            let input_port = env
+                .borrow()
+                .find_param("current-input-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::BinaryInput(port)) = input_port {
+                if let Some(input_vec) = port.borrow_mut().read_bytevector(Some(bv.len()))? {
+                    let input_vec = input_vec.to_slice();
+                    // TODO: implement "set range" in ByteVector itself.
+                    for i in 0..bv.len() {
+                        bv.set(i, input_vec[i])?;
+                    }
+                    return Ok(Expr::Number(Number::from_usize(input_vec.len())));
+                }
+                return Ok(Expr::Eof);
+            }
+
+            Err(Error::new("expected binary input port"))
+        }
+        // TODO: finish cases
+        [Expr::ByteVector(bv), Expr::Port(Port::BinaryInput(port))] => {}
+        [
+            Expr::ByteVector(bv),
+            Expr::Port(Port::BinaryInput(port)),
+            Expr::Number(start),
+        ] => {}
+        [
+            Expr::ByteVector(bv),
+            Expr::Port(Port::BinaryInput(port)),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {}
+        _ => Err(Error::new(
+            "expected bytevector and optional binary input port, start index, end index arguments",
+        )),
     }
 }
 

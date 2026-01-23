@@ -594,9 +594,12 @@ impl BinaryInputPort {
 
     /// Read all bytes from input port into `ByteVector`.
     /// Returns `Error` if byte could not be read.
-    pub fn read_bytevector(&mut self) -> Result<Option<ByteVector>, Error> {
-        match self {
-            Self::File(Some(file_reader)) => {
+    pub fn read_bytevector(
+        &mut self,
+        read_limit: Option<usize>,
+    ) -> Result<Option<ByteVector>, Error> {
+        match (self, read_limit) {
+            (Self::File(Some(file_reader)), _) => {
                 let mut buf = [0u8; 1];
                 let mut bytes = Vec::new();
                 loop {
@@ -610,14 +613,31 @@ impl BinaryInputPort {
                             )));
                         }
                     }
+                    if let Some(limit) = read_limit
+                        && bytes.len() >= limit
+                    {
+                        break;
+                    }
                 }
                 if bytes.is_empty() {
                     return Ok(None);
                 }
                 Ok(Some(ByteVector::from(bytes.as_slice())))
             }
-            Self::File(None) => Err(Error::new("port is closed")),
-            Self::ByteVector(bvec_reader) => {
+            (Self::File(None), _) => Err(Error::new("port is closed")),
+            (Self::ByteVector(bvec_reader), Some(limit)) => {
+                let mut bytes = Vec::new();
+                while let Some(byte) = bvec_reader.read_byte()
+                    && bytes.len() < limit
+                {
+                    bytes.push(byte);
+                }
+                if bytes.is_empty() {
+                    return Ok(None);
+                }
+                Ok(Some(ByteVector::from(bytes.as_slice())))
+            }
+            (Self::ByteVector(bvec_reader), None) => {
                 let mut bytes = Vec::new();
                 while let Some(byte) = bvec_reader.read_byte() {
                     bytes.push(byte);
