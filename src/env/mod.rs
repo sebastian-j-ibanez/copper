@@ -21,11 +21,11 @@ use crate::env::procedures::{
     new_vector, newline, not, num_to_string, open_binary_input_file, open_binary_output_file,
     open_input_bytevector, open_input_file, open_input_string, open_output_bytevector,
     open_output_file, open_output_string, or, peek_char, peek_u8, pretty_print, print, println,
-    read_bytevector, read_char, read_line, read_string, read_u8, str_append, str_length,
-    string_to_downcase, string_to_list, string_to_num, string_to_symbol, string_to_upcase,
-    string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string, vector_append,
-    vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set, vector_to_list,
-    vector_to_string, write_char, write_string, write_u8,
+    read_bytevector, read_char, read_into_bytevector, read_line, read_string, read_u8, str_append,
+    str_length, string_to_downcase, string_to_list, string_to_num, string_to_symbol,
+    string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string,
+    vector_append, vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set,
+    vector_to_list, vector_to_string, write_char, write_string, write_u8,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::ports::Port;
@@ -149,6 +149,7 @@ impl Env {
             env.insert_proc("write-string", write_string);
             env.insert_proc("write-u8", write_u8);
             env.insert_proc("read-bytevector", read_bytevector);
+            env.insert_proc("read-bytevector!", read_into_bytevector);
             env.insert_proc("eof-object", eof_object);
             env.insert_proc("call-with-port", call_with_port);
             env.insert_proc("call-with-input-file", call_with_input_file);

@@ -55,9 +55,6 @@ pub fn println(args: &[Expr], _: EnvRef) -> Result {
         match arg {
             Expr::String(s) => println!("{}", s),
             Expr::Char(c) => println!("{}", c),
-            // Expr::List(l) => {
-            //     println!("{}", format_list(l, "", false));
-            // }
             _ => println!("{}", arg),
         }
         return Ok(Expr::Void());
@@ -1278,44 +1275,50 @@ pub fn read_bytevector(args: &[Expr], env: EnvRef) -> Result {
 /// Read bytes from `Port` into given bytevector.
 /// Defaults to `current-input-port` if port is not specified.
 pub fn read_into_bytevector(args: &[Expr], env: EnvRef) -> Result {
-    match args {
-        [Expr::ByteVector(bv)] => {
-            let input_port = env
-                .borrow()
-                .find_param("current-input-port")
-                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+    // Get bytevector.
+    let bv = match args.first() {
+        Some(Expr::ByteVector(bv)) => bv,
+        _ => return Err(Error::new("expected bytevector as first argument")),
+    };
 
-            if let Expr::Port(Port::BinaryInput(port)) = input_port {
-                if let Some(input_vec) = port.borrow_mut().read_bytevector(Some(bv.len()))? {
-                    let input_vec = input_vec.to_slice();
-                    // TODO: implement "set range" in ByteVector itself.
-                    for i in 0..bv.len() {
-                        bv.set(i, input_vec[i])?;
-                    }
-                    return Ok(Expr::Number(Number::from_usize(input_vec.len())));
-                }
-                return Ok(Expr::Eof);
-            }
+    // Get port.
+    let port_expr = match args.get(1) {
+        Some(p @ Expr::Port(Port::BinaryInput(_))) => p.clone(),
+        Some(_) => return Err(Error::new("expected binary input port")),
+        None => env
+            .borrow()
+            .find_param("current-input-port")
+            .ok_or_else(|| Error::new("current-input-port is not initialized"))?,
+    };
+    let port = match &port_expr {
+        Expr::Port(Port::BinaryInput(p)) => p,
+        _ => return Err(Error::new("expected binary input port")),
+    };
 
-            Err(Error::new("expected binary input port"))
-        }
-        // TODO: finish cases
-        [Expr::ByteVector(bv), Expr::Port(Port::BinaryInput(port))] => {}
-        [
-            Expr::ByteVector(bv),
-            Expr::Port(Port::BinaryInput(port)),
-            Expr::Number(start),
-        ] => {}
-        [
-            Expr::ByteVector(bv),
-            Expr::Port(Port::BinaryInput(port)),
-            Expr::Number(start),
-            Expr::Number(end),
-        ] => {}
-        _ => Err(Error::new(
-            "expected bytevector and optional binary input port, start index, end index arguments",
-        )),
+    // Get start and end indexes.
+    let start = match args.get(2) {
+        Some(Expr::Number(n)) => Some(
+            n.to_usize()
+                .ok_or_else(|| Error::new("invalid start index"))?,
+        ),
+        Some(_) => return Err(Error::new("expected number for start index")),
+        None => None,
+    };
+    let end = match args.get(3) {
+        Some(Expr::Number(n)) => Some(
+            n.to_usize()
+                .ok_or_else(|| Error::new("invalid end index"))?,
+        ),
+        Some(_) => return Err(Error::new("expected number for end index")),
+        None => None,
+    };
+
+    // Copy bytes from port into bytevector.
+    if let Some(input_vec) = port.borrow_mut().read_bytevector(Some(bv.len()))? {
+        let bytes_read = bv.copy_into(input_vec, start, end)?;
+        return Ok(Expr::Number(Number::from_usize(bytes_read)));
     }
+    Ok(Expr::Eof)
 }
 
 // Ports output

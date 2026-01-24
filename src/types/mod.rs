@@ -653,6 +653,29 @@ impl ByteVector {
         self.buffer.borrow().get(index).copied()
     }
 
+    /// Copy bytevector into `self`, using optional start and end indexes.
+    pub fn copy_into(
+        &self,
+        bv: ByteVector,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> std::result::Result<usize, Error> {
+        let start_index = start.unwrap_or(0);
+        let end_index = end.map_or(bv.len(), |e| e + 1);
+        if end_index > self.len() || end_index > bv.len() {
+            return Err(Error::new("unable to copy bytes, bytevector overflow"));
+        }
+        if start_index > end_index {
+            return Err(Error::new("unable to copy bytes, invalid indexes"));
+        }
+        let mut self_buf = self.buffer.borrow_mut();
+        let bv_buf = bv.buffer.borrow();
+        for i in start_index..end_index {
+            self_buf[i] = bv_buf[i];
+        }
+        Ok(end_index - start_index)
+    }
+
     /// Return size of `buffer`.
     pub fn len(&self) -> usize {
         self.buffer.borrow().len()
