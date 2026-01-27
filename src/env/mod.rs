@@ -25,7 +25,7 @@ use crate::env::procedures::{
     str_length, string_to_downcase, string_to_list, string_to_num, string_to_symbol,
     string_to_upcase, string_to_utf8, string_to_vector, sub, symbol_to_string, utf8_to_string,
     vector_append, vector_copy, vector_copy_from, vector_fill, vector_len, vector_ref, vector_set,
-    vector_to_list, vector_to_string, write_char, write_string, write_u8,
+    vector_to_list, vector_to_string, write_char, write_simple, write_string, write_u8,
 };
 use crate::macros::{quote, set_car, set_cdr};
 use crate::types::ports::Port;
@@ -148,6 +148,7 @@ impl Env {
             env.insert_proc("write-char", write_char);
             env.insert_proc("write-string", write_string);
             env.insert_proc("write-u8", write_u8);
+            env.insert_proc("write-simple", write_simple);
             env.insert_proc("read-bytevector", read_bytevector);
             env.insert_proc("read-bytevector!", read_into_bytevector);
             env.insert_proc("eof-object", eof_object);
@@ -253,12 +254,31 @@ impl Env {
         self.set_param(&id.to_string(), value);
     }
 
-    /// Find parameter value in environment. Checks self before outer env.
+    /// Find parameter value by name. Looks up the `Parameter` in `self.data`,
+    /// then uses its ID to retrieve the value from `self.params`.
+    /// Checks outer env if name not found in current env.
     pub fn find_param(&self, param_name: &str) -> Option<Expr> {
-        if let Some(val) = self.params.get(param_name) {
+        if let Some(Expr::Parameter(param)) = self.data.get(param_name) {
+            let id = param.id.to_string();
+            if let Some(val) = self.params.get(&id) {
+                return Some(val.clone());
+            }
+        }
+
+        if let Some(outer) = &self.outer {
+            outer.borrow().find_param(param_name)
+        } else {
+            None
+        }
+    }
+
+    /// Find parameter value by numeric ID.
+    /// Checks outer env if parameter not found in current env.
+    pub fn find_param_id(&self, id: &str) -> Option<Expr> {
+        if let Some(val) = self.params.get(id) {
             Some(val.clone())
         } else if let Some(outer) = &self.outer {
-            outer.borrow().find_param(param_name)
+            outer.borrow().find_param_id(id)
         } else {
             None
         }

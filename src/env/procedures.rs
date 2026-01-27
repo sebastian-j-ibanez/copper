@@ -1446,6 +1446,32 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
     }
 }
 
+/// Write arguments to a textual `Port`.
+/// Defaults to `current-output-port` if port is not specified.
+pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [obj] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_string(&obj.to_string())?;
+                return Ok(Expr::Void());
+            }
+            Err(Error::new("current-output-port is not initialized"))
+        }
+        [obj, Expr::Port(Port::TextOutput(port))] => {
+            let mut port = port.borrow_mut();
+            port.write_string(&obj.to_string())?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected obj and optional text output port")),
+    }
+}
+
 /// Execute procedure with `Port`.
 pub fn call_with_port(args: &[Expr], env: EnvRef) -> Result {
     match args {

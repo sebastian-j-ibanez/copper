@@ -94,7 +94,7 @@ fn apply_parameter(param: &Parameter, args: Vec<Expr>, env: EnvRef) -> Result<Ex
         // Get current value
         [] => env
             .borrow()
-            .find_param(&key)
+            .find_param_id(&key)
             .ok_or_else(|| Error::Message(format!("parameter {} not initialized", param.id))),
         // Set new value
         [new_value] => {
