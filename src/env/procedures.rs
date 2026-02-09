@@ -1448,6 +1448,12 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
 
 /// Write arguments to a textual `Port`.
 /// Defaults to `current-output-port` if port is not specified.
+pub fn write(args: &[Expr], env: EnvRef) -> Result {
+    todo!()
+}
+
+/// Write arguments to a textual `Port`.
+/// Defaults to `current-output-port` if port is not specified.
 pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
     match args {
         [obj] => {
@@ -1470,6 +1476,32 @@ pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
         }
         _ => Err(Error::new("expected obj and optional text output port")),
     }
+}
+
+pub fn write_complex(args: &[Expr], env: EnvRef) -> Result {
+    todo!()
+}
+
+/// Flush buffered output in `Port`.
+/// Note: Only `File` output buffers require flushing.
+pub fn flush_output_port(args: &[Expr], env: EnvRef) -> Result {
+    let mut port = match args {
+        [] => {
+            let expr = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
+
+            match expr {
+                Expr::Port(p) => p,
+                _ => return Err(Error::new("expected output port")),
+            }
+        }
+        [Expr::Port(p)] => p.clone(),
+        _ => return Err(Error::new("expected output port")),
+    };
+    port.flush()?;
+    Ok(Expr::Void())
 }
 
 /// Execute procedure with `Port`.

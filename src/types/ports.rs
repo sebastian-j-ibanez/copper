@@ -83,6 +83,14 @@ impl Port {
         Ok(Port::BinaryOutput(Rc::new(RefCell::new(output))))
     }
 
+    pub fn flush(&mut self) -> Result<(), Error> {
+        match self {
+            Port::TextOutput(port) => port.borrow_mut().flush(),
+            Port::BinaryOutput(port) => port.borrow_mut().flush(),
+            _ => Err(Error::new("expected output port")),
+        }
+    }
+
     /// Close port.
     pub fn close(&self) {
         match self {
@@ -750,7 +758,7 @@ impl BinaryOutputPort {
     }
 
     /// Flush output port buffer.
-    /// Note: Only used for `Self::File`.
+    /// Note: Only used for `Self::File` ports, otherwise performs a no op.
     pub fn flush(&mut self) -> Result<(), Error> {
         match self {
             Self::File(Some(writer)) => writer.flush().map_err(|_| Error::new("unable to flush")),
