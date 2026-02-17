@@ -17,9 +17,9 @@ use std::ops::{Add, Deref, Div, Mul, Sub};
 
 /// Display raw expression in stdout.
 pub fn display(args: &[Expr], _: EnvRef) -> Result {
-    match args.first() {
-        Some(arg) => {
-            print!("{}", arg);
+    match args {
+        [expr] => {
+            print!("{}", expr);
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected 1 valid expression")),
@@ -1456,7 +1456,7 @@ pub fn write(args: &[Expr], env: EnvRef) -> Result {
 /// Defaults to `current-output-port` if port is not specified.
 pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
     match args {
-        [obj] => {
+        [expr] => {
             let port = env
                 .borrow()
                 .find_param("current-output-port")
@@ -1464,21 +1464,21 @@ pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
 
             if let Expr::Port(Port::TextOutput(port)) = port {
                 let mut port = port.borrow_mut();
-                port.write_string(&obj.to_string())?;
+                port.write_string(&expr.external_rep())?;
                 return Ok(Expr::Void());
             }
             Err(Error::new("current-output-port is not initialized"))
         }
-        [obj, Expr::Port(Port::TextOutput(port))] => {
+        [expr, Expr::Port(Port::TextOutput(port))] => {
             let mut port = port.borrow_mut();
-            port.write_string(&obj.to_string())?;
+            port.write_string(&expr.to_string())?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected obj and optional text output port")),
     }
 }
 
-pub fn write_complex(args: &[Expr], env: EnvRef) -> Result {
+pub fn write_shared(args: &[Expr], env: EnvRef) -> Result {
     todo!()
 }
 

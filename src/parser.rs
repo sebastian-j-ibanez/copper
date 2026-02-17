@@ -34,14 +34,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             .find_var(k)
             .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
         Expr::Pair(pair) => {
-            let mut list_elements: Vec<Expr> = pair.iter().collect();
-
-            // Drop terminating `Expr::Null` from list.
-            if pair.is_list()
-                && let Some(Expr::Null) = list_elements.last()
-            {
-                list_elements.pop();
-            }
+            let list_elements: Vec<Expr> = pair.iter().collect();
 
             // Return empty list if there are no args.
             let [first, args @ ..] = list_elements.as_slice() else {

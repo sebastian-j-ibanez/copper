@@ -1149,6 +1149,15 @@ fn test_empty_list_format() {
 }
 
 #[test]
+fn test_quote_empty_list() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(cons 1 '())".to_string(), env);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().to_string(), "(1)");
+}
+
+#[test]
 fn test_make_parameter_basic() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();

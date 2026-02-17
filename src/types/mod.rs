@@ -56,12 +56,43 @@ pub enum Expr {
     Void(),
 }
 
+pub enum Representation {
+    Normal,
+    External,
+}
+
+impl Expr {
+    /// Returns `&self` as a `String` in external representation.
+    ///
+    /// Note: `Procedure`, `Closure`, and `Parameter` are always
+    /// shown in external representation even in the `fmt::Display` trait.
+    pub fn external_rep(&self) -> String {
+        match self {
+            Expr::Number(n) => n.to_string(),
+            Expr::String(s) => format_string(s, Representation::External),
+            Expr::Char(c) => format_char(c, Representation::External),
+            Expr::Boolean(b) => format_boolean(b),
+            Expr::Symbol(s) => s.clone(),
+            Expr::Pair(p) => format_pair(p, " ", true),
+            Expr::Null => format_null(),
+            Expr::Vector(v) => format_vector(v, true),
+            Expr::ByteVector(bv) => format_bytevector(bv, true),
+            proc @ Expr::Procedure(_) => proc.to_string(),
+            closure @ Expr::Closure(_) => closure.to_string(),
+            Expr::Port(p) => format_port(p),
+            param @ Expr::Parameter(_) => param.to_string(),
+            Expr::Eof => String::from("#!eof"),
+            Expr::Void() => String::new(),
+        }
+    }
+}
+
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s: String = match self {
             Expr::Number(n) => n.to_string(),
-            Expr::String(s) => format_string(s),
-            Expr::Char(c) => format_char(c),
+            Expr::String(s) => format_string(s, Representation::Normal),
+            Expr::Char(c) => format_char(c, Representation::Normal),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::Pair(p) => format_pair(p, " ", true),
@@ -80,16 +111,24 @@ impl fmt::Display for Expr {
 }
 
 /// Format string into its literal representation.
-fn format_string(s: &String) -> String {
-    format!("\"{}\"", s)
+fn format_string(s: &String, rep: Representation) -> String {
+    match rep {
+        Representation::External => format!("\"{}\"", s),
+        Representation::Normal => s.clone(),
+    }
 }
 
 /// Format char into its literal representation.
-fn format_char(c: &char) -> String {
-    format!("{}{}", "#\\", c)
+fn format_char(c: &char, rep: Representation) -> String {
+    match rep {
+        Representation::External => format!("{}{}", "#\\", c),
+        Representation::Normal => c.to_string(),
+    }
 }
 
 /// Format boolean into its literal representation.
+///
+/// Note: `Booleans` are always shown in external representation.
 fn format_boolean(b: &bool) -> String {
     match *b {
         true => format!("{}", BOOLEAN_TRUE_STR),

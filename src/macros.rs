@@ -219,7 +219,7 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
 pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {
         [expr] => Ok(expr.clone()),
-        _ => Err(Error::new("quote expects 1 argument")),
+        _ => Err(Error::new("quote expects 0 or 1 arguments")),
     }
 }
 
