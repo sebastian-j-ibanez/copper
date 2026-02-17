@@ -1471,7 +1471,7 @@ pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
         }
         [expr, Expr::Port(Port::TextOutput(port))] => {
             let mut port = port.borrow_mut();
-            port.write_string(&expr.to_string())?;
+            port.write_string(&expr.external_rep())?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected obj and optional text output port")),
