@@ -107,8 +107,8 @@ pub fn parameterize(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 pub fn set_car(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
     match args {
         [Expr::Symbol(name), expr] => {
-            let env = env_ref.borrow_mut();
-            if let Some(value) = env.find_var(name) {
+            let value = env_ref.borrow().find_var(name);
+            if let Some(value) = value {
                 match value {
                     Expr::Pair(pair) => {
                         let new_value = eval(&expr, env_ref.clone())?;
