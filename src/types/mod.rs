@@ -57,20 +57,21 @@ pub enum Expr {
 }
 
 pub enum Representation {
-    Normal,
     External,
+    Formatted,
 }
 
 impl Expr {
-    /// Returns `&self` as a `String` in external representation.
-    ///
-    /// Note: `Procedure`, `Closure`, and `Parameter` are always
-    /// shown in external representation even in the `fmt::Display` trait.
-    pub fn external_rep(&self) -> String {
+    /// Returns `&self` as a formatted `String`.
+    /// Atom values are formatted without quotations or external representation.
+    /// Examples:
+    /// #\a       -> a
+    /// "example" -> example
+    pub fn formatted(&self) -> String {
         match self {
             Expr::Number(n) => n.to_string(),
-            Expr::String(s) => format_string(s, Representation::External),
-            Expr::Char(c) => format_char(c, Representation::External),
+            Expr::String(s) => format_string(s, Representation::Formatted),
+            Expr::Char(c) => format_char(c, Representation::Formatted),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::Pair(p) => format_pair(p, " ", true),
@@ -87,12 +88,16 @@ impl Expr {
     }
 }
 
+// `Expr` are formatted in external representation by default.
+// Examples:
+// #\a       -> #\a
+// "example" -> "example"
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s: String = match self {
             Expr::Number(n) => n.to_string(),
-            Expr::String(s) => format_string(s, Representation::Normal),
-            Expr::Char(c) => format_char(c, Representation::Normal),
+            Expr::String(s) => format_string(s, Representation::External),
+            Expr::Char(c) => format_char(c, Representation::External),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
             Expr::Pair(p) => format_pair(p, " ", true),
@@ -114,7 +119,7 @@ impl fmt::Display for Expr {
 fn format_string(s: &String, rep: Representation) -> String {
     match rep {
         Representation::External => format!("\"{}\"", s),
-        Representation::Normal => s.clone(),
+        Representation::Formatted => s.clone(),
     }
 }
 
@@ -122,7 +127,7 @@ fn format_string(s: &String, rep: Representation) -> String {
 fn format_char(c: &char, rep: Representation) -> String {
     match rep {
         Representation::External => format!("{}{}", "#\\", c),
-        Representation::Normal => c.to_string(),
+        Representation::Formatted => c.to_string(),
     }
 }
 
