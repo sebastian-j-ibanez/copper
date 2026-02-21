@@ -1464,14 +1464,14 @@ pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
 
             if let Expr::Port(Port::TextOutput(port)) = port {
                 let mut port = port.borrow_mut();
-                port.write_string(&expr.external_rep())?;
+                port.write_string(&expr.formatted())?;
                 return Ok(Expr::Void());
             }
             Err(Error::new("current-output-port is not initialized"))
         }
         [expr, Expr::Port(Port::TextOutput(port))] => {
             let mut port = port.borrow_mut();
-            port.write_string(&expr.external_rep())?;
+            port.write_string(&expr.formatted())?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected obj and optional text output port")),
