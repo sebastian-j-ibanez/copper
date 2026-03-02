@@ -1240,7 +1240,7 @@ fn test_parameter_get_string_value() {
     )
     .unwrap();
     let result = parse_and_eval("(p)".to_string(), env);
-    assert_eq!(result.unwrap().to_string(), "hello");
+    assert_eq!(result.unwrap().to_string(), "\"hello\"");
 }
 
 #[test]
@@ -1260,7 +1260,7 @@ fn test_parameter_set_different_type() {
     parse_and_eval("(define p (make-parameter 10))".to_string(), env.clone()).unwrap();
     parse_and_eval("(p \"now a string\")".to_string(), env.clone()).unwrap();
     let result = parse_and_eval("(p)".to_string(), env);
-    assert_eq!(result.unwrap().to_string(), "now a string");
+    assert_eq!(result.unwrap().to_string(), "\"now a string\"");
 }
 
 #[test]
@@ -1313,7 +1313,7 @@ fn test_parameter_converter_string_to_upper() {
     )
     .unwrap();
     let result = parse_and_eval("(p)".to_string(), env);
-    assert_eq!(result.unwrap().to_string(), "HELLO");
+    assert_eq!(result.unwrap().to_string(), "\"HELLO\"");
 }
 
 #[test]

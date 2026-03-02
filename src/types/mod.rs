@@ -16,21 +16,6 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct Parameter {
-    pub id: u64,
-    pub converter: Option<Box<Expr>>,
-}
-
-impl Parameter {
-    pub fn new(id: u64, converter: Option<Expr>) -> Parameter {
-        Parameter {
-            id,
-            converter: converter.map(Box::new),
-        }
-    }
-}
-
 pub const BOOLEAN_TRUE_STR: &str = "#t";
 pub const BOOLEAN_FALSE_STR: &str = "#f";
 
@@ -56,6 +41,7 @@ pub enum Expr {
     Void(),
 }
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum Representation {
     External,
     Formatted,
@@ -74,9 +60,9 @@ impl Expr {
             Expr::Char(c) => format_char(c, Representation::Formatted),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
-            Expr::Pair(p) => format_pair(p, " ", true),
+            Expr::Pair(p) => format_pair(p, " ", true, Representation::Formatted),
             Expr::Null => format_null(),
-            Expr::Vector(v) => format_vector(v, true),
+            Expr::Vector(v) => format_vector(v, true, Representation::Formatted),
             Expr::ByteVector(bv) => format_bytevector(bv, true),
             proc @ Expr::Procedure(_) => proc.to_string(),
             closure @ Expr::Closure(_) => closure.to_string(),
@@ -100,9 +86,9 @@ impl fmt::Display for Expr {
             Expr::Char(c) => format_char(c, Representation::External),
             Expr::Boolean(b) => format_boolean(b),
             Expr::Symbol(s) => s.clone(),
-            Expr::Pair(p) => format_pair(p, " ", true),
+            Expr::Pair(p) => format_pair(p, " ", true, Representation::External),
             Expr::Null => format_null(),
-            Expr::Vector(v) => format_vector(v, true),
+            Expr::Vector(v) => format_vector(v, true, Representation::External),
             Expr::ByteVector(bv) => format_bytevector(bv, true),
             Expr::Procedure(_) => String::from("#<function {}>"),
             Expr::Closure(_) => String::from("#<procedure {}>"),
@@ -141,14 +127,22 @@ fn format_boolean(b: &bool) -> String {
     }
 }
 
+/// Format an `Expr` according to the given `Representation`.
+fn format_expr(expr: &Expr, rep: Representation) -> String {
+    match rep {
+        Representation::External => expr.to_string(),
+        Representation::Formatted => expr.formatted(),
+    }
+}
+
 /// Format pair into literal representation.
-pub fn format_pair(pair: &Pair, delim: &str, parenthesis: bool) -> String {
+pub fn format_pair(pair: &Pair, delim: &str, parenthesis: bool, rep: Representation) -> String {
     let (car, cdr) = &*pair.elements.borrow();
 
     if pair.is_list() {
         let items = pair
             .iter()
-            .map(|e| e.to_string())
+            .map(|e| format_expr(&e, rep))
             .collect::<Vec<_>>()
             .join(delim);
 
@@ -159,20 +153,23 @@ pub fn format_pair(pair: &Pair, delim: &str, parenthesis: bool) -> String {
         };
     }
 
+    let car_s = format_expr(car, rep);
+    let cdr_s = format_expr(cdr, rep);
+
     if parenthesis {
-        return format!("({car} . {cdr})");
+        return format!("({car_s} . {cdr_s})");
     }
 
-    format!("{car}{cdr}")
+    format!("{car_s}{cdr_s}")
 }
 
 /// Format vector into literal representation.
-fn format_vector(vector: &Vector, literal: bool) -> String {
+fn format_vector(vector: &Vector, literal: bool, rep: Representation) -> String {
     let items = vector
         .elements
         .borrow()
         .iter()
-        .map(|e| e.to_string())
+        .map(|e| format_expr(e, rep))
         .collect::<Vec<String>>()
         .join(" ");
 
@@ -749,5 +746,20 @@ impl ByteVector {
         }
 
         format!("\\x{};", byte)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Parameter {
+    pub id: u64,
+    pub converter: Option<Box<Expr>>,
+}
+
+impl Parameter {
+    pub fn new(id: u64, converter: Option<Expr>) -> Parameter {
+        Parameter {
+            id,
+            converter: converter.map(Box::new),
+        }
     }
 }
