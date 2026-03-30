@@ -2,7 +2,7 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
-use crate::env::{EnvRef, next_parameter_id};
+use crate::env::{next_parameter_id, EnvRef};
 use crate::error::Error;
 use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
@@ -579,12 +579,7 @@ pub fn vector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [
-            Expr::Vector(dest),
-            Expr::Number(at),
-            Expr::Vector(from),
-            Expr::Number(start),
-        ] => {
+        [Expr::Vector(dest), Expr::Number(at), Expr::Vector(from), Expr::Number(start)] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -604,13 +599,8 @@ pub fn vector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [
-            Expr::Vector(dest),
-            Expr::Number(at),
-            Expr::Vector(from),
-            Expr::Number(start),
-            Expr::Number(end),
-        ] => {
+        [Expr::Vector(dest), Expr::Number(at), Expr::Vector(from), Expr::Number(start), Expr::Number(end)] =>
+        {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -664,12 +654,7 @@ pub fn vector_fill(args: &[Expr], _: EnvRef) -> Result {
             vec.fill(new_value, start, vec.len())?;
             Ok(Expr::Void())
         }
-        [
-            Expr::Vector(vec),
-            new_value,
-            Expr::Number(start),
-            Expr::Number(end),
-        ] => {
+        [Expr::Vector(vec), new_value, Expr::Number(start), Expr::Number(end)] => {
             let v_len = Number::from_usize(vec.len());
             if *start == v_len && *end == v_len {
                 return Ok(Expr::Null);
@@ -770,11 +755,9 @@ pub fn bytevector_ref(args: &[Expr], _: EnvRef) -> Result {
 /// Set byte at index to new value.
 pub fn bytevector_set(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [
-            Expr::ByteVector(bv),
-            Expr::Number(n_index),
-            Expr::Number(n_byte),
-        ] if n_index.is_usize() && n_byte.is_byte() => {
+        [Expr::ByteVector(bv), Expr::Number(n_index), Expr::Number(n_byte)]
+            if n_index.is_usize() && n_byte.is_byte() =>
+        {
             let index = n_index
                 .to_usize()
                 .expect("value should have been converted to usize");
@@ -809,11 +792,7 @@ pub fn bytevector_copy(args: &[Expr], _: EnvRef) -> Result {
                 None => Err(Error::new("out of range")),
             }
         }
-        [
-            Expr::ByteVector(vec),
-            Expr::Number(start),
-            Expr::Number(end),
-        ] => {
+        [Expr::ByteVector(vec), Expr::Number(start), Expr::Number(end)] => {
             let v_len = Number::from_usize(vec.len());
             if *start == v_len && *end == v_len {
                 return Ok(Expr::Null);
@@ -836,11 +815,7 @@ pub fn bytevector_copy(args: &[Expr], _: EnvRef) -> Result {
 /// Copy elements from one `ByteVector` into another using range indexes.
 pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [
-            Expr::ByteVector(dest),
-            Expr::Number(at),
-            Expr::ByteVector(from),
-        ] => {
+        [Expr::ByteVector(dest), Expr::Number(at), Expr::ByteVector(from)] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -855,12 +830,7 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [
-            Expr::ByteVector(dest),
-            Expr::Number(at),
-            Expr::ByteVector(from),
-            Expr::Number(start),
-        ] => {
+        [Expr::ByteVector(dest), Expr::Number(at), Expr::ByteVector(from), Expr::Number(start)] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -880,13 +850,8 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [
-            Expr::ByteVector(dest),
-            Expr::Number(at),
-            Expr::ByteVector(from),
-            Expr::Number(start),
-            Expr::Number(end),
-        ] => {
+        [Expr::ByteVector(dest), Expr::Number(at), Expr::ByteVector(from), Expr::Number(start), Expr::Number(end)] =>
+        {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -1355,11 +1320,7 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             port.write_string(s)?;
             Ok(Expr::Void())
         }
-        [
-            Expr::String(s),
-            Expr::Port(Port::TextOutput(input)),
-            Expr::Number(start),
-        ] => {
+        [Expr::String(s), Expr::Port(Port::TextOutput(input)), Expr::Number(start)] => {
             let start = start
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -1370,12 +1331,8 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             port.write_string(&s[start..])?;
             Ok(Expr::Void())
         }
-        [
-            Expr::String(s),
-            Expr::Port(Port::TextOutput(input)),
-            Expr::Number(start),
-            Expr::Number(end),
-        ] => {
+        [Expr::String(s), Expr::Port(Port::TextOutput(input)), Expr::Number(start), Expr::Number(end)] =>
+        {
             let start = start
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;

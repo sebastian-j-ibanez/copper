@@ -51,7 +51,7 @@ impl Env {
             env.insert_proc("load", procedures::load_file);
             env.insert_proc("display", procedures::display);
             env.insert_proc("newline", procedures::newline);
-            env.insert_proc("print", procedures::print);
+            env.insert_proc("print", procedures::display);
             env.insert_proc("println", procedures::println);
             env.insert_proc("pp", procedures::pretty_print);
             // Math

@@ -5,7 +5,7 @@
 //! Functions for REPL IO.
 
 use std::fs::File;
-use std::io::{self, BufRead, Write, stdout};
+use std::io::{self, stdout, BufRead, Write};
 use std::process;
 
 use colored::{self, Colorize};
