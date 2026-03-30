@@ -218,7 +218,8 @@ impl Env {
         }
     }
 
-    /// Insert a new `Procedure` into `HashMap<String, Expr>`. Created to clean up boilerplate in `env::standard_env()`.
+    /// Insert a new `Procedure` into `HashMap<String, Expr>`.
+    /// Used to reduce boilerplate in `env::standard_env()`.
     fn insert_proc(&mut self, name: &str, function: Procedure) {
         self.data
             .insert(name.to_string(), Expr::Procedure(function));

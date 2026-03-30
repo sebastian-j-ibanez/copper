@@ -7,19 +7,20 @@ use crate::error::Error;
 use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
 use crate::types::ports::{BinaryOutputPort, Port};
-use crate::types::{
-    ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector, format_pair,
-};
+use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector};
 use crate::{io, parser};
 use std::ops::{Add, Deref, Div, Mul, Sub};
 
 // I/O
 
-/// Display raw expression in stdout.
+/// Print expression in stdout.
+///
+/// Does not display formatting punctuation such as
+/// quotations around `String` or #\ before chars.
 pub fn display(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [expr] => {
-            print!("{}", expr);
+            print!("{}", expr.formatted());
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected 1 valid expression")),
@@ -32,35 +33,15 @@ pub fn newline(_: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Void())
 }
 
-/// Print formatted value of expression in stdout.
-pub fn print(args: &[Expr], _: EnvRef) -> Result {
-    if let Some(arg) = args.first() {
-        match arg {
-            Expr::String(s) => print!("{}", s),
-            Expr::Char(c) => print!("{}", c),
-            Expr::Pair(p) => {
-                print!("{}", format_pair(p, "", false));
-            }
-            _ => print!("{}", arg),
-        }
-        return Ok(Expr::Void());
-    }
-
-    Err(Error::new("expected 1 valid expression"))
-}
-
 /// Print formatted value of expression in stdout with a newline.
 pub fn println(args: &[Expr], _: EnvRef) -> Result {
-    if let Some(arg) = args.first() {
-        match arg {
-            Expr::String(s) => println!("{}", s),
-            Expr::Char(c) => println!("{}", c),
-            _ => println!("{}", arg),
+    match args {
+        [expr] => {
+            println!("{}", expr.formatted());
+            Ok(Expr::Void())
         }
-        return Ok(Expr::Void());
+        _ => Err(Error::new("expected 1 valid expression")),
     }
-
-    Err(Error::new("expected 1 valid expression"))
 }
 
 /// Evaluate the contents of a file.
@@ -1464,14 +1445,14 @@ pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
 
             if let Expr::Port(Port::TextOutput(port)) = port {
                 let mut port = port.borrow_mut();
-                port.write_string(&expr.formatted())?;
+                port.write_string(&expr.to_string())?;
                 return Ok(Expr::Void());
             }
             Err(Error::new("current-output-port is not initialized"))
         }
         [expr, Expr::Port(Port::TextOutput(port))] => {
             let mut port = port.borrow_mut();
-            port.write_string(&expr.formatted())?;
+            port.write_string(&expr.to_string())?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected obj and optional text output port")),
