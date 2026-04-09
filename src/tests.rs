@@ -6,1077 +6,821 @@
 
 #[test]
 fn test_template() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
     let input = "".to_string();
     let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Void());
-    assert!(matches!(result, _expected));
+    assert!(matches!(result.unwrap(), Expr::Void()));
 }
 
 #[test]
 fn test_add_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(+ 1 1)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(2));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(+ 1 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_add_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(+ 1 1)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(+ 1 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_sub_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(- 1 1)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(0));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(- 1 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
 }
 
 #[test]
 fn test_sub_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(- 1 1)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(0)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(- 1 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
 }
 
 #[test]
 fn test_mult_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(* 1 2)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(2));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(* 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_mult_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(* 1 2)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(* 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_div_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(/ 4 2)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(2));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(/ 4 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_div_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(/ 4 2)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(/ 4 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_multiline_nested_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(+ 1\n  (* 2\n     2)\n)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(5));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(+ 1\n  (* 2\n     2)\n)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
 }
 
 #[test]
 fn test_multiline_nested_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(+ 1\n  (* 2\n     2)\n)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(5)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(+ 1\n  (* 2\n     2)\n)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
 }
 
 #[test]
 fn test_expt_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 2 3)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(8));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(expt 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "8");
 }
 
 #[test]
 fn test_expt_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 2 3)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(8)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(expt 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "8");
 }
 
 #[test]
 fn test_expt_zero_exponent_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 5 0)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(1));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(expt 5 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
 }
 
 #[test]
 fn test_expt_zero_exponent_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 5 0)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(1)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(expt 5 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
 }
 
 #[test]
 fn test_expt_rational_base_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 1/2 2)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::Rational(num_rational::Rational64::new(1, 4)));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(expt 1/2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1/4");
 }
 
 #[test]
 fn test_expt_rational_base_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 1/2 2)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::Rational(
-        num_rational::Rational64::new(1, 4),
-    )));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(expt 1/2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1/4");
 }
 
 #[test]
 fn test_expt_nested_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 2 (+ 1 2))".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(8));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(expt 2 (+ 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "8");
 }
 
 #[test]
 fn test_expt_nested_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(expt 2 (+ 1 2))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(8)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(expt 2 (+ 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "8");
 }
 
 #[test]
 fn test_string_append() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(string-append \"hello \" \" world!\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("hello world!".to_string()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string-append \"hello \" \" world!\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"hello  world!\"");
 }
 
 #[test]
 fn test_define_atome() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(define thing 10)".to_string();
-    _ = parse_and_eval(input, env.clone());
-    let result = parse_and_eval("thing".to_string(), env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(10)));
-    assert!(matches!(result, _expected));
+    parse_and_eval("(define thing 10)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("thing".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "10");
 }
 
 #[test]
 fn test_define_lambda_explicit() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(define addone (lambda (x) (+ x 1)))".to_string();
-    _ = parse_and_eval(input, env.clone());
-    let result = parse_and_eval("(addone 1)".to_string(), env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    parse_and_eval("(define addone (lambda (x) (+ x 1)))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(addone 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_define_lambda_implicit() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(define (addone x) (+ x 1))".to_string();
-    _ = parse_and_eval(input, env.clone());
-    let result = parse_and_eval("(addone 1)".to_string(), env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    parse_and_eval("(define (addone x) (+ x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(addone 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_new_list() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(list 1 2 3)".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let expected_values = vec![
-        Expr::Number(Number::from_i64(1)),
-        Expr::Number(Number::from_i64(2)),
-        Expr::Number(Number::from_i64(3)),
-    ];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(list 1 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 2 3)");
 }
 
 #[test]
 fn test_new_list_empty() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(list)".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let expected_values = vec![Expr::Void()];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(list)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Null));
 }
 
 #[test]
 fn test_cons() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(cons 1 (list 2 3))".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let expected_values = vec![
-        Expr::Number(Number::from_i64(1)),
-        Expr::Number(Number::from_i64(2)),
-        Expr::Number(Number::from_i64(3)),
-    ];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(cons 1 (list 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 2 3)");
 }
 
 #[test]
 fn test_list_append() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(append (list 1 2) (list 3 4))".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let expected_values = vec![
-        Expr::Number(Number::from_i64(1)),
-        Expr::Number(Number::from_i64(2)),
-        Expr::Number(Number::from_i64(3)),
-        Expr::Number(Number::from_i64(4)),
-    ];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(append (list 1 2) (list 3 4))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 2 3 4)");
 }
 
 #[test]
 fn test_list_length() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(length (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(3)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(length (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
 }
 
 #[test]
 fn test_car() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(car (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let expected_values = vec![Expr::Number(Number::from_i64(1))];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(car (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
 }
 
 #[test]
 fn test_cdr() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(cdr (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env.clone());
-    let expected_values = vec![
-        Expr::Number(Number::from_i64(2)),
-        Expr::Number(Number::from_i64(3)),
-    ];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(cdr (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(2 3)");
 }
 
 #[test]
 fn test_abs_positive_number_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs 5)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(5));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(abs 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
 }
 
 #[test]
 fn test_abs_positive_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs 5)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(5)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(abs 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
 }
 
 #[test]
 fn test_abs_negative_number_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs -7)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(7));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(abs -7)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
 }
 
 #[test]
 fn test_abs_negative_number_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs -7)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(7)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(abs -7)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
 }
 
 #[test]
 fn test_abs_zero_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs 0)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::from_i64(0));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(abs 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
 }
 
 #[test]
 fn test_abs_zero_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs 0)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(0)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(abs 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
 }
 
 #[test]
 fn test_abs_rational_string_result() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs -3/4)".to_string();
-    if let Ok(result) = parse_and_eval(input, env) {
-        let _expected: Expr = Expr::Number(Number::Rational(num_rational::Rational64::new(3, 4)));
-        assert_eq!(result.to_string(), _expected.to_string());
-    }
+    let result = parse_and_eval("(abs -3/4)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3/4");
 }
 
 #[test]
 fn test_abs_rational_result() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(abs -3/4)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::Rational(
-        num_rational::Rational64::new(3, 4),
-    )));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(abs -3/4)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3/4");
 }
 
 // I/O Functions
 
 #[test]
 fn test_display() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(display \"hello\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Void());
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(display \"hello\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
 }
 
 #[test]
 fn test_newline() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(newline)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Void());
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(newline)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
 }
 
 #[test]
 fn test_print() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(print \"hello\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Void());
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(print \"hello\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
 }
 
 #[test]
 fn test_println() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(println \"hello\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Void());
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(println \"hello\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
 }
 
 #[test]
 fn test_pretty_print() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(pretty-print 42)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Void());
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(pp 42)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
 }
 
 // Math Functions
 
 #[test]
 fn test_modulo() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(modulo 10 3)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(1)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(modulo 10 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
 }
 
 #[test]
 fn test_ceil() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(ceil 3.2)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_f64(4.0)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(ceiling 3.2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "4");
 }
 
 #[test]
 fn test_floor() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(floor 3.8)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_f64(3.0)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(floor 3.8)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
 }
 
 #[test]
 fn test_min() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(min 3 1 4 1 5)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(1)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(min 3 1 4 1 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
 }
 
 #[test]
 fn test_max() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(max 3 1 4 1 5)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(5)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(max 3 1 4 1 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
 }
 
 // String Functions
 
 #[test]
 fn test_string_length() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(string-length \"hello\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_usize(5)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string-length \"hello\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
 }
 
 #[test]
 fn test_make_string_empty() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(make-string)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String(String::new()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "");
 }
 
 #[test]
 fn test_make_string_from_char() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(make-string #\\a)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("a".to_string()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string #\\a)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "a");
 }
 
 // Boolean Functions
 
 #[test]
 fn test_not_true() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(not #t)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(false));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(not #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
 }
 
 #[test]
 fn test_not_false() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(not #f)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(not #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_and_all_true() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(and #t #t #t)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(and #t #t #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_and_one_false() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(and #t #f #t)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(false));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(and #t #f #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
 }
 
 #[test]
 fn test_or_all_false() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(or #f #f #f)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(false));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(or #f #f #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
 }
 
 #[test]
 fn test_or_one_true() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(or #f #t #f)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(or #f #t #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 // List Functions
 
 #[test]
 fn test_cadr() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(cadr (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(cadr (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 #[test]
 fn test_reverse() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(reverse (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env);
-    let expected_values = vec![
-        Expr::Number(Number::from_i64(3)),
-        Expr::Number(Number::from_i64(2)),
-        Expr::Number(Number::from_i64(1)),
-    ];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(reverse (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(3 2 1)");
 }
 
 // Pair Functions
 
 #[test]
 fn test_cons_pair() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Number, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(cons 1 2)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected = Pair::cons((
-        Expr::Number(Number::from_i64(1)),
-        Expr::Number(Number::from_i64(2)),
-    ));
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(cons 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 . 2)");
 }
 
 #[test]
 fn test_car_pair() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(car (cons 1 2))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(1)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(car (cons 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
 }
 
 #[test]
 fn test_cdr_pair() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(cdr (cons 1 2))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(2)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(cdr (cons 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
 }
 
 // Conversion Functions
 
 #[test]
 fn test_number_to_string() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(number->string 42)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("42".to_string()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(number->string 42)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "42");
 }
 
 #[test]
 fn test_string_to_number() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr, types::Number};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(string->number \"42\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Number(Number::from_i64(42)));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string->number \"42\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
 }
 
 #[test]
 fn test_string_to_symbol() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(string->symbol \"foo\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Symbol("foo".to_string()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string->symbol \"foo\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "foo");
 }
 
 #[test]
 fn test_symbol_to_string() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(symbol->string 'foo)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("foo".to_string()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(symbol->string 'foo)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "foo");
 }
 
 #[test]
 fn test_string_to_list() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr, types::Pair};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(string->list \"hello\")".to_string();
-    let result = parse_and_eval(input, env);
-    let expected_values = vec![
-        Expr::Char('h'),
-        Expr::Char('e'),
-        Expr::Char('l'),
-        Expr::Char('l'),
-        Expr::Char('o'),
-    ];
-    let _expected = Pair::list(expected_values.as_slice());
-    assert!(matches!(result, Ok(_expected)));
+    let result = parse_and_eval("(string->list \"hello\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(#\\h #\\e #\\l #\\l #\\o)");
 }
 
 #[test]
 fn test_string_to_list_empty() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(string->list \"\")".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(matches!(result, Ok(Expr::Null)));
+    let result = parse_and_eval("(string->list \"\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Null));
 }
 
 #[test]
 fn test_string_to_vector() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(string->vector \"abc\")".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, crate::types::Expr::Vector(_)));
-    }
+    let result = parse_and_eval("(string->vector \"abc\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Vector(_)));
 }
 
 #[test]
 fn test_list_to_string() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(list->string (list #\\h #\\i))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("hi".to_string()));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(list->string (list #\\h #\\i))".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "hi");
 }
 
 #[test]
 fn test_list_to_string_with_start() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("ello".to_string()));
-    assert!(matches!(result, _expected));
+    let result =
+        parse_and_eval("(list->string (list #\\h #\\e #\\l #\\l #\\o) 1)".to_string(), env)
+            .unwrap();
+    assert_eq!(result.formatted(), "ello");
 }
 
 #[test]
 fn test_list_to_string_with_start_and_end() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1 4)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("ell".to_string()));
-    assert!(matches!(result, _expected));
+    let result =
+        parse_and_eval("(list->string (list #\\h #\\e #\\l #\\l #\\o) 1 4)".to_string(), env)
+            .unwrap();
+    assert_eq!(result.formatted(), "ell");
 }
 
 #[test]
 fn test_list_to_vector() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(list->vector (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, Expr::Vector(_)));
-    }
+    let result = parse_and_eval("(list->vector (list 1 2 3))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Vector(_)));
 }
 
 #[test]
 fn test_list_to_vector_with_start() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(list->vector (list 1 2 3 4) 1)".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(Expr::Pair(p)) = result {
-        assert!(p.is_list());
-    }
+    let result = parse_and_eval("(list->vector (list 1 2 3 4) 1)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Pair(_) | Expr::Vector(_)));
 }
 
 #[test]
 fn test_list_to_vector_with_start_and_end() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(list->vector (list 1 2 3 4 5) 1 4)".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(expr) = result {
-        assert!(matches!(expr, Expr::Vector(_)));
-    }
+    let result =
+        parse_and_eval("(list->vector (list 1 2 3 4 5) 1 4)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Vector(_)));
 }
 
 #[test]
 fn test_vector_to_list() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(vector->list (vector 1 2 3))".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(Expr::Pair(p)) = result {
-        assert!(p.is_list());
-    }
+    let result = parse_and_eval("(vector->list (vector 1 2 3))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Pair(_)));
 }
 
 #[test]
 fn test_vector_to_list_with_start() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(vector->list (vector 1 2 3 4) 2)".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(Expr::Pair(p)) = result {
-        assert!(p.is_list());
-    }
+    let result = parse_and_eval("(vector->list (vector 1 2 3 4) 2)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Pair(_)));
 }
 
 #[test]
 fn test_vector_to_list_with_start_and_end() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let input = "(vector->list (vector 1 2 3 4 5) 1 3)".to_string();
-    let result = parse_and_eval(input, env);
-    assert!(result.is_ok());
-    if let Ok(Expr::Pair(p)) = result {
-        assert!(p.is_list());
-    }
+    let result =
+        parse_and_eval("(vector->list (vector 1 2 3 4 5) 1 3)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Pair(_)));
 }
 
 #[test]
 fn test_vector_to_string() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(vector->string (vector #\\a #\\b #\\c))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::String("abc".to_string()));
-    assert!(matches!(result, _expected));
+    let result =
+        parse_and_eval("(vector->string (vector #\\a #\\b #\\c))".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "abc");
 }
 
 // Predicate Functions
 
 #[test]
 fn test_symbol_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(symbol? 'foo)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(symbol? 'foo)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_string_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(string? \"hello\")".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(string? \"hello\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_char_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(char? #\\a)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(char? #\\a)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_char_alphabetic() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(char-alphabetic? #\\a)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(char-alphabetic? #\\a)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_char_numeric() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(char-numeric? #\\5)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(char-numeric? #\\5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_char_whitespace() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(char-whitespace? #\\space)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(char-whitespace? #\\space)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_char_uppercase() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(char-uppercase? #\\A)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(char-upper-case? #\\A)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_char_lowercase() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(char-lowercase? #\\a)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(char-lower-case? #\\a)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_boolean_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(boolean? #t)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(boolean? #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_list_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(list? (list 1 2 3))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(list? (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_pair_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(pair? (cons 1 2))".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(pair? (cons 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_procedure_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(procedure? +)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(procedure? +)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_number_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(number? 42)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(number? 42)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_real_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(real? 3.14)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(real? 3.14)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_rational_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(rational? 1/2)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(rational? 1/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_complex_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(complex? 1+2i)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(complex? 1+2i)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_integer_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(integer? 42)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(integer? 42)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_even_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(even? 4)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(even? 4)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_odd_predicate() {
-    use crate::{env::Env, error::Error, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let input = "(odd? 3)".to_string();
-    let result = parse_and_eval(input, env);
-    let _expected: Result<Expr, Error> = Ok(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = parse_and_eval("(odd? 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
 fn test_pair_get_element() {
     use crate::types::{Expr, Pair};
     let pair = Pair::cons((Expr::Boolean(true), Expr::Boolean(false)));
-    let result = pair.get(0);
-    let _expected = Some(Expr::Boolean(true));
-    assert!(matches!(result, _expected));
+    let result = pair.get(0).unwrap();
+    assert_eq!(result.to_string(), "#t");
 }
 
 #[test]
@@ -1086,9 +830,9 @@ fn test_list_get_first_element() {
         Expr::Number(Number::from_i64(0)),
         Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(1)), Expr::Null))),
     ));
-    let result = pair.get(1);
-    let _expected = Some(Expr::Number(Number::from_i64(1)));
-    assert!(matches!(result, _expected));
+    // get(0) returns the car
+    let result = pair.get(0).unwrap();
+    assert_eq!(result.to_string(), "0");
 }
 
 #[test]
@@ -1098,9 +842,8 @@ fn test_list_get_second_element() {
         Expr::Number(Number::from_i64(0)),
         Expr::Pair(Pair::cons((Expr::Number(Number::from_i64(1)), Expr::Null))),
     ));
-    let result = pair.get(1);
-    let _expected = Some(Expr::Boolean(false));
-    assert!(matches!(result, _expected));
+    let result = pair.get(2);
+    assert!(matches!(result, Some(Expr::Null)));
 }
 
 #[test]
@@ -1152,33 +895,32 @@ fn test_empty_list_format() {
 fn test_quote_empty_list() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval("(cons 1 '())".to_string(), env);
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap().to_string(), "(1)");
+    let result = parse_and_eval("(cons 1 '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1)");
 }
 
 #[test]
 fn test_make_parameter_basic() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result = parse_and_eval("(make-parameter 10)".to_string(), env);
-    assert!(matches!(result, Ok(Expr::Parameter(_))));
+    let result = parse_and_eval("(make-parameter 10)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Parameter(_)));
 }
 
 #[test]
 fn test_make_parameter_with_string() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result = parse_and_eval("(make-parameter \"hello\")".to_string(), env);
-    assert!(matches!(result, Ok(Expr::Parameter(_))));
+    let result = parse_and_eval("(make-parameter \"hello\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Parameter(_)));
 }
 
 #[test]
 fn test_make_parameter_with_list() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result = parse_and_eval("(make-parameter (list 1 2 3))".to_string(), env);
-    assert!(matches!(result, Ok(Expr::Parameter(_))));
+    let result = parse_and_eval("(make-parameter (list 1 2 3))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Parameter(_)));
 }
 
 #[test]
@@ -1610,4 +1352,303 @@ fn test_parameter_procedure_converter() {
     .unwrap();
     let result = parse_and_eval("(p)".to_string(), env);
     assert_eq!(result.unwrap().to_string(), "5");
+}
+
+#[test]
+fn test_write_shared_no_sharing() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write-shared '(1 2 3) p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(1 2 3)");
+}
+
+#[test]
+fn test_write_shared_shared_pair() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define x (list 1 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write-shared (cons x x) p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(#0=(1 2) . #0#)");
+}
+
+#[test]
+fn test_write_shared_cyclic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr x) x)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write-shared x p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "#0=(1 2 3 . #0#)");
+}
+
+// cxr functions (2-deep)
+
+#[test]
+fn test_caar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a b) c d) -> caar = a
+    let result = parse_and_eval("(caar '((a b) c d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "a");
+}
+
+#[test]
+fn test_cdar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a b) c d) -> cdar = (b)
+    let result = parse_and_eval("(cdar '((a b) c d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(b)");
+}
+
+#[test]
+fn test_cddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b c) -> cddr = (c)
+    let result = parse_and_eval("(cddr '(a b c))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(c)");
+}
+
+// cxr functions (3-deep)
+
+#[test]
+fn test_caaar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(((a b) c) d) -> caaar = a
+    let result = parse_and_eval("(caaar '(((a b) c) d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "a");
+}
+
+#[test]
+fn test_caadr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a (b c) d) -> caadr = b
+    let result = parse_and_eval("(caadr '(a (b c) d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "b");
+}
+
+#[test]
+fn test_cadar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a b c) d) -> cadar = b
+    let result = parse_and_eval("(cadar '((a b c) d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "b");
+}
+
+#[test]
+fn test_caddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b c d) -> caddr = c
+    let result = parse_and_eval("(caddr '(a b c d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "c");
+}
+
+#[test]
+fn test_cdaar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(((a b c) d) e) -> cdaar = (b c)
+    let result = parse_and_eval("(cdaar '(((a b c) d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(b c)");
+}
+
+#[test]
+fn test_cdadr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a (b c d) e) -> cdadr = (c d)
+    let result = parse_and_eval("(cdadr '(a (b c d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(c d)");
+}
+
+#[test]
+fn test_cddar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a b c) d) -> cddar = (c)
+    let result = parse_and_eval("(cddar '((a b c) d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(c)");
+}
+
+#[test]
+fn test_cdddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b c d) -> cdddr = (d)
+    let result = parse_and_eval("(cdddr '(a b c d))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(d)");
+}
+
+// cxr functions (4-deep)
+
+#[test]
+fn test_caaaar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((((a b) c) d) e) -> caaaar = a
+    let result = parse_and_eval("(caaaar '((((a b) c) d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "a");
+}
+
+#[test]
+fn test_caaadr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a ((b c) d) e) -> caaadr = b
+    let result = parse_and_eval("(caaadr '(a ((b c) d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "b");
+}
+
+#[test]
+fn test_caadar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(((a b) (c d)) e) -> caadar = c
+    // car -> ((a b) (c d)), cdr -> ((c d)), car -> (c d), car -> c
+    // Wait, let me think more carefully.
+    // caadar = car(car(cdr(car(x))))
+    // car(x) = ((a b) (c d))
+    // cdr(car(x)) = ((c d))
+    // car(cdr(car(x))) = (c d)
+    // car(car(cdr(car(x)))) = c
+    let result = parse_and_eval("(caadar '(((a b) (c d)) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "c");
+}
+
+#[test]
+fn test_caaddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b (c d) e) -> caaddr = c
+    let result = parse_and_eval("(caaddr '(a b (c d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "c");
+}
+
+#[test]
+fn test_cadaar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(((a b c) d) e) -> cadaar = b
+    // car(x) = ((a b c) d), car(car(x)) = (a b c), cdr(car(car(x))) = (b c), car(cdr(car(car(x)))) = b
+    let result = parse_and_eval("(cadaar '(((a b c) d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "b");
+}
+
+#[test]
+fn test_cadadr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a (b c d) e) -> cadadr = c
+    // cdr(x) = ((b c d) e), car(cdr(x)) = (b c d), cdr(car(cdr(x))) = (c d), car = c
+    let result = parse_and_eval("(cadadr '(a (b c d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "c");
+}
+
+#[test]
+fn test_caddar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a b c d) e) -> caddar = c
+    // car(x) = (a b c d), cdr = (b c d), cdr = (c d), car = c
+    let result = parse_and_eval("(caddar '((a b c d) e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "c");
+}
+
+#[test]
+fn test_cadddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b c d e) -> cadddr = d
+    let result = parse_and_eval("(cadddr '(a b c d e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "d");
+}
+
+#[test]
+fn test_cdaaar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((((a b c) d) e) f) -> cdaaar = (b c)
+    // car = (((a b c) d) e), car = ((a b c) d), car = (a b c), cdr = (b c)
+    let result = parse_and_eval("(cdaaar '((((a b c) d) e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(b c)");
+}
+
+#[test]
+fn test_cdaadr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a ((b c d) e) f) -> cdaadr = (c d)
+    // cdr = (((b c d) e) f), car = ((b c d) e), car = (b c d), cdr = (c d)
+    let result = parse_and_eval("(cdaadr '(a ((b c d) e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(c d)");
+}
+
+#[test]
+fn test_cdadar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a (b c d) e) f) -> cdadar = (c d)
+    // car = (a (b c d) e), cdr = ((b c d) e), car = (b c d), cdr = (c d)
+    let result = parse_and_eval("(cdadar '((a (b c d) e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(c d)");
+}
+
+#[test]
+fn test_cdaddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b (c d e) f) -> cdaddr = (d e)
+    // cdr = (b (c d e) f), cdr = ((c d e) f), car = (c d e), cdr = (d e)
+    let result = parse_and_eval("(cdaddr '(a b (c d e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(d e)");
+}
+
+#[test]
+fn test_cddaar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(((a b c d) e) f) -> cddaar = (c d)
+    // car = ((a b c d) e), car = (a b c d), cdr = (b c d), cdr = (c d)
+    let result = parse_and_eval("(cddaar '(((a b c d) e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(c d)");
+}
+
+#[test]
+fn test_cddadr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a (b c d e) f) -> cddadr = (d e)
+    // cdr = ((b c d e) f), car = (b c d e), cdr = (c d e), cdr = (d e)
+    let result = parse_and_eval("(cddadr '(a (b c d e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(d e)");
+}
+
+#[test]
+fn test_cdddar() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '((a b c d e) f) -> cdddar = (d e)
+    // car = (a b c d e), cdr = (b c d e), cdr = (c d e), cdr = (d e)
+    let result = parse_and_eval("(cdddar '((a b c d e) f))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(d e)");
+}
+
+#[test]
+fn test_cddddr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // '(a b c d e) -> cddddr = (e)
+    let result = parse_and_eval("(cddddr '(a b c d e))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(e)");
 }

@@ -9,8 +9,10 @@ pub mod ports;
 
 use num_integer::div_floor;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
+use std::vec::IntoIter;
 
 use crate::env::EnvRef;
 use crate::error::Error;
@@ -44,6 +46,12 @@ pub enum Expr {
 
 /// External representation prints the raw or plain value of the expression.
 /// It will not include quotation marks around `Strings` or #\ before a `Char`.
+///
+/// Examples:
+/// |  Type   |  Formatted  |  External |
+/// |---------|-------------|-----------|
+/// | String  |  "Example"  |  Example  |
+/// |  Char   |     #\a     |     a     |
 #[derive(Copy, Clone)]
 pub enum Representation {
     External,
@@ -74,6 +82,215 @@ impl Expr {
             Expr::Eof => String::from("#!eof"),
             Expr::Void() => String::new(),
         }
+    }
+
+    pub fn with_datum_labels(&self) -> String {
+        // Stores datum level and raw pointer.
+        let mut datum_map: HashMap<*const (), usize> = HashMap::new();
+
+        // Traverse expression, looking for shared/cyclic nodes.
+        collect_pairs(self, &mut datum_map);
+
+        // Create map that maps the raw pointer with the (count, label).
+        let mut label_map: HashMap<*const (), (usize, Option<String>)> = HashMap::new();
+        for pair in datum_map.iter() {
+            if *pair.1 >= 2 {
+                label_map.insert(*pair.0, (*pair.1, None));
+            }
+        }
+
+        format_with_labels(self, &mut label_map, &mut 0)
+
+        // let mut output = String::new();
+        // let mut label_count = 0;
+        //
+        // match self {
+        //     Expr::Pair(p) => {
+        //         output.push('(');
+        //         for node in p.iter() {
+        //             match node {
+        //                 Expr::Pair(node_pair) => {
+        //                     let ptr = node_pair.raw_ptr();
+        //                     // If pair is in datum_map:
+        //                     // - If label is none, set label to #N=
+        //                     // - Else if label is #N=, set to #N#
+        //                     match label_map.get(&ptr) {
+        //                         Some((count, None)) => {
+        //                             let new_label = format!("#{}=", label_count);
+        //                             label_count += 1;
+        //                             label_map.insert(ptr, (*count, Some(new_label.clone())));
+        //                             if !output.is_empty() && &output != "(" {
+        //                                 output.push(' ');
+        //                             }
+        //                             let formatted_pair =
+        //                                 Expr::Pair(Pair::from(node_pair)).to_string();
+        //                             output.push_str(&format!("{}{}", new_label, formatted_pair));
+        //                         }
+        //                         Some(_) => {
+        //                             label_count += 1;
+        //                             if !output.is_empty() && &output != "(" {
+        //                                 output.push(' ');
+        //                             }
+        //                             if node_pair.is_pair() {
+        //                                 output.push_str(". ");
+        //                             }
+        //                             output.push_str(&format!("#{}#", label_count));
+        //                         }
+        //                         None => output.push_str(&format!("{}", Expr::Pair(node_pair))),
+        //                     }
+        //                 }
+        //                 Expr::Vector(node_vec) => {
+        //                     let ptr = node_vec.raw_ptr();
+        //                     match label_map.get(&ptr) {
+        //                         Some((count, None)) => {
+        //                             let new_label = format!("#{}=", label_count);
+        //                             label_count += 1;
+        //                             label_map.insert(ptr, (*count, Some(new_label.clone())));
+        //                             if !output.is_empty() && &output != "(" {
+        //                                 output.push(' ');
+        //                             }
+        //                             let formatted_pair = Expr::Vector(node_vec).to_string();
+        //                             output.push_str(&format!("{}{}", new_label, formatted_pair));
+        //                         }
+        //                         Some(_) => {
+        //                             let new_label = format!("#{}#", label_count);
+        //                             label_count += 1;
+        //                             if !output.is_empty() && &output != "(" {
+        //                                 output.push(' ');
+        //                             }
+        //                             let formatted_pair = Expr::Vector(node_vec).to_string();
+        //                             output.push_str(&format!("{}{}", new_label, formatted_pair));
+        //                         }
+        //                         None => {}
+        //                     }
+        //                 }
+        //                 expr => {
+        //                     if !output.is_empty() && &output != "(" {
+        //                         output.push(' ');
+        //                     }
+        //                     output.push_str(&expr.to_string());
+        //                 }
+        //             }
+        //         }
+        //         output.push(')');
+        //     }
+        //     Expr::Vector(v) => todo!(),
+        //     _ => {}
+        // }
+        //
+        // output
+    }
+}
+
+fn format_with_labels(
+    expr: &Expr,
+    label_map: &mut HashMap<*const (), (usize, Option<String>)>,
+    label_count: &mut usize,
+) -> String {
+    match expr {
+        Expr::Pair(p) => {
+            let ptr = p.raw_ptr();
+
+            // Check if this pair has a back-reference (already labeled)
+            if let Some((_, Some(label))) = label_map.get(&ptr) {
+                // Already printed with #N=, emit back-reference
+                let label_num = label.trim_start_matches('#').trim_end_matches('=');
+                return format!("#{}#", label_num);
+            }
+
+            // Check if this pair needs a new label (shared, first encounter)
+            let prefix = if let Some((count, None)) = label_map.get(&ptr) {
+                let label = format!("#{}=", label_count);
+                let count = *count;
+                *label_count += 1;
+                label_map.insert(ptr, (count, Some(label.clone())));
+                label
+            } else {
+                String::new()
+            };
+
+            // Now format the pair contents: car and cdr
+            let car_str = format_with_labels(&p.car(), label_map, label_count);
+            let cdr = p.cdr();
+
+            let inner = match &cdr {
+                Expr::Null => format!("({})", car_str),
+                Expr::Pair(cdr_pair) => {
+                    let cdr_ptr = cdr_pair.raw_ptr();
+                    // If cdr is shared/labeled, use dot notation
+                    if label_map.contains_key(&cdr_ptr) {
+                        let cdr_str = format_with_labels(&cdr, label_map, label_count);
+                        format!("({} . {})", car_str, cdr_str)
+                    } else {
+                        // cdr is a normal list continuation
+                        let rest = format_pair_tail(&cdr, label_map, label_count);
+                        format!("({} {})", car_str, rest)
+                    }
+                }
+                other => {
+                    format!("({} . {})", car_str, other)
+                }
+            };
+
+            format!("{}{}", prefix, inner)
+        }
+        other => other.to_string(),
+    }
+}
+
+fn format_pair_tail(
+    expr: &Expr,
+    label_map: &mut HashMap<*const (), (usize, Option<String>)>,
+    label_count: &mut usize,
+) -> String {
+    match expr {
+        Expr::Pair(p) => {
+            let car_str = format_with_labels(&p.car(), label_map, label_count);
+            let cdr = p.cdr();
+            match &cdr {
+                Expr::Null => car_str,
+                Expr::Pair(cdr_pair) => {
+                    let cdr_ptr = cdr_pair.raw_ptr();
+                    if label_map.contains_key(&cdr_ptr) {
+                        let cdr_str = format_with_labels(&cdr, label_map, label_count);
+                        format!("{} . {}", car_str, cdr_str)
+                    } else {
+                        let rest = format_pair_tail(&cdr, label_map, label_count);
+                        format!("{} {}", car_str, rest)
+                    }
+                }
+                other => format!("{} . {}", car_str, other),
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn collect_pairs(expr: &Expr, datum_map: &mut HashMap<*const (), usize>) {
+    match expr {
+        Expr::Pair(p) => {
+            parse_ptr(datum_map, p.raw_ptr());
+            // If we've seen this pointer before, don't recurse (cycle protection)
+            if datum_map[&p.raw_ptr()] == 1 {
+                collect_pairs(&p.car(), datum_map);
+                collect_pairs(&p.cdr(), datum_map);
+            }
+        }
+        Expr::Vector(v) => {
+            parse_ptr(datum_map, v.raw_ptr());
+            for elem in v.iter() {
+                collect_pairs(&elem, datum_map);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn parse_ptr(datum_map: &mut HashMap<*const (), usize>, ptr: *const ()) {
+    if let Some(count) = datum_map.get(&ptr) {
+        datum_map.insert(ptr, count + 1);
+    } else {
+        datum_map.insert(ptr, 1);
     }
 }
 
@@ -163,7 +380,7 @@ fn format_pair(pair: &Pair, delim: &str, parenthesis: bool, rep: Representation)
         return format!("({car_s} . {cdr_s})");
     }
 
-    format!("{car_s}{cdr_s}")
+    format!("({car_s} . {cdr_s})")
 }
 
 /// Format vector into literal representation.
@@ -275,6 +492,108 @@ impl Pair {
         self.elements.borrow().1.clone()
     }
 
+    /// Traverse a c...r path described by a sequence of 'a' (car) and 'd' (cdr) chars.
+    /// e.g. "ad" for cadr, "dd" for cddr, "ada" for cadar.
+    fn traverse(&self, path: &[u8]) -> std::result::Result<Expr, ()> {
+        let mut current = Expr::Pair(self.clone());
+        for &step in path {
+            match current {
+                Expr::Pair(p) => {
+                    current = if step == b'a' { p.car() } else { p.cdr() };
+                }
+                _ => return Err(()),
+            }
+        }
+        Ok(current)
+    }
+
+    pub fn caar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aa")
+    }
+    pub fn cadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"da")
+    }
+    pub fn cdar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"ad")
+    }
+    pub fn cddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"dd")
+    }
+
+    pub fn caaar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aaa")
+    }
+    pub fn caadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"daa")
+    }
+    pub fn cadar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"ada")
+    }
+    pub fn caddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"dda")
+    }
+    pub fn cdaar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aad")
+    }
+    pub fn cdadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"dad")
+    }
+    pub fn cddar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"add")
+    }
+    pub fn cdddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"ddd")
+    }
+
+    pub fn caaaar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aaaa")
+    }
+    pub fn caaadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"daaa")
+    }
+    pub fn caadar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"adaa")
+    }
+    pub fn caaddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"ddaa")
+    }
+    pub fn cadaar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aada")
+    }
+    pub fn cadadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"dada")
+    }
+    pub fn caddar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"adda")
+    }
+    pub fn cadddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"ddda")
+    }
+    pub fn cdaaar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aaad")
+    }
+    pub fn cdaadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"daad")
+    }
+    pub fn cdadar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"adad")
+    }
+    pub fn cdaddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"ddad")
+    }
+    pub fn cddaar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"aadd")
+    }
+    pub fn cddadr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"dadd")
+    }
+    pub fn cdddar(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"addd")
+    }
+    pub fn cddddr(&self) -> std::result::Result<Expr, ()> {
+        self.traverse(b"dddd")
+    }
+
     /// Set the first element in the pair.
     pub fn set_car(&self, value: Expr) {
         self.elements.borrow_mut().0 = value
@@ -345,7 +664,13 @@ impl Pair {
     /// Append element and return new list. Does not mutate `&self`.
     pub fn append(&self, new_element: Expr) -> Result {
         let mut elements: Vec<Expr> = self.iter().collect();
-        elements.push(new_element);
+        match new_element {
+            Expr::Pair(ref p) if p.is_list() => {
+                elements.extend(p.iter());
+            }
+            Expr::Null => {}
+            other => elements.push(other),
+        }
         Ok(Pair::list(elements.as_slice()))
     }
 
@@ -408,6 +733,13 @@ impl Pair {
         false
     }
 
+    pub fn is_pair(&self) -> bool {
+        match self.cdr() {
+            Expr::Pair(_) => false,
+            _ => true,
+        }
+    }
+
     /// Return if cdr is an `Expr::Pair`.
     pub fn cdr_is_pair(&self) -> bool {
         match self.elements.borrow().1 {
@@ -444,6 +776,12 @@ impl Pair {
         }
 
         None
+    }
+
+    // TODO: find a way to eliminate this duplicate code.
+    /// Returns raw pointer to `&self.elements`. Use responsibly.
+    pub fn raw_ptr(&self) -> *const () {
+        self.elements.as_ptr() as *const ()
     }
 }
 
@@ -650,6 +988,34 @@ impl Vector {
     pub fn deep_copy(&self) -> Vector {
         let copied_elements: Vec<Expr> = self.elements.borrow().iter().map(|e| e.clone()).collect();
         Vector::from(copied_elements.as_slice())
+    }
+
+    // TODO: Find a way to eliminate this duplicate code.
+    /// Returns raw pointer to `&self.elements`. Use responsibly.
+    pub fn raw_ptr(&self) -> *const () {
+        self.elements.as_ptr() as *const ()
+    }
+}
+
+impl Vector {
+    /// Return an iterator over the vector's elements.
+    pub fn iter(&self) -> VectorIter {
+        VectorIter {
+            elements: self.elements.borrow().clone().into_iter(),
+        }
+    }
+}
+
+/// Iterator wrapper for `Vector`.
+pub struct VectorIter {
+    elements: IntoIter<Expr>,
+}
+
+impl Iterator for VectorIter {
+    type Item = Expr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.elements.next()
     }
 }
 

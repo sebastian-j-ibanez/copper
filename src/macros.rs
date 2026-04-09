@@ -104,55 +104,27 @@ pub fn parameterize(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 }
 
 /// Sets the first element in a list or pair.
-pub fn set_car(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
+pub fn set_car(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {
-        [Expr::Symbol(name), expr] => {
-            let value = env_ref.borrow().find_var(name);
-            if let Some(value) = value {
-                match value {
-                    Expr::Pair(pair) => {
-                        let new_value = eval(&expr, env_ref.clone())?;
-                        pair.set_car(new_value.clone());
-                    }
-                    _ => return Err(Error::new("pair expected")),
-                }
-            }
+        [Expr::Pair(pair), value] => {
+            pair.set_car(value.clone());
+            Ok(Expr::Void())
         }
-        [Expr::Pair(pair), expr] => {
-            let new_value = eval(&expr, env_ref.clone())?;
-            pair.set_car(new_value.clone());
-        }
-        [] => return Err(Error::new("expected 2 arguments")),
-        _ => {}
+        [_, _] => Err(Error::new("set-car!: expected pair as first argument")),
+        _ => Err(Error::new("set-car!: expected 2 arguments")),
     }
-
-    Ok(Expr::Void())
 }
 
 /// Sets the last element in a list or pair.
-pub fn set_cdr(args: &[Expr], env_ref: EnvRef) -> Result<Expr, Error> {
+pub fn set_cdr(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {
-        [Expr::Symbol(name), expr] => {
-            let env = env_ref.borrow_mut();
-            if let Some(value) = env.find_var(name) {
-                match value {
-                    Expr::Pair(pair) => {
-                        let new_value = eval(&expr, env_ref.clone())?;
-                        pair.set_cdr(new_value.clone());
-                    }
-                    _ => return Err(Error::new("expected pair")),
-                }
-            }
+        [Expr::Pair(pair), value] => {
+            pair.set_cdr(value.clone());
+            Ok(Expr::Void())
         }
-        [Expr::Pair(pair), expr] => {
-            let new_value = eval(&expr, env_ref.clone())?;
-            pair.set_cdr(new_value.clone());
-        }
-        [] => return Err(Error::new("expected 2 arguments")),
-        _ => {}
+        [_, _] => Err(Error::new("set-cdr!: expected pair as first argument")),
+        _ => Err(Error::new("set-cdr!: expected 2 arguments")),
     }
-
-    Ok(Expr::Void())
 }
 
 /// Lambda macro returns a closure (scoped environment and a body).

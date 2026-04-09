@@ -2,7 +2,7 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
-use crate::env::{next_parameter_id, EnvRef};
+use crate::env::{EnvRef, next_parameter_id};
 use crate::error::Error;
 use crate::macros::apply_lambda;
 use crate::types::number::IntVariant::Small;
@@ -361,9 +361,9 @@ pub fn and(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Boolean(contains_false))
 }
 
-/// Returns `false` if any arguments are `true`.
+/// Returns `true` if any argument is not `#f`.
 pub fn or(args: &[Expr], _: EnvRef) -> Result {
-    let contains_true = args.iter().all(|arg| !matches!(arg, Expr::Boolean(true)));
+    let contains_true = args.iter().any(|arg| !matches!(arg, Expr::Boolean(false)));
     Ok(Expr::Boolean(contains_true))
 }
 
@@ -418,19 +418,199 @@ pub fn cdr(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Return car of cdr.
+pub fn caar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caar().map_err(|_| Error::new("caar: not enough pairs")),
+        _ => Err(Error::new("caar: expected pair")),
+    }
+}
+
 pub fn cadr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => {
-            let cdr = p.cdr();
-            match cdr {
-                Expr::Pair(p) => Ok(p.car()),
-                _ => Err(Error::Message(
-                    "expected list of at least 2 items".to_string(),
-                )),
-            }
-        }
-        _ => Err(Error::new("expected list")),
+        [Expr::Pair(p)] => p.cadr().map_err(|_| Error::new("cadr: not enough pairs")),
+        _ => Err(Error::new("cadr: expected pair")),
+    }
+}
+
+pub fn cdar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdar().map_err(|_| Error::new("cdar: not enough pairs")),
+        _ => Err(Error::new("cdar: expected pair")),
+    }
+}
+
+pub fn cddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cddr().map_err(|_| Error::new("cddr: not enough pairs")),
+        _ => Err(Error::new("cddr: expected pair")),
+    }
+}
+
+pub fn caaar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caaar().map_err(|_| Error::new("caaar: not enough pairs")),
+        _ => Err(Error::new("caaar: expected pair")),
+    }
+}
+
+pub fn caadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caadr().map_err(|_| Error::new("caadr: not enough pairs")),
+        _ => Err(Error::new("caadr: expected pair")),
+    }
+}
+
+pub fn cadar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cadar().map_err(|_| Error::new("cadar: not enough pairs")),
+        _ => Err(Error::new("cadar: expected pair")),
+    }
+}
+
+pub fn caddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caddr().map_err(|_| Error::new("caddr: not enough pairs")),
+        _ => Err(Error::new("caddr: expected pair")),
+    }
+}
+
+pub fn cdaar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdaar().map_err(|_| Error::new("cdaar: not enough pairs")),
+        _ => Err(Error::new("cdaar: expected pair")),
+    }
+}
+
+pub fn cdadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdadr().map_err(|_| Error::new("cdadr: not enough pairs")),
+        _ => Err(Error::new("cdadr: expected pair")),
+    }
+}
+
+pub fn cddar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cddar().map_err(|_| Error::new("cddar: not enough pairs")),
+        _ => Err(Error::new("cddar: expected pair")),
+    }
+}
+
+pub fn cdddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdddr().map_err(|_| Error::new("cdddr: not enough pairs")),
+        _ => Err(Error::new("cdddr: expected pair")),
+    }
+}
+
+pub fn caaaar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caaaar().map_err(|_| Error::new("caaaar: not enough pairs")),
+        _ => Err(Error::new("caaaar: expected pair")),
+    }
+}
+
+pub fn caaadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caaadr().map_err(|_| Error::new("caaadr: not enough pairs")),
+        _ => Err(Error::new("caaadr: expected pair")),
+    }
+}
+
+pub fn caadar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caadar().map_err(|_| Error::new("caadar: not enough pairs")),
+        _ => Err(Error::new("caadar: expected pair")),
+    }
+}
+
+pub fn caaddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caaddr().map_err(|_| Error::new("caaddr: not enough pairs")),
+        _ => Err(Error::new("caaddr: expected pair")),
+    }
+}
+
+pub fn cadaar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cadaar().map_err(|_| Error::new("cadaar: not enough pairs")),
+        _ => Err(Error::new("cadaar: expected pair")),
+    }
+}
+
+pub fn cadadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cadadr().map_err(|_| Error::new("cadadr: not enough pairs")),
+        _ => Err(Error::new("cadadr: expected pair")),
+    }
+}
+
+pub fn caddar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.caddar().map_err(|_| Error::new("caddar: not enough pairs")),
+        _ => Err(Error::new("caddar: expected pair")),
+    }
+}
+
+pub fn cadddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cadddr().map_err(|_| Error::new("cadddr: not enough pairs")),
+        _ => Err(Error::new("cadddr: expected pair")),
+    }
+}
+
+pub fn cdaaar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdaaar().map_err(|_| Error::new("cdaaar: not enough pairs")),
+        _ => Err(Error::new("cdaaar: expected pair")),
+    }
+}
+
+pub fn cdaadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdaadr().map_err(|_| Error::new("cdaadr: not enough pairs")),
+        _ => Err(Error::new("cdaadr: expected pair")),
+    }
+}
+
+pub fn cdadar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdadar().map_err(|_| Error::new("cdadar: not enough pairs")),
+        _ => Err(Error::new("cdadar: expected pair")),
+    }
+}
+
+pub fn cdaddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdaddr().map_err(|_| Error::new("cdaddr: not enough pairs")),
+        _ => Err(Error::new("cdaddr: expected pair")),
+    }
+}
+
+pub fn cddaar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cddaar().map_err(|_| Error::new("cddaar: not enough pairs")),
+        _ => Err(Error::new("cddaar: expected pair")),
+    }
+}
+
+pub fn cddadr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cddadr().map_err(|_| Error::new("cddadr: not enough pairs")),
+        _ => Err(Error::new("cddadr: expected pair")),
+    }
+}
+
+pub fn cdddar(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cdddar().map_err(|_| Error::new("cdddar: not enough pairs")),
+        _ => Err(Error::new("cdddar: expected pair")),
+    }
+}
+
+pub fn cddddr(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Pair(p)] => p.cddddr().map_err(|_| Error::new("cddddr: not enough pairs")),
+        _ => Err(Error::new("cddddr: expected pair")),
     }
 }
 
@@ -579,7 +759,12 @@ pub fn vector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [Expr::Vector(dest), Expr::Number(at), Expr::Vector(from), Expr::Number(start)] => {
+        [
+            Expr::Vector(dest),
+            Expr::Number(at),
+            Expr::Vector(from),
+            Expr::Number(start),
+        ] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -599,8 +784,13 @@ pub fn vector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [Expr::Vector(dest), Expr::Number(at), Expr::Vector(from), Expr::Number(start), Expr::Number(end)] =>
-        {
+        [
+            Expr::Vector(dest),
+            Expr::Number(at),
+            Expr::Vector(from),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -654,7 +844,12 @@ pub fn vector_fill(args: &[Expr], _: EnvRef) -> Result {
             vec.fill(new_value, start, vec.len())?;
             Ok(Expr::Void())
         }
-        [Expr::Vector(vec), new_value, Expr::Number(start), Expr::Number(end)] => {
+        [
+            Expr::Vector(vec),
+            new_value,
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
             let v_len = Number::from_usize(vec.len());
             if *start == v_len && *end == v_len {
                 return Ok(Expr::Null);
@@ -755,9 +950,11 @@ pub fn bytevector_ref(args: &[Expr], _: EnvRef) -> Result {
 /// Set byte at index to new value.
 pub fn bytevector_set(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::ByteVector(bv), Expr::Number(n_index), Expr::Number(n_byte)]
-            if n_index.is_usize() && n_byte.is_byte() =>
-        {
+        [
+            Expr::ByteVector(bv),
+            Expr::Number(n_index),
+            Expr::Number(n_byte),
+        ] if n_index.is_usize() && n_byte.is_byte() => {
             let index = n_index
                 .to_usize()
                 .expect("value should have been converted to usize");
@@ -792,7 +989,11 @@ pub fn bytevector_copy(args: &[Expr], _: EnvRef) -> Result {
                 None => Err(Error::new("out of range")),
             }
         }
-        [Expr::ByteVector(vec), Expr::Number(start), Expr::Number(end)] => {
+        [
+            Expr::ByteVector(vec),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
             let v_len = Number::from_usize(vec.len());
             if *start == v_len && *end == v_len {
                 return Ok(Expr::Null);
@@ -815,7 +1016,11 @@ pub fn bytevector_copy(args: &[Expr], _: EnvRef) -> Result {
 /// Copy elements from one `ByteVector` into another using range indexes.
 pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::ByteVector(dest), Expr::Number(at), Expr::ByteVector(from)] => {
+        [
+            Expr::ByteVector(dest),
+            Expr::Number(at),
+            Expr::ByteVector(from),
+        ] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -830,7 +1035,12 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [Expr::ByteVector(dest), Expr::Number(at), Expr::ByteVector(from), Expr::Number(start)] => {
+        [
+            Expr::ByteVector(dest),
+            Expr::Number(at),
+            Expr::ByteVector(from),
+            Expr::Number(start),
+        ] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -850,8 +1060,13 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
             Ok(Expr::Void())
         }
-        [Expr::ByteVector(dest), Expr::Number(at), Expr::ByteVector(from), Expr::Number(start), Expr::Number(end)] =>
-        {
+        [
+            Expr::ByteVector(dest),
+            Expr::Number(at),
+            Expr::ByteVector(from),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
             let at = at
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -1320,7 +1535,11 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             port.write_string(s)?;
             Ok(Expr::Void())
         }
-        [Expr::String(s), Expr::Port(Port::TextOutput(input)), Expr::Number(start)] => {
+        [
+            Expr::String(s),
+            Expr::Port(Port::TextOutput(input)),
+            Expr::Number(start),
+        ] => {
             let start = start
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -1331,8 +1550,12 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             port.write_string(&s[start..])?;
             Ok(Expr::Void())
         }
-        [Expr::String(s), Expr::Port(Port::TextOutput(input)), Expr::Number(start), Expr::Number(end)] =>
-        {
+        [
+            Expr::String(s),
+            Expr::Port(Port::TextOutput(input)),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
             let start = start
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
@@ -1416,8 +1639,31 @@ pub fn write_simple(args: &[Expr], env: EnvRef) -> Result {
     }
 }
 
+/// Write arguments to a textual `Port`.
+/// Defaults to `current-output-port` if port is not specified.
+/// Safe to use with cyclic and shared data. Prints datum labels.
 pub fn write_shared(args: &[Expr], env: EnvRef) -> Result {
-    todo!()
+    match args {
+        [expr] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_string(&expr.with_datum_labels())?;
+                return Ok(Expr::Void());
+            }
+            Err(Error::new("current-output-port is not initialized"))
+        }
+        [expr, Expr::Port(Port::TextOutput(port))] => {
+            let mut port = port.borrow_mut();
+            port.write_string(&expr.with_datum_labels())?;
+            return Ok(Expr::Void());
+        }
+        _ => Err(Error::new("expected obj and optional text output port")),
+    }
 }
 
 /// Flush buffered output in `Port`.
