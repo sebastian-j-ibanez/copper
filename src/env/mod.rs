@@ -157,6 +157,7 @@ impl Env {
             env.insert_proc("write-char", procedures::write_char);
             env.insert_proc("write-string", procedures::write_string);
             env.insert_proc("write-u8", procedures::write_u8);
+            env.insert_proc("write", procedures::write);
             env.insert_proc("write-simple", procedures::write_simple);
             env.insert_proc("write-shared", procedures::write_shared);
             env.insert_proc("read-bytevector", procedures::read_bytevector);

@@ -504,112 +504,144 @@ pub fn cdddr(args: &[Expr], _: EnvRef) -> Result {
 
 pub fn caaaar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.caaaar().map_err(|_| Error::new("caaaar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .caaaar()
+            .map_err(|_| Error::new("caaaar: not enough pairs")),
         _ => Err(Error::new("caaaar: expected pair")),
     }
 }
 
 pub fn caaadr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.caaadr().map_err(|_| Error::new("caaadr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .caaadr()
+            .map_err(|_| Error::new("caaadr: not enough pairs")),
         _ => Err(Error::new("caaadr: expected pair")),
     }
 }
 
 pub fn caadar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.caadar().map_err(|_| Error::new("caadar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .caadar()
+            .map_err(|_| Error::new("caadar: not enough pairs")),
         _ => Err(Error::new("caadar: expected pair")),
     }
 }
 
 pub fn caaddr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.caaddr().map_err(|_| Error::new("caaddr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .caaddr()
+            .map_err(|_| Error::new("caaddr: not enough pairs")),
         _ => Err(Error::new("caaddr: expected pair")),
     }
 }
 
 pub fn cadaar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cadaar().map_err(|_| Error::new("cadaar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cadaar()
+            .map_err(|_| Error::new("cadaar: not enough pairs")),
         _ => Err(Error::new("cadaar: expected pair")),
     }
 }
 
 pub fn cadadr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cadadr().map_err(|_| Error::new("cadadr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cadadr()
+            .map_err(|_| Error::new("cadadr: not enough pairs")),
         _ => Err(Error::new("cadadr: expected pair")),
     }
 }
 
 pub fn caddar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.caddar().map_err(|_| Error::new("caddar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .caddar()
+            .map_err(|_| Error::new("caddar: not enough pairs")),
         _ => Err(Error::new("caddar: expected pair")),
     }
 }
 
 pub fn cadddr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cadddr().map_err(|_| Error::new("cadddr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cadddr()
+            .map_err(|_| Error::new("cadddr: not enough pairs")),
         _ => Err(Error::new("cadddr: expected pair")),
     }
 }
 
 pub fn cdaaar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cdaaar().map_err(|_| Error::new("cdaaar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cdaaar()
+            .map_err(|_| Error::new("cdaaar: not enough pairs")),
         _ => Err(Error::new("cdaaar: expected pair")),
     }
 }
 
 pub fn cdaadr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cdaadr().map_err(|_| Error::new("cdaadr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cdaadr()
+            .map_err(|_| Error::new("cdaadr: not enough pairs")),
         _ => Err(Error::new("cdaadr: expected pair")),
     }
 }
 
 pub fn cdadar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cdadar().map_err(|_| Error::new("cdadar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cdadar()
+            .map_err(|_| Error::new("cdadar: not enough pairs")),
         _ => Err(Error::new("cdadar: expected pair")),
     }
 }
 
 pub fn cdaddr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cdaddr().map_err(|_| Error::new("cdaddr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cdaddr()
+            .map_err(|_| Error::new("cdaddr: not enough pairs")),
         _ => Err(Error::new("cdaddr: expected pair")),
     }
 }
 
 pub fn cddaar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cddaar().map_err(|_| Error::new("cddaar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cddaar()
+            .map_err(|_| Error::new("cddaar: not enough pairs")),
         _ => Err(Error::new("cddaar: expected pair")),
     }
 }
 
 pub fn cddadr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cddadr().map_err(|_| Error::new("cddadr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cddadr()
+            .map_err(|_| Error::new("cddadr: not enough pairs")),
         _ => Err(Error::new("cddadr: expected pair")),
     }
 }
 
 pub fn cdddar(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cdddar().map_err(|_| Error::new("cdddar: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cdddar()
+            .map_err(|_| Error::new("cdddar: not enough pairs")),
         _ => Err(Error::new("cdddar: expected pair")),
     }
 }
 
 pub fn cddddr(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Pair(p)] => p.cddddr().map_err(|_| Error::new("cddddr: not enough pairs")),
+        [Expr::Pair(p)] => p
+            .cddddr()
+            .map_err(|_| Error::new("cddddr: not enough pairs")),
         _ => Err(Error::new("cddddr: expected pair")),
     }
 }
@@ -1609,8 +1641,29 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
 
 /// Write arguments to a textual `Port`.
 /// Defaults to `current-output-port` if port is not specified.
+/// Labels cyclic structure with datum labels; non-cyclic shared structure is expanded inline.
 pub fn write(args: &[Expr], env: EnvRef) -> Result {
-    todo!()
+    match args {
+        [expr] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
+
+            if let Expr::Port(Port::TextOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_string(&expr.with_cycle_labels())?;
+                return Ok(Expr::Void());
+            }
+            Err(Error::new("current-output-port is not initialized"))
+        }
+        [expr, Expr::Port(Port::TextOutput(port))] => {
+            let mut port = port.borrow_mut();
+            port.write_string(&expr.with_cycle_labels())?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected obj and optional text output port")),
+    }
 }
 
 /// Write arguments to a textual `Port`.

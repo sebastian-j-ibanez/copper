@@ -9,7 +9,7 @@ pub mod ports;
 
 use num_integer::div_floor;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::rc::Rc;
 use std::vec::IntoIter;
@@ -100,85 +100,21 @@ impl Expr {
         }
 
         format_with_labels(self, &mut label_map, &mut 0)
+    }
 
-        // let mut output = String::new();
-        // let mut label_count = 0;
-        //
-        // match self {
-        //     Expr::Pair(p) => {
-        //         output.push('(');
-        //         for node in p.iter() {
-        //             match node {
-        //                 Expr::Pair(node_pair) => {
-        //                     let ptr = node_pair.raw_ptr();
-        //                     // If pair is in datum_map:
-        //                     // - If label is none, set label to #N=
-        //                     // - Else if label is #N=, set to #N#
-        //                     match label_map.get(&ptr) {
-        //                         Some((count, None)) => {
-        //                             let new_label = format!("#{}=", label_count);
-        //                             label_count += 1;
-        //                             label_map.insert(ptr, (*count, Some(new_label.clone())));
-        //                             if !output.is_empty() && &output != "(" {
-        //                                 output.push(' ');
-        //                             }
-        //                             let formatted_pair =
-        //                                 Expr::Pair(Pair::from(node_pair)).to_string();
-        //                             output.push_str(&format!("{}{}", new_label, formatted_pair));
-        //                         }
-        //                         Some(_) => {
-        //                             label_count += 1;
-        //                             if !output.is_empty() && &output != "(" {
-        //                                 output.push(' ');
-        //                             }
-        //                             if node_pair.is_pair() {
-        //                                 output.push_str(". ");
-        //                             }
-        //                             output.push_str(&format!("#{}#", label_count));
-        //                         }
-        //                         None => output.push_str(&format!("{}", Expr::Pair(node_pair))),
-        //                     }
-        //                 }
-        //                 Expr::Vector(node_vec) => {
-        //                     let ptr = node_vec.raw_ptr();
-        //                     match label_map.get(&ptr) {
-        //                         Some((count, None)) => {
-        //                             let new_label = format!("#{}=", label_count);
-        //                             label_count += 1;
-        //                             label_map.insert(ptr, (*count, Some(new_label.clone())));
-        //                             if !output.is_empty() && &output != "(" {
-        //                                 output.push(' ');
-        //                             }
-        //                             let formatted_pair = Expr::Vector(node_vec).to_string();
-        //                             output.push_str(&format!("{}{}", new_label, formatted_pair));
-        //                         }
-        //                         Some(_) => {
-        //                             let new_label = format!("#{}#", label_count);
-        //                             label_count += 1;
-        //                             if !output.is_empty() && &output != "(" {
-        //                                 output.push(' ');
-        //                             }
-        //                             let formatted_pair = Expr::Vector(node_vec).to_string();
-        //                             output.push_str(&format!("{}{}", new_label, formatted_pair));
-        //                         }
-        //                         None => {}
-        //                     }
-        //                 }
-        //                 expr => {
-        //                     if !output.is_empty() && &output != "(" {
-        //                         output.push(' ');
-        //                     }
-        //                     output.push_str(&expr.to_string());
-        //                 }
-        //             }
-        //         }
-        //         output.push(')');
-        //     }
-        //     Expr::Vector(v) => todo!(),
-        //     _ => {}
-        // }
-        //
-        // output
+    pub fn with_cycle_labels(&self) -> String {
+        let mut state_map: HashMap<*const (), State> = HashMap::new();
+        let mut cyclic_set: HashSet<*const ()> = HashSet::new();
+
+        collect_cyclic(self, &mut state_map, &mut cyclic_set);
+
+        // Create map that maps the raw pointer with the (count, label).
+        let mut label_map: HashMap<*const (), (usize, Option<String>)> = HashMap::new();
+        for ptr in cyclic_set.iter() {
+            label_map.insert(*ptr, (1, None));
+        }
+
+        format_with_labels(self, &mut label_map, &mut 0)
     }
 }
 
@@ -234,6 +170,32 @@ fn format_with_labels(
 
             format!("{}{}", prefix, inner)
         }
+        Expr::Vector(v) => {
+            let ptr = v.raw_ptr();
+
+            if let Some((_, Some(label))) = label_map.get(&ptr) {
+                let label_num = label.trim_start_matches('#').trim_end_matches('=');
+                return format!("#{}#", label_num);
+            }
+
+            let prefix = if let Some((count, None)) = label_map.get(&ptr) {
+                let label = format!("#{}=", label_count);
+                let count = *count;
+                *label_count += 1;
+                label_map.insert(ptr, (count, Some(label.clone())));
+                label
+            } else {
+                String::new()
+            };
+
+            let items = v
+                .iter()
+                .map(|elem| format_with_labels(&elem, label_map, label_count))
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            format!("{}#({})", prefix, items)
+        }
         other => other.to_string(),
     }
 }
@@ -280,6 +242,55 @@ fn collect_pairs(expr: &Expr, datum_map: &mut HashMap<*const (), usize>) {
             parse_ptr(datum_map, v.raw_ptr());
             for elem in v.iter() {
                 collect_pairs(&elem, datum_map);
+            }
+        }
+        _ => {}
+    }
+}
+
+enum State {
+    InProgress,
+    Done,
+}
+
+fn collect_cyclic(
+    expr: &Expr,
+    state_map: &mut HashMap<*const (), State>,
+    cyclic_set: &mut HashSet<*const ()>,
+) {
+    match expr {
+        Expr::Pair(p) => {
+            let ptr = p.raw_ptr();
+            match state_map.get(&ptr) {
+                Some(State::InProgress) => {
+                    // Back-edge: this node is on our current call stack
+                    cyclic_set.insert(ptr);
+                }
+                Some(State::Done) => {
+                    // Shared but not cyclic, skip
+                }
+                None => {
+                    state_map.insert(ptr, State::InProgress);
+                    collect_cyclic(&p.car(), state_map, cyclic_set);
+                    collect_cyclic(&p.cdr(), state_map, cyclic_set);
+                    state_map.insert(ptr, State::Done);
+                }
+            }
+        }
+        Expr::Vector(v) => {
+            let ptr = v.raw_ptr();
+            match state_map.get(&ptr) {
+                Some(State::InProgress) => {
+                    cyclic_set.insert(ptr);
+                }
+                Some(State::Done) => {}
+                None => {
+                    state_map.insert(ptr, State::InProgress);
+                    for elem in v.iter() {
+                        collect_cyclic(&elem, state_map, cyclic_set);
+                    }
+                    state_map.insert(ptr, State::Done);
+                }
             }
         }
         _ => {}
