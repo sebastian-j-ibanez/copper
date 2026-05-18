@@ -343,7 +343,27 @@ fn format_expr(expr: &Expr, rep: Representation) -> String {
 /// Format string into its literal representation.
 fn format_string(s: &String, rep: Representation) -> String {
     match rep {
-        Representation::External => format!("\"{}\"", s),
+        Representation::External => {
+            let mut out = String::with_capacity(s.len() + 2);
+            out.push('"');
+            for c in s.chars() {
+                match c {
+                    '"' => out.push_str("\\\""),
+                    '\\' => out.push_str("\\\\"),
+                    '\n' => out.push_str("\\n"),
+                    '\r' => out.push_str("\\r"),
+                    '\t' => out.push_str("\\t"),
+                    '\x07' => out.push_str("\\a"),
+                    '\x08' => out.push_str("\\b"),
+                    c if (c as u32) < 0x20 || c == '\x7F' => {
+                        out.push_str(&format!("\\x{:x};", c as u32))
+                    }
+                    c => out.push(c),
+                }
+            }
+            out.push('"');
+            out
+        }
         Representation::Formatted => s.clone(),
     }
 }
@@ -351,7 +371,18 @@ fn format_string(s: &String, rep: Representation) -> String {
 /// Format char into its literal representation.
 fn format_char(c: &char, rep: Representation) -> String {
     match rep {
-        Representation::External => format!("{}{}", "#\\", c),
+        Representation::External => match c {
+            ' ' => "#\\space".to_string(),
+            '\n' => "#\\newline".to_string(),
+            '\t' => "#\\tab".to_string(),
+            '\r' => "#\\return".to_string(),
+            '\0' => "#\\null".to_string(),
+            '\x07' => "#\\alarm".to_string(),
+            '\x08' => "#\\backspace".to_string(),
+            '\x7F' => "#\\delete".to_string(),
+            '\x1B' => "#\\escape".to_string(),
+            c => format!("#\\{}", c),
+        },
         Representation::Formatted => c.to_string(),
     }
 }
