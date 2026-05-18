@@ -178,7 +178,11 @@ fn test_define_atome() {
 fn test_define_lambda_explicit() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    parse_and_eval("(define addone (lambda (x) (+ x 1)))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define addone (lambda (x) (+ x 1)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     let result = parse_and_eval("(addone 1)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "2");
 }
@@ -586,9 +590,11 @@ fn test_list_to_string() {
 fn test_list_to_string_with_start() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(list->string (list #\\h #\\e #\\l #\\l #\\o) 1)".to_string(), env)
-            .unwrap();
+    let result = parse_and_eval(
+        "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1)".to_string(),
+        env,
+    )
+    .unwrap();
     assert_eq!(result.formatted(), "ello");
 }
 
@@ -596,9 +602,11 @@ fn test_list_to_string_with_start() {
 fn test_list_to_string_with_start_and_end() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(list->string (list #\\h #\\e #\\l #\\l #\\o) 1 4)".to_string(), env)
-            .unwrap();
+    let result = parse_and_eval(
+        "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1 4)".to_string(),
+        env,
+    )
+    .unwrap();
     assert_eq!(result.formatted(), "ell");
 }
 
@@ -622,8 +630,7 @@ fn test_list_to_vector_with_start() {
 fn test_list_to_vector_with_start_and_end() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(list->vector (list 1 2 3 4 5) 1 4)".to_string(), env).unwrap();
+    let result = parse_and_eval("(list->vector (list 1 2 3 4 5) 1 4)".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Vector(_)));
 }
 
@@ -647,8 +654,7 @@ fn test_vector_to_list_with_start() {
 fn test_vector_to_list_with_start_and_end() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(vector->list (vector 1 2 3 4 5) 1 3)".to_string(), env).unwrap();
+    let result = parse_and_eval("(vector->list (vector 1 2 3 4 5) 1 3)".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Pair(_)));
 }
 
@@ -1385,6 +1391,53 @@ fn test_write_shared_cyclic() {
     parse_and_eval("(write-shared x p)".to_string(), env.clone()).unwrap();
     let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
     assert_eq!(result.formatted(), "#0=(1 2 3 . #0#)");
+}
+
+#[test]
+fn test_write_no_sharing() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write '(1 2 3) p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    // No sharing: write and write-shared produce identical output
+    assert_eq!(result.formatted(), "(1 2 3)");
+}
+
+#[test]
+fn test_write_shared_pair_expanded() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define x (list 1 2))".to_string(), env.clone()).unwrap();
+    // write expands non-cyclic shared structure inline — no datum labels
+    parse_and_eval("(write (cons x x) p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "((1 2) 1 2)");
+}
+
+#[test]
+fn test_write_cyclic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr x) x)".to_string(), env.clone()).unwrap();
+    // Cyclic structure must use datum labels to avoid infinite output
+    parse_and_eval("(write x p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "#0=(1 2 3 . #0#)");
+}
+
+#[test]
+fn test_write_atoms() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    // Atoms: strings get quotes, chars get #\ prefix (external representation)
+    parse_and_eval(r#"(write "hello" p)"#.to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), r#""hello""#);
 }
 
 // cxr functions (2-deep)

@@ -21,7 +21,7 @@ use crate::parser::parse_and_eval;
 fn process_line(env: EnvRef) -> ProcessLineFunc {
     Box::new(
         move |line: String| match parse_and_eval(line, env.clone()) {
-            Ok(result) => Ok(result.to_string()),
+            Ok(result) => Ok(result.with_datum_labels()),
             Err(Error::Message(e)) => Err(repl_lib::Error::User(repl_lib::UserError {
                 error: format!("{}", e),
             })),
