@@ -2,6 +2,8 @@
 // Author: Sebastian Ibanez
 // Created: 2025-11-11
 
+use num_traits::ToPrimitive;
+
 use crate::env::{EnvRef, next_parameter_id};
 use crate::error::Error;
 use crate::macros::apply_lambda;
@@ -57,9 +59,22 @@ pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
     Ok(Expr::Void())
 }
 
-/// End process.
-pub fn exit(_: &[Expr], _: EnvRef) -> Result {
-    std::process::exit(0);
+/// Exit with an exit code.
+/// Defaults to `0` if no exit code is provided.
+///
+/// Returns an error if the status code is not a number,
+/// or can't be converted into an i32 status code.
+pub fn exit(args: &[Expr], _: EnvRef) -> Result {
+    let code = match args {
+        [Expr::Number(n)] => {
+            let msg = format!("unable to convert number to status code: {}", n);
+            n.to_i32().ok_or_else(|| Error::new(&msg))?
+        }
+        [] => 0,
+        _ => return Err(Error::new("expected exit code number or no arguments")),
+    };
+
+    std::process::exit(code);
 }
 
 /// Print literal.
