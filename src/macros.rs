@@ -6,7 +6,7 @@
 
 use crate::env::{Env, EnvRef};
 use crate::parser::eval;
-use crate::types::Pair;
+use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 
 /// Associate a symbol with a value in an environment.
@@ -241,8 +241,15 @@ fn unquote(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
 
             Ok(Pair::list(&elements))
         }
-        Expr::ByteVector(_) => todo!(),
-        Expr::Vector(_) => todo!(),
+        Expr::Vector(vec) => {
+            let elements = vec
+                .iter()
+                .map(|elem| unquote(&elem, env.clone()))
+                .collect::<Result<Vec<Expr>, _>>()?;
+
+            let new_vec = Expr::Vector(Vector::from(&elements));
+            Ok(new_vec)
+        }
         expr => Ok(expr.clone()),
     }
 }
