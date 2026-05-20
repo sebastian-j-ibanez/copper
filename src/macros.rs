@@ -6,6 +6,7 @@
 
 use crate::env::{Env, EnvRef};
 use crate::parser::eval;
+use crate::types::Pair;
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 
 /// Associate a symbol with a value in an environment.
@@ -192,6 +193,57 @@ pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {
         [expr] => Ok(expr.clone()),
         _ => Err(Error::new("quote expects 0 or 1 arguments")),
+    }
+}
+
+/// Process literal into expression, replacing comma prefixed symbols
+/// with their `env` value.
+pub fn quasiquote(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [expr] => unquote(expr, env),
+        _ => Err(Error::new("quasiquote expects 1 expression")),
+    }
+}
+
+/// Replace comma prefixed symbols with their `env` value recursively.
+fn unquote(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+    match expr {
+        Expr::Symbol(s) => {
+            if s == "," {
+                return Err(Error::new("expected symbol after ','"));
+            }
+
+            if s.starts_with(",") {
+                let symbol = &s[1..];
+                let env = env
+                    .try_borrow()
+                    .map_err(|_| Error::new("unable to borrow reference to runtime environment"))?;
+
+                if let Some(value) = env.find_var(symbol) {
+                    return Ok(value);
+                }
+
+                return Err(Error::new(&format!("unbound variable: {symbol}")));
+            }
+
+            Ok(expr.clone())
+        }
+        Expr::Pair(p) if p.is_pair() => {
+            let car = unquote(&p.car(), env.clone())?;
+            let cdr = unquote(&p.cdr(), env)?;
+            Ok(Expr::Pair(Pair::cons((car, cdr))))
+        }
+        Expr::Pair(p) => {
+            let elements = p
+                .iter()
+                .map(|expr| unquote(&expr, env.clone()))
+                .collect::<Result<Vec<Expr>, _>>()?;
+
+            Ok(Pair::list(&elements))
+        }
+        Expr::ByteVector(_) => todo!(),
+        Expr::Vector(_) => todo!(),
+        expr => Ok(expr.clone()),
     }
 }
 

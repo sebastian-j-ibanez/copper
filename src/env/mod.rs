@@ -6,7 +6,7 @@
 
 mod procedures;
 
-use crate::macros::{quote, set_car, set_cdr};
+use crate::macros;
 use crate::types::ports::Port;
 use crate::types::{Expr, Parameter, Procedure};
 
@@ -111,8 +111,8 @@ impl Env {
             env.insert_proc("cddadr", procedures::cddadr);
             env.insert_proc("cdddar", procedures::cdddar);
             env.insert_proc("cddddr", procedures::cddddr);
-            env.insert_proc("set-car!", set_car);
-            env.insert_proc("set-cdr!", set_cdr);
+            env.insert_proc("set-car!", macros::set_car);
+            env.insert_proc("set-cdr!", macros::set_cdr);
             env.insert_proc("reverse", procedures::list_reverse);
             // Vectors
             env.insert_proc("vector", procedures::new_vector);
@@ -219,7 +219,8 @@ impl Env {
             env.insert_proc("parameter?", procedures::is_parameter);
             // Misc
             env.insert_proc("exit", procedures::exit);
-            env.insert_proc("quote", quote);
+            env.insert_proc("quote", macros::quote);
+            env.insert_proc("quasiquote", macros::quasiquote);
 
             // Setup ports
             env.init_default_ports();

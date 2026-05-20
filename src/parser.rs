@@ -6,7 +6,9 @@
 
 use crate::env::EnvRef;
 use crate::error::Error;
-use crate::macros::{apply_lambda, define, if_statement, lambda, parameterize, quote, set_car};
+use crate::macros::{
+    apply_lambda, define, if_statement, lambda, parameterize, quasiquote, quote, set_car,
+};
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter};
 
 /// Parse s-expression, evaluate it, and return result.
@@ -48,6 +50,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     "set-car!" => return set_car(args, env),
                     "lambda" => return lambda(args, env),
                     "quote" => return quote(args, env),
+                    "quasiquote" => return quasiquote(args, env),
                     "if" => return if_statement(args, env),
                     "parameterize" => return parameterize(args, env),
                     _ => {}
@@ -126,6 +129,11 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
         "'" => {
             let (quoted_expr, remaining) = parse(right_expr)?;
             let slice = vec![Expr::Symbol("quote".to_string()), quoted_expr];
+            Ok((Pair::list(slice.as_slice()), remaining))
+        }
+        "`" => {
+            let (quasiquoted_expr, remaining) = parse(right_expr)?;
+            let slice = vec![Expr::Symbol("quasiquote".to_string()), quasiquoted_expr];
             Ok((Pair::list(slice.as_slice()), remaining))
         }
         "#(" => {
@@ -284,6 +292,10 @@ pub fn tokenize(expression: String) -> Vec<String> {
             }
             '\'' => {
                 tokens.push("'".to_string());
+                i += 1;
+            }
+            '`' => {
+                tokens.push("`".to_string());
                 i += 1;
             }
             '#' => {
