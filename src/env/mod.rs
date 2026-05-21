@@ -54,6 +54,7 @@ impl Env {
             env.insert_proc("print", procedures::display);
             env.insert_proc("println", procedures::println);
             env.insert_proc("pp", procedures::pretty_print);
+            env.insert_proc("error", procedures::error);
             // Math
             env.insert_proc("+", procedures::add);
             env.insert_proc("-", procedures::sub);
@@ -72,6 +73,7 @@ impl Env {
             env.insert_proc("string-length", procedures::str_length);
             env.insert_proc("string-upcase", procedures::string_to_upcase);
             env.insert_proc("string-downcase", procedures::string_to_downcase);
+            env.insert_proc("string-reverse", procedures::string_reverse);
             // Booleans
             env.insert_proc("not", procedures::not);
             env.insert_proc("and", procedures::and);

@@ -46,6 +46,17 @@ pub fn println(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return an error with an optional string message.
+pub fn error(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => Err(Error::new(s)),
+        [] => Err(Error::new("")),
+        _ => Err(Error::new(
+            "invalid error argument: expected optional string",
+        )),
+    }
+}
+
 /// Evaluate the contents of a file.
 pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
     let file = match args.first() {
@@ -357,6 +368,17 @@ pub fn string_to_downcase(args: &[Expr], _: EnvRef) -> Result {
             return Ok(Expr::String(upcase));
         }
         _ => Err(Error::new("expected string")),
+    }
+}
+
+/// Return reverse version of string.
+pub fn string_reverse(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(s)] => {
+            let reverse = s.chars().rev().collect();
+            Ok(Expr::String(reverse))
+        }
+        _ => Err(Error::new("expected a string")),
     }
 }
 
