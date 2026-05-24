@@ -13,7 +13,8 @@ use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Para
 
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
-    let (parsed_exp, _) = parse(&tokenize(expr))?;
+    let tokens = tokenize(expr);
+    let (parsed_exp, _) = parse(&tokens)?;
     let evaled_exp = eval(&parsed_exp, env)?;
     Ok(evaled_exp)
 }
@@ -264,8 +265,14 @@ pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
 
 /// Tokenize a string s-expression.
 pub fn tokenize(expression: String) -> Vec<String> {
-    let mut tokens: Vec<String> = Vec::new();
     let chars: Vec<char> = expression.chars().collect();
+    let mut tokens: Vec<String> = Vec::new();
+
+    // Ignore line if it's a comment.
+    if chars.starts_with(&[';']) {
+        return tokens;
+    }
+
     let mut i = 0;
     let is_delimiter = |c: char| c.is_whitespace() || c == '(' || c == ')' || c == '\'';
     while i < chars.len() {
