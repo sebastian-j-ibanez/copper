@@ -214,32 +214,48 @@ fn unquote(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             }
 
             if s.starts_with(",") {
-                let symbol = &s[1..];
-                let env = env
-                    .try_borrow()
-                    .map_err(|_| Error::new("unable to borrow reference to runtime environment"))?;
-
-                if let Some(value) = env.find_var(symbol) {
-                    return Ok(value);
-                }
-
-                return Err(Error::new(&format!("unbound variable: {symbol}")));
+                let value = resolve_unquoted_symbol(s, env)?;
+                return Ok(value);
             }
 
             Ok(expr.clone())
         }
         Expr::Pair(p) if p.is_pair() => {
-            let car = unquote(&p.car(), env.clone())?;
-            let cdr = unquote(&p.cdr(), env)?;
-            Ok(Expr::Pair(Pair::cons((car, cdr))))
+            let pair = match p.car() {
+                // Edgecase where dotted pair has 1 unquoted element. Example: `(,a)
+                Expr::Symbol(s) if s == "," => {
+                    let car = unquote(&p.cdr(), env)?;
+                    Expr::Pair(Pair::cons((car, Expr::Null)))
+                }
+                _ => {
+                    let car = unquote(&p.car(), env.clone())?;
+                    let cdr = unquote(&p.cdr(), env)?;
+                    Expr::Pair(Pair::cons((car, cdr)))
+                }
+            };
+            Ok(pair)
         }
         Expr::Pair(p) => {
-            let elements = p
-                .iter()
-                .map(|expr| unquote(&expr, env.clone()))
-                .collect::<Result<Vec<Expr>, _>>()?;
+            let mut list = Vec::new();
+            for elem in p.iter() {
+                match elem {
+                    Expr::Pair(elem_pair) => match elem_pair.car() {
+                        // Case where pair is like this: `(,example)
+                        // The car becomes ',' and the cdr is 'example'.
+                        Expr::Symbol(s) if s == "," => {
+                            list.push(unquote(&elem_pair.cdr(), env.clone())?);
+                        }
+                        _ => list.push(unquote(&Expr::Pair(elem_pair), env.clone())?),
+                    },
+                    Expr::Symbol(s) if s.starts_with(",") => {
+                        let value = resolve_unquoted_symbol(&s, env.clone())?;
+                        list.push(value);
+                    }
+                    _ => list.push(elem),
+                }
+            }
 
-            Ok(Pair::list(&elements))
+            Ok(Pair::list(&list))
         }
         Expr::Vector(vec) => {
             let elements = vec
@@ -252,6 +268,20 @@ fn unquote(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         }
         expr => Ok(expr.clone()),
     }
+}
+
+/// Resolve a symbol that starts with a comma.
+fn resolve_unquoted_symbol(symbol: &String, env: EnvRef) -> Result<Expr, Error> {
+    let symbol = &symbol[1..];
+    let env = env
+        .try_borrow()
+        .map_err(|_| Error::new("unable to borrow reference to runtime environment"))?;
+
+    if let Some(value) = env.find_var(symbol) {
+        return Ok(value);
+    }
+
+    return Err(Error::new(&format!("unbound variable: {symbol}")));
 }
 
 /// If predicate is true evaluate first expression, otherwise evaluate second expression.
