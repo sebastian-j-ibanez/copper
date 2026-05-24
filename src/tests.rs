@@ -1705,3 +1705,92 @@ fn test_cddddr() {
     let result = parse_and_eval("(cddddr '(a b c d e))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "(e)");
 }
+
+// Quasiquote
+
+#[test]
+fn test_quasiquote_atoms_unchanged() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("`(a b c)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(a b c)");
+}
+
+#[test]
+fn test_quasiquote_unquote_number() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 42)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("`(a ,x c)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(a 42 c)");
+}
+
+#[test]
+fn test_quasiquote_unquote_string() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define s \"hello\")".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("`(a ,s c)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(a \"hello\" c)");
+}
+
+
+#[test]
+fn test_quasiquote_all_unquoted() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define a 1)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b 2)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("`(,a ,b)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 2)");
+}
+
+#[test]
+fn test_quasiquote_nested_list() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("`(a (b ,x) c)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(a (b 99) c)");
+}
+
+#[test]
+fn test_quasiquote_empty_list() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("`()".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Null));
+}
+
+#[test]
+fn test_quasiquote_preserves_boolean() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("`(#t #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(#t #f)");
+}
+
+#[test]
+fn test_quasiquote_unquote_list_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define xs (list 1 2))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("`(a ,xs c)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(a (1 2) c)");
+}
+
+#[test]
+fn test_quasiquote_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(quasiquote a b)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_quasiquote_unquote_unbound_variable() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("`(a ,unbound-var)".to_string(), env);
+    assert!(result.is_err());
+}

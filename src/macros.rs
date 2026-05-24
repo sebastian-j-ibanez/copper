@@ -6,6 +6,7 @@
 
 use crate::env::{Env, EnvRef};
 use crate::parser::eval;
+use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 
 /// Associate a symbol with a value in an environment.
@@ -193,6 +194,94 @@ pub fn quote(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
         [expr] => Ok(expr.clone()),
         _ => Err(Error::new("quote expects 0 or 1 arguments")),
     }
+}
+
+/// Process literal into expression, replacing comma prefixed symbols
+/// with their `env` value.
+pub fn quasiquote(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [expr] => unquote(expr, env),
+        _ => Err(Error::new("quasiquote expects 1 expression")),
+    }
+}
+
+/// Replace comma prefixed symbols with their `env` value recursively.
+fn unquote(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+    match expr {
+        Expr::Symbol(s) => {
+            if s == "," {
+                return Err(Error::new("expected symbol after ','"));
+            }
+
+            if s.starts_with(",") {
+                let value = resolve_unquoted_symbol(s, env)?;
+                return Ok(value);
+            }
+
+            Ok(expr.clone())
+        }
+        Expr::Pair(p) if p.is_pair() => {
+            let pair = match p.car() {
+                // Edgecase where dotted pair has 1 unquoted element. Example: `(,a)
+                Expr::Symbol(s) if s == "," => {
+                    let car = unquote(&p.cdr(), env)?;
+                    Expr::Pair(Pair::cons((car, Expr::Null)))
+                }
+                _ => {
+                    let car = unquote(&p.car(), env.clone())?;
+                    let cdr = unquote(&p.cdr(), env)?;
+                    Expr::Pair(Pair::cons((car, cdr)))
+                }
+            };
+            Ok(pair)
+        }
+        Expr::Pair(p) => {
+            let mut list = Vec::new();
+            for elem in p.iter() {
+                match elem {
+                    Expr::Pair(elem_pair) => match elem_pair.car() {
+                        // Case where pair is like this: `(,example)
+                        // The car becomes ',' and the cdr is 'example'.
+                        Expr::Symbol(s) if s == "," => {
+                            list.push(unquote(&elem_pair.cdr(), env.clone())?);
+                        }
+                        _ => list.push(unquote(&Expr::Pair(elem_pair), env.clone())?),
+                    },
+                    Expr::Symbol(s) if s.starts_with(",") => {
+                        let value = resolve_unquoted_symbol(&s, env.clone())?;
+                        list.push(value);
+                    }
+                    _ => list.push(elem),
+                }
+            }
+
+            Ok(Pair::list(&list))
+        }
+        Expr::Vector(vec) => {
+            let elements = vec
+                .iter()
+                .map(|elem| unquote(&elem, env.clone()))
+                .collect::<Result<Vec<Expr>, _>>()?;
+
+            let new_vec = Expr::Vector(Vector::from(&elements));
+            Ok(new_vec)
+        }
+        expr => Ok(expr.clone()),
+    }
+}
+
+/// Resolve a symbol that starts with a comma.
+fn resolve_unquoted_symbol(symbol: &String, env: EnvRef) -> Result<Expr, Error> {
+    let symbol = &symbol[1..];
+    let env = env
+        .try_borrow()
+        .map_err(|_| Error::new("unable to borrow reference to runtime environment"))?;
+
+    if let Some(value) = env.find_var(symbol) {
+        return Ok(value);
+    }
+
+    return Err(Error::new(&format!("unbound variable: {symbol}")));
 }
 
 /// If predicate is true evaluate first expression, otherwise evaluate second expression.
