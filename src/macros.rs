@@ -4,10 +4,11 @@
 
 //! Define functions and variables.
 
-use crate::env::{Env, EnvRef};
+use crate::env::{Env, EnvRef, try_borrow_env};
 use crate::parser::eval;
 use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
+use std::rc::Rc;
 
 /// Associate a symbol with a value in an environment.
 pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
@@ -163,7 +164,7 @@ pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         _ => return Err(Error::new("expected lambda body")),
     };
 
-    let closure = Box::new(Closure::init(env.clone(), params, body.clone()));
+    let closure = Rc::new(Closure::init(env.clone(), params, body.clone()));
     Ok(Expr::Closure(closure))
 }
 
@@ -273,11 +274,9 @@ fn unquote(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
 /// Resolve a symbol that starts with a comma.
 fn resolve_unquoted_symbol(symbol: &String, env: EnvRef) -> Result<Expr, Error> {
     let symbol = &symbol[1..];
-    let env = env
-        .try_borrow()
-        .map_err(|_| Error::new("unable to borrow reference to runtime environment"))?;
+    let env = try_borrow_env(&env)?;
 
-    if let Some(value) = env.find_var(symbol) {
+    if let Some(value) = env.find_value(symbol) {
         return Ok(value);
     }
 

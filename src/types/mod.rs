@@ -37,7 +37,7 @@ pub enum Expr {
     Vector(Vector),
     ByteVector(ByteVector),
     Procedure(Procedure),
-    Closure(Box<Closure>),
+    Closure(Rc<Closure>),
     Port(Port),
     Parameter(Parameter),
     Eof,
@@ -115,6 +115,36 @@ impl Expr {
         }
 
         format_with_labels(self, &mut label_map, &mut 0)
+    }
+
+    pub fn eqv(&self, other: &Expr) -> std::result::Result<bool, Error> {
+        let eqv = match (self, other) {
+            (Expr::Boolean(a), Expr::Boolean(b)) => a == b,
+            (Expr::Symbol(a), Expr::Symbol(b)) => a == b,
+            (Expr::Number(a), Expr::Number(b)) => a == b,
+            (Expr::Char(a), Expr::Char(b)) => a == b,
+            (Expr::Pair(a), Expr::Pair(b)) => Rc::ptr_eq(&a.elements, &b.elements),
+            (Expr::Vector(a), Expr::Vector(b)) => Rc::ptr_eq(&a.elements, &b.elements),
+            (Expr::ByteVector(a), Expr::ByteVector(b)) => Rc::ptr_eq(&a.buffer, &b.buffer),
+            (Expr::Procedure(a), Expr::Procedure(b)) => std::ptr::fn_addr_eq(*a, *b),
+            (Expr::Closure(a), Expr::Closure(b)) => Rc::ptr_eq(a, b),
+            (Expr::Null, Expr::Null) => true,
+            _ => false,
+        };
+
+        Ok(eqv)
+    }
+
+    pub fn eq(&self, other: &Expr) -> std::result::Result<bool, Error> {
+        match (self, other) {
+            _ => self.eqv(other),
+        }
+    }
+
+    pub fn equal(&self, other: &Expr) -> std::result::Result<bool, Error> {
+        match (self, other) {
+            _ => self.eq(other),
+        }
     }
 }
 

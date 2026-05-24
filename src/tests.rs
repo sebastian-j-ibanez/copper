@@ -1794,3 +1794,193 @@ fn test_quasiquote_unquote_unbound_variable() {
     let result = parse_and_eval("`(a ,unbound-var)".to_string(), env);
     assert!(result.is_err());
 }
+
+// eqv? Predicate
+
+#[test]
+fn test_eqv_booleans() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(eqv? #t #t)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(eqv? #t #f)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_eqv_symbols() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(eqv? 'a 'a)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(eqv? 'a 'b)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_eqv_chars() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(eqv? #\\a #\\a)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(eqv? #\\a #\\b)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_eqv_exact_numbers_equal() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? 2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_exact_and_inexact_differ() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (eqv? 2 2.0) => #f: an exact and an inexact number are never eqv?.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? 2 2.0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_empty_lists() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? '() '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_different_types() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (eqv? #f 'nil) => #f
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? #f 'nil)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_same_pair() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Two references to the same allocation are eqv?.
+    let env = Env::standard_env();
+    parse_and_eval("(define x (cons 1 2))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(eqv? x x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_distinct_pairs_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (eqv? (cons 1 2) (cons 1 2)) => #f: equal contents, distinct locations.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? (cons 1 2) (cons 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_same_vector() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define v (vector 1 2))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(eqv? v v)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_distinct_vectors_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? (vector 1 2) (vector 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_same_bytevector() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define b (bytevector 1 2 3))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(eqv? b b)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_distinct_bytevectors_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(eqv? (bytevector 1 2 3) (bytevector 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_same_procedure() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (eqv? car car) => #t: same native procedure, equal location tags.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? car car)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_distinct_procedures() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(eqv? car cdr)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_same_closure() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // A closure bound to a variable is eqv? to itself: clones share the Rc.
+    let env = Env::standard_env();
+    parse_and_eval("(define p (lambda (x) x))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(eqv? p p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_eqv_distinct_closures() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Two separately evaluated lambdas are distinct allocations.
+    // (R7RS leaves this unspecified; we return #f.)
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(eqv? (lambda (x) x) (lambda (x) x))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_eqv_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert!(parse_and_eval("(eqv? 1)".to_string(), env.clone()).is_err());
+    assert!(parse_and_eval("(eqv? 1 2 3)".to_string(), env).is_err());
+}

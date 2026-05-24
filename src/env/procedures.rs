@@ -2642,6 +2642,19 @@ pub fn is_parameter(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+pub fn are_eqv(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [a, b] => {
+            let eqv = a.eqv(b)?;
+            Ok(Expr::Boolean(eqv))
+        }
+        _ => Err(Error::new(&format!(
+            "expected 2 arguments, got {}",
+            args.len()
+        ))),
+    }
+}
+
 // Parameters
 
 /// Apply a converter function to a value.
