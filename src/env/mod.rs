@@ -218,6 +218,8 @@ impl Env {
             env.insert_proc("output-port-open?", procedures::is_output_port_open);
             env.insert_proc("eof-object?", procedures::is_eof_object);
             env.insert_proc("eqv?", procedures::are_eqv);
+            env.insert_proc("eq?", procedures::are_eqv);
+            env.insert_proc("equal?", procedures::are_equal);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
             env.insert_proc("parameter?", procedures::is_parameter);

@@ -2642,10 +2642,29 @@ pub fn is_parameter(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return true if arguments have equivalent identities.
 pub fn are_eqv(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [a, b] => {
             let eqv = a.eqv(b)?;
+            Ok(Expr::Boolean(eqv))
+        }
+        _ => Err(Error::new(&format!(
+            "expected 2 arguments, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arguments have equivalent values.
+///
+/// The main difference between this and `are_eqv()`
+/// is that `are_equal()` will parse and compare the values
+/// of complex types like `String`, `Pair`, `Vector`, and `ByteVector`.
+pub fn are_equal(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [a, b] => {
+            let eqv = a.equal(b)?;
             Ok(Expr::Boolean(eqv))
         }
         _ => Err(Error::new(&format!(

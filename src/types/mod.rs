@@ -117,6 +117,7 @@ impl Expr {
         format_with_labels(self, &mut label_map, &mut 0)
     }
 
+    /// Return true if `self` and `other` have equivalent identities.
     pub fn eqv(&self, other: &Expr) -> std::result::Result<bool, Error> {
         let eqv = match (self, other) {
             (Expr::Boolean(a), Expr::Boolean(b)) => a == b,
@@ -135,15 +136,40 @@ impl Expr {
         Ok(eqv)
     }
 
-    pub fn eq(&self, other: &Expr) -> std::result::Result<bool, Error> {
-        match (self, other) {
-            _ => self.eqv(other),
-        }
-    }
-
+    /// Return true if `self` and `other` have equivalent values.
     pub fn equal(&self, other: &Expr) -> std::result::Result<bool, Error> {
         match (self, other) {
-            _ => self.eq(other),
+            (Expr::String(a), Expr::String(b)) => Ok(a == b),
+            (Expr::Pair(a), Expr::Pair(b)) => {
+                Ok(a.car().equal(&b.car())? && a.cdr().equal(&b.cdr())?)
+            }
+            (Expr::Vector(a), Expr::Vector(b)) => {
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+
+                for (a_elem, b_elem) in a.iter().zip(b.iter()) {
+                    if !a_elem.equal(&b_elem)? {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            (Expr::ByteVector(a), Expr::ByteVector(b)) => {
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+
+                for (a_byte, b_byte) in a.iter().zip(b.iter()) {
+                    if a_byte != b_byte {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            _ => self.eqv(other),
         }
     }
 }
@@ -1067,9 +1093,7 @@ impl Vector {
     pub fn raw_ptr(&self) -> *const () {
         self.elements.as_ptr() as *const ()
     }
-}
 
-impl Vector {
     /// Return an iterator over the vector's elements.
     pub fn iter(&self) -> VectorIter {
         VectorIter {
@@ -1186,6 +1210,24 @@ impl ByteVector {
         }
 
         format!("\\x{};", byte)
+    }
+
+    pub fn iter(&self) -> ByteVecIter {
+        ByteVecIter {
+            buffer: self.buffer.borrow().clone().into_iter(),
+        }
+    }
+}
+
+pub struct ByteVecIter {
+    buffer: IntoIter<u8>,
+}
+
+impl Iterator for ByteVecIter {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.buffer.next()
     }
 }
 

@@ -1984,3 +1984,261 @@ fn test_eqv_wrong_arg_count() {
     assert!(parse_and_eval("(eqv? 1)".to_string(), env.clone()).is_err());
     assert!(parse_and_eval("(eqv? 1 2 3)".to_string(), env).is_err());
 }
+
+// equal? Predicate
+
+#[test]
+fn test_equal_booleans() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(equal? #t #t)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(equal? #t #f)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_equal_symbols() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(equal? 'a 'a)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(equal? 'a 'b)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_equal_numbers() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(equal? 2 2)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(equal? 2 3)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_equal_chars() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert_eq!(
+        parse_and_eval("(equal? #\\a #\\a)".to_string(), env.clone())
+            .unwrap()
+            .to_string(),
+        "#t"
+    );
+    assert_eq!(
+        parse_and_eval("(equal? #\\a #\\b)".to_string(), env)
+            .unwrap()
+            .to_string(),
+        "#f"
+    );
+}
+
+#[test]
+fn test_equal_empty_lists() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? '() '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_strings_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Unlike eqv?, equal? compares strings by their contents.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? \"abc\" \"abc\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_strings_different_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? \"abc\" \"abd\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_lists_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Distinct allocations with equal contents are equal? (but not eqv?).
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(equal? (list 1 2 3) (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_lists_different_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(equal? (list 1 2 3) (list 1 2 4))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_lists_different_lengths() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? (list 1 2) (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_quoted_lists() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // R7RS: (equal? '(a (b) c) '(a (b) c)) => #t
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(equal? '(a (b) c) '(a (b) c))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_nested_lists() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let same = parse_and_eval(
+        "(equal? (list 1 (list 2 3)) (list 1 (list 2 3)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    assert_eq!(same.to_string(), "#t");
+    let diff = parse_and_eval(
+        "(equal? (list 1 (list 2 3)) (list 1 (list 2 4)))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(diff.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_dotted_pairs() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // The cdr of a dotted pair participates in the comparison.
+    let env = Env::standard_env();
+    let same = parse_and_eval("(equal? (cons 1 2) (cons 1 2))".to_string(), env.clone()).unwrap();
+    assert_eq!(same.to_string(), "#t");
+    let diff = parse_and_eval("(equal? (cons 1 2) (cons 1 3))".to_string(), env).unwrap();
+    assert_eq!(diff.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_vectors_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(equal? (vector 1 2 3) (vector 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_vectors_different_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? (vector 1 2) (vector 1 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_nested_vectors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(equal? (vector 1 (vector 2 3)) (vector 1 (vector 2 3)))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_bytevectors_same_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(equal? (bytevector 1 2 3) (bytevector 1 2 3))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_bytevectors_different_contents() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(equal? (bytevector 1 2) (bytevector 1 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_mixed_nested() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Exercises recursion through a list containing a string and a vector.
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(equal? (list 1 \"a\" (vector 2 3)) (list 1 \"a\" (vector 2 3)))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_different_types() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // A number and a string are never equal?.
+    let num_str = parse_and_eval("(equal? 1 \"1\")".to_string(), env.clone()).unwrap();
+    assert_eq!(num_str.to_string(), "#f");
+    // A list and a vector with the same contents are not equal?.
+    let list_vec =
+        parse_and_eval("(equal? (list 1 2) (vector 1 2))".to_string(), env).unwrap();
+    assert_eq!(list_vec.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_falls_back_to_eqv_on_atoms() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // On non-compound values equal? agrees with eqv?.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? car car)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    assert!(parse_and_eval("(equal? 1)".to_string(), env.clone()).is_err());
+    assert!(parse_and_eval("(equal? 1 2 3)".to_string(), env).is_err());
+}
