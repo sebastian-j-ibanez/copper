@@ -346,11 +346,13 @@ pub fn expression_closed(buf: &str) -> bool {
     let mut open_paren = 0;
     let mut close_paren = 0;
 
-    for e in expression.chars() {
-        match e {
-            '(' => open_paren += 1,
-            ')' => close_paren += 1,
-            _ => {}
+    for line in expression.lines().filter(|l| !l.trim_start().starts_with(';')) {
+        for e in line.chars() {
+            match e {
+                '(' => open_paren += 1,
+                ')' => close_paren += 1,
+                _ => {}
+            }
         }
     }
 

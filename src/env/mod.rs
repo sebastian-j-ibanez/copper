@@ -216,9 +216,10 @@ impl Env {
             env.insert_proc("input-port-open?", procedures::is_input_port_open);
             env.insert_proc("output-port-open?", procedures::is_output_port_open);
             env.insert_proc("eof-object?", procedures::is_eof_object);
+            env.insert_proc("parameter?", procedures::is_parameter);
+            env.insert_proc("null?", procedures::is_null);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
-            env.insert_proc("parameter?", procedures::is_parameter);
             // Misc
             env.insert_proc("exit", procedures::exit);
             env.insert_proc("quote", macros::quote);

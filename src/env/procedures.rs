@@ -2642,6 +2642,18 @@ pub fn is_parameter(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return true if arg is null (the empty list).
+pub fn is_null(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Null] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::new(&format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
 // Parameters
 
 /// Apply a converter function to a value.
