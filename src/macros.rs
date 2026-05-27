@@ -5,7 +5,7 @@
 //! Define functions and variables.
 
 use crate::env::{Env, EnvRef};
-use crate::parser::eval;
+use crate::parser;
 use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 
@@ -13,7 +13,7 @@ use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
         [Expr::Symbol(name), expr] => {
-            let value = eval(&expr, env.clone())?;
+            let value = parser::eval(&expr, env.clone())?;
             env.borrow_mut().data.insert(name.to_owned(), value);
         }
         [Expr::Pair(pair), expr] => {
@@ -35,97 +35,14 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     Ok(Expr::Void())
 }
 
-/// Temporarily shadow parameters for the duration of the body evaluation.
-/// Syntax: (parameterize ((param value) ...) body ...)
-pub fn parameterize(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
-    // args[0] should be the bindings list: ((param1 val1) (param2 val2) ...)
-    // args[1..] are the body expressions
-    let (bindings_expr, body) = match args {
-        [Expr::Pair(bindings), rest @ ..] if !rest.is_empty() => (bindings, rest),
-        [Expr::Null, rest @ ..] if !rest.is_empty() => {
-            let mut result = Expr::Void();
-            for expr in rest {
-                result = eval(expr, env.clone())?;
-            }
-            return Ok(result);
-        }
-        _ => return Err(Error::new("parameterize: ill-formed syntax")),
-    };
+/// Evaluate all arguments sequentially, and return the value of the last expression.
+pub fn begin(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    let last_value = args
+        .iter()
+        .try_fold(None, |_, expr| parser::eval(expr, env.clone()).map(Some))?
+        .unwrap_or(Expr::Void());
 
-    // Create a new environment scope for the parameterize body
-    let param_env = Env::local_env(env.clone());
-
-    // Process each binding: ((param val) ...)
-    for binding in bindings_expr.iter() {
-        match binding {
-            Expr::Pair(pair) if pair.len() == 2 => {
-                let items: Vec<Expr> = pair.iter().collect();
-                let param_expr = &items[0];
-                let val_expr = &items[1];
-
-                // Evaluate the parameter expression to get the Parameter object
-                let param = eval(param_expr, env.clone())?;
-                let Parameter { id, ref converter } = match param {
-                    Expr::Parameter(p) => p,
-                    _ => return Err(Error::new("parameterize: expected parameter object")),
-                };
-
-                // Evaluate the value expression
-                let raw_value = eval(val_expr, env.clone())?;
-
-                // Apply converter if present
-                let value = if let Some(conv) = converter {
-                    match conv.as_ref() {
-                        Expr::Procedure(f) => f(&[raw_value], env.clone())?,
-                        Expr::Closure(c) => apply_lambda(c, vec![raw_value])?,
-                        _ => return Err(Error::new("invalid converter")),
-                    }
-                } else {
-                    raw_value
-                };
-
-                // Store in the new parameterize environment
-                param_env.borrow_mut().set_param(&id.to_string(), &value);
-            }
-            _ => {
-                return Err(Error::new(
-                    "parameterize: each binding must be (param value)",
-                ));
-            }
-        }
-    }
-
-    // Evaluate body expressions in the new environment
-    let mut result = Expr::Void();
-    for expr in body {
-        result = eval(expr, param_env.clone())?;
-    }
-
-    Ok(result)
-}
-
-/// Sets the first element in a list or pair.
-pub fn set_car(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
-    match args {
-        [Expr::Pair(pair), value] => {
-            pair.set_car(value.clone());
-            Ok(Expr::Void())
-        }
-        [_, _] => Err(Error::new("set-car!: expected pair as first argument")),
-        _ => Err(Error::new("set-car!: expected 2 arguments")),
-    }
-}
-
-/// Sets the last element in a list or pair.
-pub fn set_cdr(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
-    match args {
-        [Expr::Pair(pair), value] => {
-            pair.set_cdr(value.clone());
-            Ok(Expr::Void())
-        }
-        [_, _] => Err(Error::new("set-cdr!: expected pair as first argument")),
-        _ => Err(Error::new("set-cdr!: expected 2 arguments")),
-    }
+    Ok(last_value)
 }
 
 /// Lambda macro returns a closure (scoped environment and a body).
@@ -185,7 +102,7 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
         }
     }
 
-    eval(&closure.body, new_env)
+    parser::eval(&closure.body, new_env)
 }
 
 /// Process literal into expression.
@@ -288,10 +205,10 @@ fn resolve_unquoted_symbol(symbol: &String, env: EnvRef) -> Result<Expr, Error> 
 pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
         [conditional, first_branch, second_branch] => {
-            let cond_result = eval(conditional, env.to_owned())?;
+            let cond_result = parser::eval(conditional, env.to_owned())?;
             match cond_result {
-                Expr::Boolean(false) => eval(second_branch, env),
-                _ => eval(first_branch, env),
+                Expr::Boolean(false) => parser::eval(second_branch, env),
+                _ => parser::eval(first_branch, env),
             }
         }
         _ => Err(Error::new("ill-formed special form")),
@@ -305,9 +222,9 @@ pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                 let collected_args = pair.iter().collect::<Vec<Expr>>();
                 match collected_args.as_slice() {
                     [conditional, result] => {
-                        let cond_result = eval(conditional, env.to_owned())?;
+                        let cond_result = parser::eval(conditional, env.to_owned())?;
                         if let Expr::Boolean(true) = cond_result {
-                            return eval(result, env);
+                            return parser::eval(result, env);
                         }
                     }
                     _ => continue,
@@ -317,4 +234,97 @@ pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         }
     }
     Ok(Expr::Void())
+}
+
+/// Sets the first element in a list or pair.
+pub fn set_car(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Pair(pair), value] => {
+            pair.set_car(value.clone());
+            Ok(Expr::Void())
+        }
+        [_, _] => Err(Error::new("set-car!: expected pair as first argument")),
+        _ => Err(Error::new("set-car!: expected 2 arguments")),
+    }
+}
+
+/// Sets the last element in a list or pair.
+pub fn set_cdr(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Pair(pair), value] => {
+            pair.set_cdr(value.clone());
+            Ok(Expr::Void())
+        }
+        [_, _] => Err(Error::new("set-cdr!: expected pair as first argument")),
+        _ => Err(Error::new("set-cdr!: expected 2 arguments")),
+    }
+}
+
+/// Temporarily shadow parameters for the duration of the body evaluation.
+/// Syntax: (parameterize ((param value) ...) body ...)
+pub fn parameterize(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    // args[0] should be the bindings list: ((param1 val1) (param2 val2) ...)
+    // args[1..] are the body expressions
+    let (bindings_expr, body) = match args {
+        [Expr::Pair(bindings), rest @ ..] if !rest.is_empty() => (bindings, rest),
+        [Expr::Null, rest @ ..] if !rest.is_empty() => {
+            let mut result = Expr::Void();
+            for expr in rest {
+                result = parser::eval(expr, env.clone())?;
+            }
+            return Ok(result);
+        }
+        _ => return Err(Error::new("parameterize: ill-formed syntax")),
+    };
+
+    // Create a new environment scope for the parameterize body
+    let param_env = Env::local_env(env.clone());
+
+    // Process each binding: ((param val) ...)
+    for binding in bindings_expr.iter() {
+        match binding {
+            Expr::Pair(pair) if pair.len() == 2 => {
+                let items: Vec<Expr> = pair.iter().collect();
+                let param_expr = &items[0];
+                let val_expr = &items[1];
+
+                // Evaluate the parameter expression to get the Parameter object
+                let param = parser::eval(param_expr, env.clone())?;
+                let Parameter { id, ref converter } = match param {
+                    Expr::Parameter(p) => p,
+                    _ => return Err(Error::new("parameterize: expected parameter object")),
+                };
+
+                // Evaluate the value expression
+                let raw_value = parser::eval(val_expr, env.clone())?;
+
+                // Apply converter if present
+                let value = if let Some(conv) = converter {
+                    match conv.as_ref() {
+                        Expr::Procedure(f) => f(&[raw_value], env.clone())?,
+                        Expr::Closure(c) => apply_lambda(c, vec![raw_value])?,
+                        _ => return Err(Error::new("invalid converter")),
+                    }
+                } else {
+                    raw_value
+                };
+
+                // Store in the new parameterize environment
+                param_env.borrow_mut().set_param(&id.to_string(), &value);
+            }
+            _ => {
+                return Err(Error::new(
+                    "parameterize: each binding must be (param value)",
+                ));
+            }
+        }
+    }
+
+    // Evaluate body expressions in the new environment
+    let mut result = Expr::Void();
+    for expr in body {
+        result = parser::eval(expr, param_env.clone())?;
+    }
+
+    Ok(result)
 }

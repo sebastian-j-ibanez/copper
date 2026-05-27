@@ -6,9 +6,7 @@
 
 use crate::env::EnvRef;
 use crate::error::Error;
-use crate::macros::{
-    apply_lambda, define, if_statement, lambda, parameterize, quasiquote, quote, set_car,
-};
+use crate::macros;
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter};
 
 /// Parse s-expression, evaluate it, and return result.
@@ -47,13 +45,16 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             // Check for special forms (like define).
             if let Expr::Symbol(s) = first {
                 match s.as_str() {
-                    "define" => return define(args, env),
-                    "set-car!" => return set_car(args, env),
-                    "lambda" => return lambda(args, env),
-                    "quote" => return quote(args, env),
-                    "quasiquote" => return quasiquote(args, env),
-                    "if" => return if_statement(args, env),
-                    "parameterize" => return parameterize(args, env),
+                    "define" => return macros::define(args, env),
+                    "begin" => return macros::begin(args, env),
+                    "lambda" => return macros::lambda(args, env),
+                    "quote" => return macros::quote(args, env),
+                    "quasiquote" => return macros::quasiquote(args, env),
+                    "if" => return macros::if_statement(args, env),
+                    "cond" => return macros::cond(args, env),
+                    "set-car!" => return macros::set_car(args, env),
+                    "set-cdr!" => return macros::set_cdr(args, env),
+                    "parameterize" => return macros::parameterize(args, env),
                     _ => {}
                 }
             }
@@ -67,7 +68,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
 
             match func_val {
                 Expr::Procedure(f) => f(&arg_vals, env),
-                Expr::Closure(c) => apply_lambda(&c, arg_vals),
+                Expr::Closure(c) => macros::apply_lambda(&c, arg_vals),
                 Expr::Parameter(p) => apply_parameter(&p, arg_vals, env),
                 e => {
                     let msg = format!("not a function: {}", e);
@@ -99,7 +100,7 @@ fn apply_parameter(param: &Parameter, args: Vec<Expr>, env: EnvRef) -> Result<Ex
                 // Apply converter
                 match converter.as_ref() {
                     Expr::Procedure(f) => f(&[new_value.clone()], env.clone())?,
-                    Expr::Closure(c) => apply_lambda(c, vec![new_value.clone()])?,
+                    Expr::Closure(c) => macros::apply_lambda(c, vec![new_value.clone()])?,
                     _ => return Err(Error::new("invalid converter")),
                 }
             } else {
@@ -346,7 +347,10 @@ pub fn expression_closed(buf: &str) -> bool {
     let mut open_paren = 0;
     let mut close_paren = 0;
 
-    for line in expression.lines().filter(|l| !l.trim_start().starts_with(';')) {
+    for line in expression
+        .lines()
+        .filter(|l| !l.trim_start().starts_with(';'))
+    {
         for e in line.chars() {
             match e {
                 '(' => open_paren += 1,
