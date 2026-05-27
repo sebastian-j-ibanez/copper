@@ -399,30 +399,35 @@ fn format_boolean(b: &bool) -> String {
 
 /// Format pair into literal representation.
 fn format_pair(pair: &Pair, delim: &str, parenthesis: bool, rep: Representation) -> String {
-    let (car, cdr) = &*pair.elements.borrow();
+    let mut items: Vec<String> = Vec::new();
+    let mut tail: Option<String> = None;
+    let mut current: Expr = Expr::Pair(pair.clone());
 
-    if pair.is_list() {
-        let items = pair
-            .iter()
-            .map(|e| format_expr(&e, rep))
-            .collect::<Vec<_>>()
-            .join(delim);
-
-        return if parenthesis {
-            format!("({items})")
-        } else {
-            items
-        };
+    loop {
+        match current {
+            Expr::Pair(p) => {
+                let (car, cdr) = (p.car(), p.cdr());
+                items.push(format_expr(&car, rep));
+                current = cdr;
+            }
+            Expr::Null => break,
+            other => {
+                tail = Some(format_expr(&other, rep));
+                break;
+            }
+        }
     }
 
-    let car_s = format_expr(car, rep);
-    let cdr_s = format_expr(cdr, rep);
+    let body = match tail {
+        Some(t) => format!("{} . {}", items.join(delim), t),
+        None => items.join(delim),
+    };
 
     if parenthesis {
-        return format!("({car_s} . {cdr_s})");
+        format!("({body})")
+    } else {
+        body
     }
-
-    format!("({car_s} . {cdr_s})")
 }
 
 /// Format vector into literal representation.

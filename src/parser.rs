@@ -52,8 +52,6 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     "quasiquote" => return macros::quasiquote(args, env),
                     "if" => return macros::if_statement(args, env),
                     "cond" => return macros::cond(args, env),
-                    "set-car!" => return macros::set_car(args, env),
-                    "set-cdr!" => return macros::set_cdr(args, env),
                     "parameterize" => return macros::parameterize(args, env),
                     _ => {}
                 }
