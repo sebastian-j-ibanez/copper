@@ -197,6 +197,62 @@ fn test_define_lambda_implicit() {
 }
 
 #[test]
+fn test_define_lambda_implicit_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define (do-stuff x) (+ x 1) (+ x 2) (+ x 3))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(do-stuff 10)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "13");
+}
+
+#[test]
+fn test_define_lambda_explicit_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define do-stuff (lambda (x) (+ x 1) (+ x 2) (+ x 3)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(do-stuff 10)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "13");
+}
+
+#[test]
+fn test_define_with_internal_define() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define (my-reverse ls) \
+           (define (my-reverse-inner ls acc) \
+             (if (null? ls) acc \
+                 (my-reverse-inner (cdr ls) (cons (car ls) acc)))) \
+           (my-reverse-inner ls '()))"
+            .to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(my-reverse '(1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(3 2 1)");
+}
+
+#[test]
+fn test_lambda_immediate_invocation_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "((lambda (x) (+ x 1) (+ x 2) (* x 10)) 5)".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "50");
+}
+
+#[test]
 fn test_new_list() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();

@@ -482,11 +482,11 @@ pub fn format_port(p: &Port) -> String {
 pub struct Closure {
     pub env: EnvRef,
     pub parameters: Vec<String>,
-    pub body: Expr,
+    pub body: Vec<Expr>,
 }
 
 impl Closure {
-    pub fn init(env: EnvRef, parameters: Vec<String>, body: Expr) -> Closure {
+    pub fn init(env: EnvRef, parameters: Vec<String>, body: Vec<Expr>) -> Closure {
         Closure {
             env,
             parameters,

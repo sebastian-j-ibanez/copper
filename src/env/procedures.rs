@@ -93,7 +93,13 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     match args.first() {
         Some(Expr::Closure(c)) => {
             let c_args = c.parameters.join(" ");
-            println!("(lambda ({}) {})", c_args, c.body);
+            let c_body = c
+                .body
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<String>>()
+                .join(" ");
+            println!("(lambda ({}) {})", c_args, c_body);
             return Ok(Expr::Void());
         }
         Some(_) => {
