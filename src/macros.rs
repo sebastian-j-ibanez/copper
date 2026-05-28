@@ -16,17 +16,18 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
             let value = parser::eval(&expr, env.clone())?;
             env.borrow_mut().data.insert(name.to_owned(), value);
         }
-        [Expr::Pair(pair), expr] => {
-            let name = match pair.get(0) {
-                Some(Expr::Symbol(s)) => s,
+        [Expr::Pair(pair), body_expressions @ ..] => {
+            let proc_name = match pair.car() {
+                Expr::Symbol(s) => s,
                 _ => {
                     return Err(Error::new("ill-formed special form name"));
                 }
             };
 
-            let args_without_name = pair.cdr();
-            let value = lambda(&[args_without_name, expr.clone()], env.clone())?;
-            env.borrow_mut().data.insert(name.to_owned(), value);
+            // Lambda parameters (cdr) and body expressions.
+            let lambda_args = [&[pair.cdr()], body_expressions].concat();
+            let value = lambda(&lambda_args, env.clone())?;
+            env.borrow_mut().data.insert(proc_name.to_owned(), value);
         }
         _ => {
             return Err(Error::new("ill-formed special form"));
@@ -50,13 +51,16 @@ pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     // Example:
     // (x y) (+ x y)
     // args  function
+    if args.len() < 2 {
+        return Err(Error::new("ill-formed lambda"));
+    }
 
     let mut iter = args.iter();
 
     // Get argument symbols.
     let arg_list = match iter.next() {
         Some(Expr::Pair(p)) => p,
-        e => return Err(Error::Message(format!("ill-formed lambda: {:?}", e))),
+        _ => return Err(Error::Message(format!("ill-formed lambda"))),
     };
 
     // Add argument symbols to env.
@@ -74,13 +78,8 @@ pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         })
         .collect::<Result<_, _>>()?;
 
-    // Get function.
-    let body = match iter.next() {
-        Some(e) => e,
-        _ => return Err(Error::new("expected lambda body")),
-    };
-
-    let closure = Box::new(Closure::init(env.clone(), params, body.clone()));
+    let body_expressions: Vec<Expr> = args[1..].to_vec();
+    let closure = Box::new(Closure::init(env.clone(), params, body_expressions));
     Ok(Expr::Closure(closure))
 }
 
@@ -102,7 +101,7 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
         }
     }
 
-    parser::eval(&closure.body, new_env)
+    begin(&closure.body, new_env)
 }
 
 /// Process literal into expression.
