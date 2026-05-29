@@ -1,6 +1,4 @@
 # copper
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/sebastian-j-ibanez/copper/rust.yml)
-![GitHub License](https://img.shields.io/github/license/sebastian-j-ibanez/copper?color=DA8A67)
 
 A Scheme interpreter written in Rust with [repl_lib](https://crates.io/crates/repl_lib).
 
