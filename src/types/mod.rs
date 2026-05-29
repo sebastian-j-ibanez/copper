@@ -37,7 +37,7 @@ pub enum Expr {
     Vector(Vector),
     ByteVector(ByteVector),
     Procedure(Procedure),
-    Closure(Box<Closure>),
+    Closure(Rc<Closure>),
     Port(Port),
     Parameter(Parameter),
     Eof,
@@ -115,6 +115,88 @@ impl Expr {
         }
 
         format_with_labels(self, &mut label_map, &mut 0)
+    }
+
+    /// Return true if `self` and `other` have equivalent identities.
+    pub fn eqv(&self, other: &Expr) -> std::result::Result<bool, Error> {
+        let eqv = match (self, other) {
+            (Expr::Boolean(a), Expr::Boolean(b)) => a == b,
+            (Expr::Symbol(a), Expr::Symbol(b)) => a == b,
+            (Expr::Number(a), Expr::Number(b)) => a == b,
+            (Expr::Char(a), Expr::Char(b)) => a == b,
+            (Expr::Pair(a), Expr::Pair(b)) => Rc::ptr_eq(&a.elements, &b.elements),
+            (Expr::Vector(a), Expr::Vector(b)) => Rc::ptr_eq(&a.elements, &b.elements),
+            (Expr::ByteVector(a), Expr::ByteVector(b)) => Rc::ptr_eq(&a.buffer, &b.buffer),
+            (Expr::Procedure(a), Expr::Procedure(b)) => std::ptr::fn_addr_eq(*a, *b),
+            (Expr::Closure(a), Expr::Closure(b)) => Rc::ptr_eq(a, b),
+            (Expr::Port(a), Expr::Port(b)) => a.equal(b),
+            (Expr::Null, Expr::Null) => true,
+            _ => false,
+        };
+
+        Ok(eqv)
+    }
+
+    /// Return true if `self` and `other` have equivalent values.
+    pub fn equal(&self, other: &Expr) -> std::result::Result<bool, Error> {
+        let mut pair_node_keys: HashSet<(*const (), *const ())> = HashSet::new();
+        self.equal_inner(other, &mut pair_node_keys)
+    }
+
+    /// Checks for equality between `Pair`, `Vector`, and `ByteVector`.
+    ///
+    /// Safe to use with cyclic `Pair` and `Vector` expressions.
+    pub fn equal_inner(
+        &self,
+        other: &Expr,
+        node_hashes: &mut HashSet<(*const (), *const ())>,
+    ) -> std::result::Result<bool, Error> {
+        match (self, other) {
+            (Expr::String(a), Expr::String(b)) => Ok(a == b),
+            (Expr::Pair(a), Expr::Pair(b)) => {
+                let key = (a.raw_ptr(), b.raw_ptr());
+
+                if !node_hashes.insert(key) {
+                    return Ok(true);
+                }
+
+                Ok(a.car().equal_inner(&b.car(), node_hashes)?
+                    && a.cdr().equal_inner(&b.cdr(), node_hashes)?)
+            }
+            (Expr::Vector(a), Expr::Vector(b)) => {
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+
+                let key = (a.raw_ptr(), b.raw_ptr());
+
+                if !node_hashes.insert(key) {
+                    return Ok(true);
+                }
+
+                for (a_elem, b_elem) in a.iter().zip(b.iter()) {
+                    if !a_elem.equal_inner(&b_elem, node_hashes)? {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            (Expr::ByteVector(a), Expr::ByteVector(b)) => {
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+
+                for (a_byte, b_byte) in a.iter().zip(b.iter()) {
+                    if a_byte != b_byte {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            _ => self.eqv(other),
+        }
     }
 }
 
@@ -1042,9 +1124,7 @@ impl Vector {
     pub fn raw_ptr(&self) -> *const () {
         self.elements.as_ptr() as *const ()
     }
-}
 
-impl Vector {
     /// Return an iterator over the vector's elements.
     pub fn iter(&self) -> VectorIter {
         VectorIter {
@@ -1161,6 +1241,24 @@ impl ByteVector {
         }
 
         format!("\\x{};", byte)
+    }
+
+    pub fn iter(&self) -> ByteVecIter {
+        ByteVecIter {
+            buffer: self.buffer.borrow().clone().into_iter(),
+        }
+    }
+}
+
+pub struct ByteVecIter {
+    buffer: IntoIter<u8>,
+}
+
+impl Iterator for ByteVecIter {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.buffer.next()
     }
 }
 

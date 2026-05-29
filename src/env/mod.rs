@@ -6,6 +6,7 @@
 
 mod procedures;
 
+use crate::error::Error;
 use crate::macros;
 use crate::types::ports::Port;
 use crate::types::{Expr, Parameter, Procedure};
@@ -216,6 +217,9 @@ impl Env {
             env.insert_proc("input-port-open?", procedures::is_input_port_open);
             env.insert_proc("output-port-open?", procedures::is_output_port_open);
             env.insert_proc("eof-object?", procedures::is_eof_object);
+            env.insert_proc("eqv?", procedures::are_eqv);
+            env.insert_proc("eq?", procedures::are_eqv);
+            env.insert_proc("equal?", procedures::are_equal);
             env.insert_proc("parameter?", procedures::is_parameter);
             env.insert_proc("null?", procedures::is_null);
             // Parameters
@@ -240,15 +244,24 @@ impl Env {
         }))
     }
 
-    /// Find var in environment. Checks self before outer environment.
-    pub fn find_var(&self, var: &str) -> Option<Expr> {
-        if let Some(val) = self.data.get(var) {
+    /// Find value in environment.
+    ///
+    /// Checks self before recursively checking outer environment.
+    pub fn find_value(&self, symbol: &str) -> Option<Expr> {
+        if let Some(val) = self.data.get(symbol) {
             Some(val.clone())
         } else if let Some(outer) = &self.outer {
-            outer.borrow().find_var(var)
+            outer.borrow().find_value(symbol)
         } else {
             None
         }
+    }
+
+    /// Check if 2 symbols point to the same environment value.
+    pub fn same_value(&self, symbol_a: &str, symbol_b: &str) -> bool {
+        symbol_a == symbol_b
+            && self.find_value(symbol_a).is_some()
+            && self.find_value(symbol_b).is_some()
     }
 
     /// Insert a new `Procedure` into `HashMap<String, Expr>`.
@@ -316,4 +329,12 @@ impl Env {
             &Expr::Port(Port::text_output_stdout()),
         );
     }
+}
+
+/// Convenience wrapped around `Rc::try_borrow()`.
+pub fn try_borrow_env(env: &EnvRef) -> Result<std::cell::Ref<'_, Env>, Error> {
+    let env = env
+        .try_borrow()
+        .map_err(|_| Error::new("unable to borrow reference to runtime environment"))?;
+    Ok(env)
 }

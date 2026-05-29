@@ -32,7 +32,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
         | Expr::Parameter(_) => Ok(expr.clone()),
         Expr::Symbol(k) => env
             .borrow()
-            .find_var(k)
+            .find_value(k)
             .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
         Expr::Pair(pair) => {
             let list_elements: Vec<Expr> = pair.iter().collect();
