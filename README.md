@@ -1,10 +1,10 @@
-# copper
+<img src="./copper-banner.svg" alt="copper" width="600">
 
-A Scheme interpreter written in Rust with [repl_lib](https://crates.io/crates/repl_lib).
+An R7RS Scheme interpreter written in Rust.
 
 ### Goal
 
-Create an `R7RS-small` compliant Lisp interpreter. The plan is to release`v1.0.0` when copper is fully `R7RS-small` compliant.
+Create an `R7RS-small` compliant Lisp interpreter. The plan is to release`v1.0.0` when copper is fully compliant.
 
 ### Features
 
