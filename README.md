@@ -9,12 +9,10 @@ Create an `R7RS-small` compliant Lisp interpreter. The plan is to release`v1.0.0
 ### Features
 
 Implemented features include:
-- List processing and manipulation.
-- File parsing and loading.
+- `define`, `lambda`, `quote`, `quasiquote`, and `if` special forms.
 - Implicit conversion between numeric types (Integer, Real, Rational, Complex).
-- `if`, `quote`, `define` and `lambda` special forms.
-- IO Ports (Textual and Binary).
-- `write`, `write-simple`, `write-shared`.
+- IO Ports, `write`, `write-simple`, and `write-shared`.
+- File parsing and loading.
 
 ### Inspiration
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
