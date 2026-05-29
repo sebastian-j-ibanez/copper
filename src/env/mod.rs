@@ -220,9 +220,10 @@ impl Env {
             env.insert_proc("eqv?", procedures::are_eqv);
             env.insert_proc("eq?", procedures::are_eqv);
             env.insert_proc("equal?", procedures::are_equal);
+            env.insert_proc("parameter?", procedures::is_parameter);
+            env.insert_proc("null?", procedures::is_null);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
-            env.insert_proc("parameter?", procedures::is_parameter);
             // Misc
             env.insert_proc("exit", procedures::exit);
             env.insert_proc("quote", macros::quote);

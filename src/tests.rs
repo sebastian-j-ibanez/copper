@@ -197,6 +197,62 @@ fn test_define_lambda_implicit() {
 }
 
 #[test]
+fn test_define_lambda_implicit_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define (do-stuff x) (+ x 1) (+ x 2) (+ x 3))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(do-stuff 10)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "13");
+}
+
+#[test]
+fn test_define_lambda_explicit_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define do-stuff (lambda (x) (+ x 1) (+ x 2) (+ x 3)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(do-stuff 10)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "13");
+}
+
+#[test]
+fn test_define_with_internal_define() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval(
+        "(define (my-reverse ls) \
+           (define (my-reverse-inner ls acc) \
+             (if (null? ls) acc \
+                 (my-reverse-inner (cdr ls) (cons (car ls) acc)))) \
+           (my-reverse-inner ls '()))"
+            .to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(my-reverse '(1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(3 2 1)");
+}
+
+#[test]
+fn test_lambda_immediate_invocation_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "((lambda (x) (+ x 1) (+ x 2) (* x 10)) 5)".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "50");
+}
+
+#[test]
 fn test_new_list() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
@@ -2359,4 +2415,108 @@ fn test_equal_distinct_cyclic_vectors() {
     parse_and_eval("(vector-set! c 1 c)".to_string(), env.clone()).unwrap();
     let diff = parse_and_eval("(equal? a c)".to_string(), env).unwrap();
     assert_eq!(diff.to_string(), "#f");
+}
+
+#[test]
+fn test_set_car_mutates_list() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-car! x 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(99 2 3)");
+}
+
+#[test]
+fn test_set_car_mutates_tail_via_cdr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-car! (cdr x) 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(1 99 3)");
+}
+
+#[test]
+fn test_set_car_evaluates_value_argument() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-car! x (+ 10 20))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(30 2 3)");
+}
+
+#[test]
+fn test_set_car_non_pair_first_arg_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(set-car! 5 1)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_set_car_wrong_arg_count_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(set-car! x)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_set_cdr_mutates_list() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! x (list 99))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(1 99)");
+}
+
+#[test]
+fn test_set_cdr_mutates_tail_via_cdr() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cdr x) (list 99))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(1 2 99)");
+}
+
+#[test]
+fn test_set_cdr_creates_dotted_pair() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cdr x) 3)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(1 2 . 3)");
+}
+
+#[test]
+fn test_set_cdr_evaluates_value_argument() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! x (list (+ 10 20)))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "(1 30)");
+}
+
+#[test]
+fn test_set_cdr_non_pair_first_arg_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(set-cdr! 5 1)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_set_cdr_wrong_arg_count_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(set-cdr! x)".to_string(), env);
+    assert!(result.is_err());
 }
