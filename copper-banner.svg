@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 140" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">
+  <rect width="100%" height="100%" fill="#1a1a1a" rx="8"/>
+  <g fill="#B87333" xml:space="preserve" text-anchor="middle">
+    <text x="210" y="34">  _________  ____  ____  ___  _____</text>
+    <text x="210" y="54"> / ___/ __ \/ __ \/ __ \/ _ \/ ___/</text>
+    <text x="210" y="74">/ /__/ /_/ / /_/ / /_/ /  __/ /    </text>
+    <text x="210" y="94">\___/\____/ .___/ .___/\___/_/     </text>
+    <text x="210" y="114">         /_/   /_/                 </text>
+  </g>
+</svg>
