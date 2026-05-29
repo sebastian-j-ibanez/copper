@@ -2242,3 +2242,121 @@ fn test_equal_wrong_arg_count() {
     assert!(parse_and_eval("(equal? 1)".to_string(), env.clone()).is_err());
     assert!(parse_and_eval("(equal? 1 2 3)".to_string(), env).is_err());
 }
+
+// equal? Edge Cases
+
+#[test]
+fn test_equal_improper_vs_proper_list() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (1 . 2) and (1 2) have the same car but cdrs of different types
+    // (an atom vs. a pair). The direct car/cdr recursion must distinguish
+    // them; an iter-based comparison would treat both as the one-element [1].
+    let env = Env::standard_env();
+    let result = parse_and_eval("(equal? '(1 . 2) '(1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_shared_substructure() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Pair whose car and cdr point at the same allocation, compared against
+    // a pair with two distinct but content-equal sub-lists. equal? should
+    // succeed structurally regardless of sharing.
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define a (cons x x))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define b (cons (list 1 2) (list 1 2)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(equal? a b)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_cyclic_pair_self_reference() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Without the assumed-set, (equal? x x) on a cyclic x recurses forever.
+    let env = Env::standard_env();
+    parse_and_eval("(define x (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr x) x)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(equal? x x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_distinct_cyclic_pairs_same_shape() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Two separately allocated cyclic lists with identical structure.
+    // The bisimulation hallmark: they unfold to the same infinite sequence,
+    // so equal? must return #t.
+    let env = Env::standard_env();
+    parse_and_eval("(define a (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr a) a)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr b) b)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(equal? a b)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_distinct_cyclic_pairs_differ_inside_cycle() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Two cyclic lists differing at one position inside the cycle.
+    // A concrete witness of difference must surface even though the
+    // structures are infinite when unfolded.
+    let env = Env::standard_env();
+    parse_and_eval("(define a (list 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr a) a)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b (list 1 2 4))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cddr b) b)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(equal? a b)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_equal_cyclic_pairs_different_periods_same_unfolding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // a is a period-1 cycle of just 1; b is a period-2 cycle of 1 1.
+    // Both unfold to the infinite sequence 1 1 1 1 ..., so coinductively
+    // equal? must return #t even though the in-memory graphs have
+    // different shapes.
+    let env = Env::standard_env();
+    parse_and_eval("(define a (list 1))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! a a)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b (list 1 1))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set-cdr! (cdr b) b)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(equal? a b)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_cyclic_vector_self_reference() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Self-referencing vector compared with itself.
+    let env = Env::standard_env();
+    parse_and_eval("(define v (vector 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(vector-set! v 1 v)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(equal? v v)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_equal_distinct_cyclic_vectors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Two distinct cyclic vectors with the same shape are equal?;
+    // changing a non-cyclic slot makes them unequal.
+    let env = Env::standard_env();
+    parse_and_eval("(define a (vector 1 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(vector-set! a 1 a)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b (vector 1 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(vector-set! b 1 b)".to_string(), env.clone()).unwrap();
+    let same = parse_and_eval("(equal? a b)".to_string(), env.clone()).unwrap();
+    assert_eq!(same.to_string(), "#t");
+
+    parse_and_eval("(define c (vector 9 2))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(vector-set! c 1 c)".to_string(), env.clone()).unwrap();
+    let diff = parse_and_eval("(equal? a c)".to_string(), env).unwrap();
+    assert_eq!(diff.to_string(), "#f");
+}

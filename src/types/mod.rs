@@ -129,6 +129,7 @@ impl Expr {
             (Expr::ByteVector(a), Expr::ByteVector(b)) => Rc::ptr_eq(&a.buffer, &b.buffer),
             (Expr::Procedure(a), Expr::Procedure(b)) => std::ptr::fn_addr_eq(*a, *b),
             (Expr::Closure(a), Expr::Closure(b)) => Rc::ptr_eq(a, b),
+            (Expr::Port(a), Expr::Port(b)) => a.equal(b),
             (Expr::Null, Expr::Null) => true,
             _ => false,
         };
@@ -138,18 +139,43 @@ impl Expr {
 
     /// Return true if `self` and `other` have equivalent values.
     pub fn equal(&self, other: &Expr) -> std::result::Result<bool, Error> {
+        let mut pair_node_keys: HashSet<(*const (), *const ())> = HashSet::new();
+        self.equal_inner(other, &mut pair_node_keys)
+    }
+
+    /// Checks for equality between `Pair`, `Vector`, and `ByteVector`.
+    ///
+    /// Safe to use with cyclic `Pair` and `Vector` expressions.
+    pub fn equal_inner(
+        &self,
+        other: &Expr,
+        node_hashes: &mut HashSet<(*const (), *const ())>,
+    ) -> std::result::Result<bool, Error> {
         match (self, other) {
             (Expr::String(a), Expr::String(b)) => Ok(a == b),
             (Expr::Pair(a), Expr::Pair(b)) => {
-                Ok(a.car().equal(&b.car())? && a.cdr().equal(&b.cdr())?)
+                let key = (a.raw_ptr(), b.raw_ptr());
+
+                if !node_hashes.insert(key) {
+                    return Ok(true);
+                }
+
+                Ok(a.car().equal_inner(&b.car(), node_hashes)?
+                    && a.cdr().equal_inner(&b.cdr(), node_hashes)?)
             }
             (Expr::Vector(a), Expr::Vector(b)) => {
                 if a.len() != b.len() {
                     return Ok(false);
                 }
 
+                let key = (a.raw_ptr(), b.raw_ptr());
+
+                if !node_hashes.insert(key) {
+                    return Ok(true);
+                }
+
                 for (a_elem, b_elem) in a.iter().zip(b.iter()) {
-                    if !a_elem.equal(&b_elem)? {
+                    if !a_elem.equal_inner(&b_elem, node_hashes)? {
                         return Ok(false);
                     }
                 }

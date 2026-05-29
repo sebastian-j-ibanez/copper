@@ -130,6 +130,17 @@ impl Port {
     pub fn is_binary(&self) -> bool {
         matches!(self, Self::BinaryInput(_) | Self::BinaryOutput(_))
     }
+
+    /// Return if `self` is the same as another port.
+    pub fn equal(&self, other: &Port) -> bool {
+        match (self, other) {
+            (Port::TextInput(a), Port::TextInput(b)) => Rc::ptr_eq(a, b),
+            (Port::TextOutput(a), Port::TextOutput(b)) => Rc::ptr_eq(a, b),
+            (Port::BinaryInput(a), Port::BinaryInput(b)) => Rc::ptr_eq(a, b),
+            (Port::BinaryOutput(a), Port::BinaryOutput(b)) => Rc::ptr_eq(a, b),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug)]
