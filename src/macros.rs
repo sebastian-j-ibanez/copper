@@ -59,25 +59,23 @@ pub fn lambda(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     let mut iter = args.iter();
 
     // Get argument symbols.
-    let arg_list = match iter.next() {
-        Some(Expr::Pair(p)) => p,
+    let params: Vec<String> = match iter.next() {
+        Some(Expr::Null) => vec![],
+        Some(Expr::Pair(p)) => p
+            .iter()
+            .map(|arg| {
+                if let Expr::Symbol(s) = arg {
+                    Ok(s.clone())
+                } else {
+                    Err(Error::Message(format!(
+                        "lambda params must be symbols: {:?}",
+                        arg
+                    )))
+                }
+            })
+            .collect::<Result<_, _>>()?,
         _ => return Err(Error::Message(format!("ill-formed lambda"))),
     };
-
-    // Add argument symbols to env.
-    let params: Vec<String> = arg_list
-        .iter()
-        .map(|arg| {
-            if let Expr::Symbol(s) = arg {
-                Ok(s.clone())
-            } else {
-                Err(Error::Message(format!(
-                    "lambda params must be symbols: {:?}",
-                    arg
-                )))
-            }
-        })
-        .collect::<Result<_, _>>()?;
 
     let body_expressions: Vec<Expr> = args[1..].to_vec();
     let closure = Rc::new(Closure::init(env.clone(), params, body_expressions));
