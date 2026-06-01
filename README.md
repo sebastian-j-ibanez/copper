@@ -14,6 +14,10 @@ Implemented features include:
 - IO Ports, `write`, `write-simple`, and `write-shared`.
 - File parsing and loading.
 
+### Progress
+
+See detailed R7RS progress here: [r7rs-progress.md](./docs/r7rs-progress.md).
+
 ### Inspiration
 - [steel](https://github.com/mattwparas/steel), an embedded scheme interpreter in Rust.
 - [risp](https://github.com/stopachka/risp?tab=readme-ov-file), a small Lisp project in Rust.
