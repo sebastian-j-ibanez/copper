@@ -11,6 +11,7 @@ use crate::types::number::IntVariant::Small;
 use crate::types::ports::{BinaryOutputPort, Port};
 use crate::types::{ByteVector, Expr, Number, Pair, PairIter, Parameter, Result, Vector};
 use crate::{io, parser};
+use std::fs;
 use std::ops::{Add, Deref, Div, Mul, Sub};
 
 // I/O
@@ -57,37 +58,6 @@ pub fn error(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Evaluate the contents of a file.
-pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
-    let file = match args.first() {
-        Some(Expr::String(f)) => f,
-        _ => return Err(Error::new("expected a string path")),
-    };
-
-    let expressions = io::file_input(file.to_owned());
-    io::process_file_input(expressions, env);
-
-    Ok(Expr::Void())
-}
-
-/// Exit with an exit code.
-/// Defaults to `0` if no exit code is provided.
-///
-/// Returns an error if the status code is not a number,
-/// or can't be converted into an i32 status code.
-pub fn exit(args: &[Expr], _: EnvRef) -> Result {
-    let code = match args {
-        [Expr::Number(n)] => {
-            let msg = format!("unable to convert number to status code: {}", n);
-            n.to_i32().ok_or_else(|| Error::new(&msg))?
-        }
-        [] => 0,
-        _ => return Err(Error::new("expected exit code number or no arguments")),
-    };
-
-    std::process::exit(code);
-}
-
 /// Print literal.
 pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     match args.first() {
@@ -108,6 +78,51 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
         }
         None => return Err(Error::new("expected ")),
     }
+}
+
+// Files
+
+/// Evaluate the contents of a file.
+pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
+    let file = match args.first() {
+        Some(Expr::String(f)) => f,
+        _ => return Err(Error::new("expected a string path")),
+    };
+
+    let expressions = io::file_input(file.to_owned());
+    io::process_file_input(expressions, env);
+
+    Ok(Expr::Void())
+}
+
+/// Delete a file.
+pub fn delete_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(file_name)] => {
+            fs::remove_file(file_name)
+                .map_err(|e| Error::new(&format!("unable to delete file: {}", e)))?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected string")),
+    }
+}
+
+/// Exit with an exit code.
+/// Defaults to `0` if no exit code is provided.
+///
+/// Returns an error if the status code is not a number,
+/// or can't be converted into an i32 status code.
+pub fn exit(args: &[Expr], _: EnvRef) -> Result {
+    let code = match args {
+        [Expr::Number(n)] => {
+            let msg = format!("unable to convert number to status code: {}", n);
+            n.to_i32().ok_or_else(|| Error::new(&msg))?
+        }
+        [] => 0,
+        _ => return Err(Error::new("expected exit code number or no arguments")),
+    };
+
+    std::process::exit(code);
 }
 
 // Math
@@ -2689,6 +2704,18 @@ pub fn is_null(args: &[Expr], _: EnvRef) -> Result {
             "expected 1 argument, got {}",
             args.len()
         ))),
+    }
+}
+
+/// Return if file exists.
+pub fn file_exists(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(file_name)] => {
+            let exists = fs::exists(file_name)
+                .map_err(|e| Error::new(&format!("unable to delete file: {}", e)))?;
+            Ok(Expr::Boolean(exists))
+        }
+        _ => Err(Error::new("expected string")),
     }
 }
 

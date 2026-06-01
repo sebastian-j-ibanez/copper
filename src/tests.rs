@@ -2520,3 +2520,109 @@ fn test_set_cdr_wrong_arg_count_errors() {
     let result = parse_and_eval("(set-cdr! x)".to_string(), env);
     assert!(result.is_err());
 }
+
+// File I/O Functions
+
+#[test]
+fn test_file_exists_existing_file() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_file_exists_existing.txt");
+    fs::write(&path, "test").unwrap();
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!("(file-exists? \"{}\")", path.to_str().unwrap()),
+        env,
+    )
+    .unwrap();
+    fs::remove_file(&path).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_file_exists_nonexistent_file() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let path = std::env::temp_dir().join("copper_test_file_exists_nonexistent.txt");
+    let _ = std::fs::remove_file(&path);
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!("(file-exists? \"{}\")", path.to_str().unwrap()),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_file_exists_wrong_arg_type() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(file-exists? 42)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_file_exists_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(file-exists?)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_delete_file_removes_file() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_delete_file.txt");
+    fs::write(&path, "test").unwrap();
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!("(delete-file \"{}\")", path.to_str().unwrap()),
+        env,
+    )
+    .unwrap();
+    assert!(matches!(result, Expr::Void()));
+    assert!(!path.exists());
+}
+
+#[test]
+fn test_delete_file_nonexistent_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let path = std::env::temp_dir().join("copper_test_delete_nonexistent.txt");
+    let _ = std::fs::remove_file(&path);
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!("(delete-file \"{}\")", path.to_str().unwrap()),
+        env,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_delete_file_wrong_arg_type() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(delete-file 42)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_delete_file_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(delete-file)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_file_exists_false_after_delete() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_exists_after_delete.txt");
+    fs::write(&path, "test").unwrap();
+    let env = Env::standard_env();
+    let path_str = path.to_str().unwrap();
+    parse_and_eval(format!("(delete-file \"{}\")", path_str), env.clone()).unwrap();
+    let result = parse_and_eval(format!("(file-exists? \"{}\")", path_str), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
