@@ -477,8 +477,8 @@ All 24 three- and four-deep compositions of `car`/`cdr` are implemented.
 | `call-with-output-file` | yes |
 | `with-input-from-file` | no |
 | `with-output-to-file` | no |
-| `file-exists?` | no |
-| `delete-file` | no |
+| `file-exists?` | yes |
+| `delete-file` | yes |
 
 ---
 
