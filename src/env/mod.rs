@@ -48,8 +48,6 @@ impl Env {
         {
             let mut env = env_ref.borrow_mut();
             // IO
-            env.insert_proc("load", procedures::load_file);
-            env.insert_proc("load", procedures::load_file);
             env.insert_proc("display", procedures::display);
             env.insert_proc("newline", procedures::newline);
             env.insert_proc("print", procedures::display);
@@ -136,7 +134,7 @@ impl Env {
             env.insert_proc("bytevector-copy", procedures::bytevector_copy);
             env.insert_proc("bytevector-append", procedures::bytevector_append);
             env.insert_proc("bytevector-copy!", procedures::bytevector_copy_from);
-            // Ports
+            // Ports & Files
             env.insert_proc("open-input-file", procedures::open_input_file);
             env.insert_proc("open-output-file", procedures::open_output_file);
             env.insert_proc("open-input-string", procedures::open_input_string);
@@ -170,6 +168,8 @@ impl Env {
             env.insert_proc("call-with-input-file", procedures::call_with_input_file);
             env.insert_proc("call-with-output-file", procedures::call_with_output_file);
             env.insert_proc("eof-object", procedures::eof_object);
+            env.insert_proc("load", procedures::load_file);
+            env.insert_proc("delete-file", procedures::delete_file);
             // Conversions
             env.insert_proc("number->string", procedures::num_to_string);
             env.insert_proc("symbol->string", procedures::symbol_to_string);
@@ -222,6 +222,7 @@ impl Env {
             env.insert_proc("equal?", procedures::are_equal);
             env.insert_proc("parameter?", procedures::is_parameter);
             env.insert_proc("null?", procedures::is_null);
+            env.insert_proc("file-exists?", procedures::file_exists);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
             // Misc
@@ -229,7 +230,7 @@ impl Env {
             env.insert_proc("quote", macros::quote);
             env.insert_proc("quasiquote", macros::quasiquote);
 
-            // Setup ports
+            // Init ports
             env.init_default_ports();
         }
         env_ref
