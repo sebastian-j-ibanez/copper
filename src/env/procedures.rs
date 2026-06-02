@@ -80,33 +80,6 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Files
-
-/// Evaluate the contents of a file.
-pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
-    let file = match args.first() {
-        Some(Expr::String(f)) => f,
-        _ => return Err(Error::new("expected a string path")),
-    };
-
-    let expressions = io::file_input(file.to_owned());
-    io::process_file_input(expressions, env);
-
-    Ok(Expr::Void())
-}
-
-/// Delete a file.
-pub fn delete_file(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::String(file_name)] => {
-            fs::remove_file(file_name)
-                .map_err(|e| Error::new(&format!("unable to delete file: {}", e)))?;
-            Ok(Expr::Void())
-        }
-        _ => Err(Error::new("expected string")),
-    }
-}
-
 /// Exit with an exit code.
 /// Defaults to `0` if no exit code is provided.
 ///
@@ -1834,9 +1807,92 @@ pub fn call_with_output_file(args: &[Expr], env: EnvRef) -> Result {
     }
 }
 
+// Helper function to evaluate thunks (either in lambda or `Procedure` form)
+fn call_thunk(thunk: &Expr, env: EnvRef) -> Result {
+    match thunk {
+        Expr::Procedure(f) => f(&[], env),
+        Expr::Closure(c) => apply_lambda(c, vec![]),
+        _ => Err(Error::new("expected a thunk")),
+    }
+}
+
+fn get_param_id(name: &str, env: &EnvRef) -> std::result::Result<String, Error> {
+    match env.borrow().find_value(name) {
+        Some(Expr::Parameter(p)) => Ok(p.id.to_string()),
+        _ => Err(Error::new(&format!("{} is not initialized", name))),
+    }
+}
+
+pub fn with_input_from_file(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [
+            s @ Expr::String(_),
+            thunk @ (Expr::Procedure(_) | Expr::Closure(_)),
+        ] => {
+            let new_port = open_input_file(&[s.clone()], env.clone())?;
+            let id = get_param_id("current-input-port", &env)?;
+            let old = env.borrow().find_param_id(&id);
+            env.borrow_mut().set_param(&id, &new_port);
+            let result = call_thunk(thunk, env.clone());
+            if let Some(old_port) = old {
+                env.borrow_mut().set_param(&id, &old_port);
+            }
+            result
+        }
+        _ => Err(Error::new("expected a string path and a thunk")),
+    }
+}
+
+pub fn with_output_from_file(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [
+            s @ Expr::String(_),
+            thunk @ (Expr::Procedure(_) | Expr::Closure(_)),
+        ] => {
+            let new_port = open_output_file(&[s.clone()], env.clone())?;
+            let id = get_param_id("current-output-port", &env)?;
+            let old = env.borrow().find_param_id(&id);
+            env.borrow_mut().set_param(&id, &new_port);
+            let result = call_thunk(thunk, env.clone());
+            if let Some(old_port) = old {
+                env.borrow_mut().set_param(&id, &old_port);
+            }
+            result
+        }
+        _ => Err(Error::new("expected a string path and a thunk")),
+    }
+}
+
 /// Return a new `Eof` object.
 pub fn eof_object(_: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Eof)
+}
+
+// Files
+
+/// Evaluate the contents of a file.
+pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
+    let file = match args.first() {
+        Some(Expr::String(f)) => f,
+        _ => return Err(Error::new("expected a string path")),
+    };
+
+    let expressions = io::file_input(file.to_owned());
+    io::process_file_input(expressions, env);
+
+    Ok(Expr::Void())
+}
+
+/// Delete a file.
+pub fn delete_file(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::String(file_name)] => {
+            fs::remove_file(file_name)
+                .map_err(|e| Error::new(&format!("unable to delete file: {}", e)))?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected string")),
+    }
 }
 
 // Conversion

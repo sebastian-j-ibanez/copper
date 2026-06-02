@@ -167,6 +167,8 @@ impl Env {
             env.insert_proc("call-with-port", procedures::call_with_port);
             env.insert_proc("call-with-input-file", procedures::call_with_input_file);
             env.insert_proc("call-with-output-file", procedures::call_with_output_file);
+            env.insert_proc("with-input-from-file", procedures::with_input_from_file);
+            env.insert_proc("with-output-to-file", procedures::with_output_from_file);
             env.insert_proc("eof-object", procedures::eof_object);
             env.insert_proc("load", procedures::load_file);
             env.insert_proc("delete-file", procedures::delete_file);

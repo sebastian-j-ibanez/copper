@@ -2626,3 +2626,183 @@ fn test_file_exists_false_after_delete() {
     let result = parse_and_eval(format!("(file-exists? \"{}\")", path_str), env).unwrap();
     assert_eq!(result.to_string(), "#f");
 }
+
+// with-input-from-file
+
+#[test]
+fn test_with_input_from_file_reads_line() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_with_input_from_file_line.txt");
+    fs::write(&path, "hello\n").unwrap();
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!(
+            "(with-input-from-file \"{}\" (lambda () (read-line)))",
+            path.to_str().unwrap()
+        ),
+        env,
+    )
+    .unwrap();
+    let s = result.to_string();
+    let _ = fs::remove_file(&path);
+    // read-line returns the line; trim quotes and trailing \n for comparison
+    assert!(s.contains("hello"));
+}
+
+#[test]
+fn test_with_input_from_file_reads_char() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_with_input_from_file_char.txt");
+    fs::write(&path, "abc").unwrap();
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!(
+            "(with-input-from-file \"{}\" (lambda () (read-char)))",
+            path.to_str().unwrap()
+        ),
+        env,
+    )
+    .unwrap();
+    let _ = fs::remove_file(&path);
+    // Chars display as #\<char> in Scheme
+    assert_eq!(result.to_string(), "#\\a");
+}
+
+#[test]
+fn test_with_input_from_file_returns_thunk_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_with_input_from_file_value.txt");
+    fs::write(&path, "x").unwrap();
+    let env = Env::standard_env();
+    // The thunk reads a char (consuming from the file port) and then returns 99;
+    // with-input-from-file should return the thunk's return value.
+    let result = parse_and_eval(
+        format!(
+            "(with-input-from-file \"{}\" (lambda () (read-char) 99))",
+            path.to_str().unwrap()
+        ),
+        env,
+    )
+    .unwrap();
+    let _ = fs::remove_file(&path);
+    assert_eq!(result.to_string(), "99");
+}
+
+#[test]
+fn test_with_input_from_file_nonexistent_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let path = std::env::temp_dir().join("copper_test_with_input_from_file_noexist.txt");
+    let _ = std::fs::remove_file(&path);
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!(
+            "(with-input-from-file \"{}\" (lambda () (read-line)))",
+            path.to_str().unwrap()
+        ),
+        env,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_with_input_from_file_wrong_arg_type() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(with-input-from-file 42 (lambda () (read-line)))".to_string(),
+        env,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_with_input_from_file_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(with-input-from-file)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// with-output-to-file
+
+#[test]
+fn test_with_output_to_file_writes_string() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_with_output_to_file_string.txt");
+    let _ = fs::remove_file(&path);
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!(
+            "(with-output-to-file \"{}\" (lambda () (write-string \"copper\")))",
+            path.to_str().unwrap()
+        ),
+        env,
+    )
+    .unwrap();
+    let written = fs::read_to_string(&path).unwrap();
+    let _ = fs::remove_file(&path);
+    assert!(matches!(result, Expr::Void()));
+    assert_eq!(written, "copper");
+}
+
+#[test]
+fn test_with_output_to_file_writes_char() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_with_output_to_file_char.txt");
+    let _ = fs::remove_file(&path);
+    let env = Env::standard_env();
+    parse_and_eval(
+        format!(
+            "(with-output-to-file \"{}\" (lambda () (write-char #\\z)))",
+            path.to_str().unwrap()
+        ),
+        env,
+    )
+    .unwrap();
+    let written = fs::read_to_string(&path).unwrap();
+    let _ = fs::remove_file(&path);
+    assert_eq!(written, "z");
+}
+
+#[test]
+fn test_with_output_to_file_returns_thunk_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    use std::fs;
+    let path = std::env::temp_dir().join("copper_test_with_output_to_file_retval.txt");
+    let _ = fs::remove_file(&path);
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        format!(
+            "(with-output-to-file \"{}\" (lambda () (write-string \"hi\") 99))",
+            path.to_str().unwrap()
+        ),
+        env,
+    )
+    .unwrap();
+    let _ = fs::remove_file(&path);
+    assert_eq!(result.to_string(), "99");
+}
+
+#[test]
+fn test_with_output_to_file_wrong_arg_type() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(with-output-to-file 42 (lambda () (display \"x\")))".to_string(),
+        env,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_with_output_to_file_wrong_arg_count() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(with-output-to-file)".to_string(), env);
+    assert!(result.is_err());
+}
