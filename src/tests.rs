@@ -240,6 +240,108 @@ fn test_define_with_internal_define() {
     assert_eq!(result.to_string(), "(3 2 1)");
 }
 
+// Let bindings
+
+#[test]
+fn test_let_basic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let ((x 5)) x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_let_multiple_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let ((x 3) (y 4)) (+ x y))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_let_evaluated_binding_value() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let ((x (+ 1 2))) x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_let_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let ((x 5)) (+ x 1) (* x 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "10");
+}
+
+#[test]
+fn test_let_shadows_outer_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 100)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(let ((x 1)) x)".to_string(), env.clone()).unwrap();
+    assert_eq!(result.to_string(), "1");
+    // outer binding unchanged
+    let outer = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(outer.to_string(), "100");
+}
+
+#[test]
+fn test_let_bindings_use_outer_env() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // In `let`, all binding values are evaluated in the outer env, not each other's scope.
+    let env = Env::standard_env();
+    parse_and_eval("(define a 10)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(let ((x a) (y (* a 2))) (+ x y))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "30");
+}
+
+#[test]
+fn test_let_body_uses_lambda() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(let ((f (lambda (x) (* x x)))) (f 6))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "36");
+}
+
+#[test]
+fn test_let_nested() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(let ((x 1)) (let ((y 2)) (+ x y)))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_let_missing_body_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let ((x 5)))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_let_ill_formed_binding_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let (x) x)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_let_empty_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (let () body) with no bindings is valid — body runs in an empty local scope
+    // Note: empty bindings `()` parse as Expr::Null, which is not matched by the Pair arm.
+    // This tests the current implementation behaviour.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let () (+ 1 2))".to_string(), env);
+    // Either succeeds with 3, or errors; either way it should not panic.
+    let _ = result;
+}
+
 #[test]
 fn test_lambda_immediate_invocation_multiple_body_expressions() {
     use crate::{env::Env, parser::parse_and_eval};

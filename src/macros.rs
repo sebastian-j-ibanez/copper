@@ -37,6 +37,44 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     Ok(Expr::Void())
 }
 
+pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Pair(bindings), body_expressions @ ..] => {
+            let binding_env = Env::local_env(env.clone());
+            // Eval bindings in outer env, then insert into new env.
+            for binding_pair in bindings.iter() {
+                match binding_pair {
+                    Expr::Pair(b) => {
+                        let items: Vec<Expr> = b.iter().collect();
+                        match items.as_slice() {
+                            [Expr::Symbol(s), val_expr] => {
+                                let value = parser::eval(val_expr, env.clone())?;
+                                binding_env
+                                    .try_borrow_mut()
+                                    .map_err(|_| Error::new("unable to borrow local env"))?
+                                    .insert_expr(&s, value);
+                            }
+                            _ => return Err(Error::new("ill-formed let binding")),
+                        }
+                    }
+                    _ => return Err(Error::new("ill-formed let binding")),
+                }
+            }
+
+            // Eval body
+            for (i, expr) in body_expressions.iter().enumerate() {
+                if i == body_expressions.len() - 1 {
+                    return parser::eval(expr, binding_env);
+                }
+
+                parser::eval(expr, binding_env.clone())?;
+            }
+            Err(Error::new("missing 'let' body"))
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
 /// Evaluate all arguments sequentially, and return the value of the last expression.
 pub fn begin(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     let last_value = args
