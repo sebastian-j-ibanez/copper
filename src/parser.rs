@@ -53,6 +53,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     "if" => return macros::if_statement(args, env),
                     "cond" => return macros::cond(args, env),
                     "parameterize" => return macros::parameterize(args, env),
+                    "let" => return macros::let_binding(args, env),
                     _ => {}
                 }
             }
