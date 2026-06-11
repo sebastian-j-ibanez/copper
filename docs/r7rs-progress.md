@@ -31,8 +31,8 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `or` | partial | Same as `and` |
 | `when` | no | |
 | `unless` | no | |
-| `let` | no | |
-| `let*` | no | |
+| `let` | yes | |
+| `let*` | yes | |
 | `letrec` | no | |
 | `letrec*` | no | |
 | `let-values` | no | |
