@@ -342,6 +342,108 @@ fn test_let_empty_bindings() {
     let _ = result;
 }
 
+// Let* bindings
+
+#[test]
+fn test_let_star_basic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* ((x 5)) x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_let_star_sequential_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // The key let* feature: later bindings can reference earlier ones.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* ((x 1) (y (+ x 1))) y)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_let_star_chained_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* ((x 2) (y (* x 3)) (z (+ y 1))) z)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_let_star_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* ((x 5)) (+ x 1) (* x 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "10");
+}
+
+#[test]
+fn test_let_star_shadows_outer_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 100)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(let* ((x 1)) x)".to_string(), env.clone()).unwrap();
+    assert_eq!(result.to_string(), "1");
+    let outer = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(outer.to_string(), "100");
+}
+
+#[test]
+fn test_let_star_rebinds_same_name() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // let* allows re-binding the same name in a later binding.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* ((x 1) (x (+ x 1))) x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_let_star_nested() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(let* ((x 1)) (let* ((y 2)) (+ x y)))".to_string(),
+        env,
+    ).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_let_star_uses_outer_env() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define a 10)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(let* ((x a) (y (+ x 5))) y)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "15");
+}
+
+#[test]
+fn test_let_star_body_uses_lambda() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(let* ((f (lambda (x) (* x x)))) (f 6))".to_string(),
+        env,
+    ).unwrap();
+    assert_eq!(result.to_string(), "36");
+}
+
+#[test]
+fn test_let_star_missing_body_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* ((x 5)))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_let_star_ill_formed_binding_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(let* (x) x)".to_string(), env);
+    assert!(result.is_err());
+}
+
 #[test]
 fn test_lambda_immediate_invocation_multiple_body_expressions() {
     use crate::{env::Env, parser::parse_and_eval};

@@ -75,6 +75,53 @@ pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     }
 }
 
+pub fn let_star_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Pair(bindings), body_expressions @ ..] => {
+            let mut binding_envs = vec![env.clone()];
+            // Eval bindings in outer env, then insert into new env.
+            for binding_pair in bindings.iter() {
+                match binding_pair {
+                    Expr::Pair(binding) => {
+                        let items: Vec<Expr> = binding.iter().collect();
+                        match items.as_slice() {
+                            [Expr::Symbol(s), val_expr] => {
+                                let outer_env_ref = binding_envs
+                                    .last()
+                                    .ok_or(Error::new("expected a local binding env"))?;
+                                let value = parser::eval(val_expr, outer_env_ref.clone())?;
+                                let local_env = Env::local_env(outer_env_ref.clone());
+                                local_env
+                                    .try_borrow_mut()
+                                    .map_err(|_| Error::new("unable to borrow local env"))?
+                                    .insert_expr(&s, value);
+                                binding_envs.push(local_env);
+                            }
+                            _ => return Err(Error::new("ill-formed let binding")),
+                        }
+                    }
+                    _ => return Err(Error::new("ill-formed let binding")),
+                }
+            }
+
+            // Eval body
+            for (i, expr) in body_expressions.iter().enumerate() {
+                let local_env = binding_envs
+                    .last()
+                    .ok_or(Error::new("expected a local binding env"))?;
+
+                if i == body_expressions.len() - 1 {
+                    return parser::eval(expr, local_env.clone());
+                }
+
+                parser::eval(expr, local_env.clone())?;
+            }
+            Err(Error::new("missing 'let' body"))
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
 /// Evaluate all arguments sequentially, and return the value of the last expression.
 pub fn begin(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     let last_value = args
