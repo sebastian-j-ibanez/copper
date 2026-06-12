@@ -55,6 +55,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     "parameterize" => return macros::parameterize(args, env),
                     "let" => return macros::let_binding(args, env),
                     "let*" => return macros::let_star_binding(args, env),
+                    "letrec" | "letrec*" => return macros::letrec_binding(args, env),
                     _ => {}
                 }
             }

@@ -444,6 +444,280 @@ fn test_let_star_ill_formed_binding_errors() {
     assert!(result.is_err());
 }
 
+// Letrec bindings
+
+#[test]
+fn test_letrec_basic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec ((x 5)) x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_letrec_multiple_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec ((x 3) (y 4)) (+ x y))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_letrec_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec ((x 5)) (+ x 1) (* x 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "10");
+}
+
+#[test]
+fn test_letrec_shadows_outer_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 100)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(letrec ((x 1)) x)".to_string(), env.clone()).unwrap();
+    assert_eq!(result.to_string(), "1");
+    let outer = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(outer.to_string(), "100");
+}
+
+#[test]
+fn test_letrec_lambda_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec ((f (lambda (x) (* x x)))) (f 6))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "36");
+}
+
+#[test]
+fn test_letrec_self_recursion() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // letrec allows a binding to refer to itself.
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec ((fact (lambda (n) (if (eqv? n 0) 1 (* n (fact (- n 1))))))) (fact 5))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "120");
+}
+
+#[test]
+fn test_letrec_mutual_recursion_even() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // Classic letrec use case: mutually recursive even?/odd?.
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec ((my-even? (lambda (n) (if (eqv? n 0) #t (my-odd? (- n 1))))) \
+                  (my-odd?  (lambda (n) (if (eqv? n 0) #f (my-even? (- n 1)))))) \
+           (my-even? 10))"
+            .to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_letrec_mutual_recursion_odd() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec ((my-even? (lambda (n) (if (eqv? n 0) #t (my-odd? (- n 1))))) \
+                  (my-odd?  (lambda (n) (if (eqv? n 0) #f (my-even? (- n 1)))))) \
+           (my-odd? 7))"
+            .to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_letrec_nested() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec ((x 1)) (letrec ((y 2)) (+ x y)))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_letrec_missing_body_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec ((x 5)))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_letrec_ill_formed_binding_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec (x) x)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// Letrec* bindings
+
+#[test]
+fn test_letrec_star_basic() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* ((x 5)) x)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_letrec_star_multiple_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* ((x 3) (y 4)) (+ x y))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_letrec_star_sequential_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // The key letrec* feature: later bindings can reference earlier ones.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* ((x 1) (y (+ x 1))) y)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_letrec_star_chained_bindings() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec* ((x 2) (y (* x 3)) (z (+ y 1))) z)".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_letrec_star_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* ((x 5)) (+ x 1) (* x 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "10");
+}
+
+#[test]
+fn test_letrec_star_shadows_outer_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 100)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(letrec* ((x 1)) x)".to_string(), env.clone()).unwrap();
+    assert_eq!(result.to_string(), "1");
+    let outer = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(outer.to_string(), "100");
+}
+
+#[test]
+fn test_letrec_star_lambda_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec* ((f (lambda (x) (* x x)))) (f 6))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "36");
+}
+
+#[test]
+fn test_letrec_star_self_recursion() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec* ((fact (lambda (n) (if (eqv? n 0) 1 (* n (fact (- n 1))))))) (fact 5))"
+            .to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "120");
+}
+
+#[test]
+fn test_letrec_star_later_binding_uses_lambda() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // A later binding can call a lambda defined in an earlier binding.
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec* ((double (lambda (x) (* x 2))) (y (double 5))) y)".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "10");
+}
+
+#[test]
+fn test_letrec_star_nested() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec* ((x 1)) (letrec* ((y 2)) (+ x y)))".to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_letrec_star_missing_body_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* ((x 5)))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_letrec_star_ill_formed_binding_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* (x) x)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_letrec_star_mutual_recursion() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // letrec* scopes names sequentially, but lambda bodies are evaluated lazily —
+    // so mutual recursion through lambdas still works because both names are bound
+    // before either lambda body runs.
+    let env = Env::standard_env();
+    let result = parse_and_eval(
+        "(letrec* ((my-even? (lambda (n) (if (eqv? n 0) #t (my-odd? (- n 1))))) \
+                   (my-odd?  (lambda (n) (if (eqv? n 0) #f (my-even? (- n 1)))))) \
+           (my-even? 10))"
+            .to_string(),
+        env,
+    )
+    .unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_letrec_star_forward_reference_undefined() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Forward references in letrec* are undefined behaviour (R7RS says "it is an error").
+    // The implementation pre-allocates all names as Null, so a forward reference resolves
+    // to Null rather than producing an error.
+    let env = Env::standard_env();
+    let result = parse_and_eval("(letrec* ((y x) (x 1)) y)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Null));
+}
+
 #[test]
 fn test_lambda_immediate_invocation_multiple_body_expressions() {
     use crate::{env::Env, parser::parse_and_eval};

@@ -33,8 +33,8 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `unless` | no | |
 | `let` | yes | |
 | `let*` | yes | |
-| `letrec` | no | |
-| `letrec*` | no | |
+| `letrec` | yes | |
+| `letrec*` | yes | |
 | `let-values` | no | |
 | `let*-values` | no | |
 | `define-values` | no | |
@@ -583,36 +583,3 @@ Procedures implemented in Copper but not defined by R7RS.
 
 ---
 
-## Summary
-
-| Library | yes | partial | no |
-| ------- | -- | -- | -- |
-| `(scheme base)` — special forms | 8 | 3 | 20 |
-| `(scheme base)` — equivalence | 3 | 0 | 0 |
-| `(scheme base)` — numbers | 15 | 0 | 21 |
-| `(scheme base)` — booleans | 2 | 0 | 1 |
-| `(scheme base)` — pairs & lists | 12 | 0 | 12 |
-| `(scheme base)` — symbols | 3 | 0 | 1 |
-| `(scheme base)` — characters | 5 | 0 | 7 |
-| `(scheme base)` — strings | 12 | 0 | 10 |
-| `(scheme base)` — vectors | 12 | 0 | 2 |
-| `(scheme base)` — bytevectors | 9 | 0 | 0 |
-| `(scheme base)` — control | 1 | 0 | 12 |
-| `(scheme base)` — exceptions | 1 | 0 | 8 |
-| `(scheme base)` — I/O | 22 | 0 | 5 |
-| `(scheme base)` — misc | 2 | 0 | 2 |
-| `(scheme case-lambda)` | 0 | 0 | 1 |
-| `(scheme char)` | 7 | 0 | 15 |
-| `(scheme complex)` | 0 | 0 | 6 |
-| `(scheme cxr)` | 24 | 0 | 0 |
-| `(scheme eval)` | 0 | 0 | 2 |
-| `(scheme file)` | 6 | 0 | 4 |
-| `(scheme inexact)` | 0 | 0 | 12 |
-| `(scheme lazy)` | 0 | 0 | 5 |
-| `(scheme load)` | 1 | 0 | 0 |
-| `(scheme process-context)` | 1 | 0 | 4 |
-| `(scheme read)` | 0 | 0 | 1 |
-| `(scheme repl)` | 0 | 0 | 1 |
-| `(scheme time)` | 0 | 0 | 3 |
-| `(scheme write)` | 4 | 0 | 0 |
-| **Total** | **150** | **3** | **155** |

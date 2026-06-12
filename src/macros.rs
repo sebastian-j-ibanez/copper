@@ -37,6 +37,7 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     Ok(Expr::Void())
 }
 
+/// Bind arguments and evaluate expressions in a locally scoped environment.
 pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
         [Expr::Pair(bindings), body_expressions @ ..] => {
@@ -75,10 +76,15 @@ pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     }
 }
 
+/// Bind arguments and evaluate expressions in a locally scoped environment.
+///
+/// Differs from `let_bindings` by first evaluating bindings in the outer/global
+/// environment, then inserting bindings into a locally scoped environment.
 pub fn let_star_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
         [Expr::Pair(bindings), body_expressions @ ..] => {
             let mut binding_envs = vec![env.clone()];
+
             // Eval bindings in outer env, then insert into new env.
             for binding_pair in bindings.iter() {
                 match binding_pair {
@@ -104,17 +110,72 @@ pub fn let_star_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                 }
             }
 
-            // Eval body
+            // Eval body.
+            let last_env = binding_envs
+                .last()
+                .ok_or(Error::new("expected a local binding env"))?;
             for (i, expr) in body_expressions.iter().enumerate() {
-                let local_env = binding_envs
-                    .last()
-                    .ok_or(Error::new("expected a local binding env"))?;
-
                 if i == body_expressions.len() - 1 {
-                    return parser::eval(expr, local_env.clone());
+                    return parser::eval(expr, last_env.clone());
                 }
 
-                parser::eval(expr, local_env.clone())?;
+                parser::eval(expr, last_env.clone())?;
+            }
+            Err(Error::new("missing 'let' body"))
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
+/// Bind arguments and evaluate expressions in a locally scoped environment.
+///
+/// Differs from `let_binding` by temporarily initializing each new variable
+/// to `Expr::Null`, before evaluating and assigning binding values. This
+/// allows new variables bound in `letrec_binding` to reference other new variables.
+pub fn letrec_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Pair(binding_pairs), body_expressions @ ..] => {
+            let binding_env_ref = Env::local_env(env.clone());
+
+            let mut bindings: Vec<(String, Expr)> = Vec::new();
+
+            // Initialize each variable to `Expr::Null`.
+            for binding_pair in binding_pairs.clone().iter() {
+                match binding_pair {
+                    Expr::Pair(b) => {
+                        let binding_items: Vec<Expr> = b.iter().collect();
+                        match binding_items.as_slice() {
+                            [Expr::Symbol(s), value] => {
+                                bindings.push((s.clone(), value.clone()));
+                                binding_env_ref
+                                    .try_borrow_mut()
+                                    .map_err(|_| Error::new("unable to borrow local env"))?
+                                    .insert_expr(s, Expr::Null)
+                            }
+                            _ => return Err(Error::new("ill-formed let binding")),
+                        }
+                    }
+                    _ => return Err(Error::new("ill-formed let binding")),
+                }
+            }
+
+            // Evaluate and assign binding values in the letrec env so closures
+            // capture it (enabling self- and mutual recursion).
+            for (name, value_expr) in bindings {
+                let value = parser::eval(&value_expr, binding_env_ref.clone())?;
+                binding_env_ref
+                    .try_borrow_mut()
+                    .map_err(|_| Error::new("unable to borrow local env"))?
+                    .insert_expr(&name, value);
+            }
+
+            // Eval body.
+            for (i, expr) in body_expressions.iter().enumerate() {
+                if i == body_expressions.len() - 1 {
+                    return parser::eval(expr, binding_env_ref.clone());
+                }
+
+                parser::eval(expr, binding_env_ref.clone())?;
             }
             Err(Error::new("missing 'let' body"))
         }
