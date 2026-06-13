@@ -300,8 +300,7 @@ fn test_let_bindings_use_outer_env() {
 fn test_let_body_uses_lambda() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(let ((f (lambda (x) (* x x)))) (f 6))".to_string(), env).unwrap();
+    let result = parse_and_eval("(let ((f (lambda (x) (* x x)))) (f 6))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "36");
 }
 
@@ -309,8 +308,7 @@ fn test_let_body_uses_lambda() {
 fn test_let_nested() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(let ((x 1)) (let ((y 2)) (+ x y)))".to_string(), env).unwrap();
+    let result = parse_and_eval("(let ((x 1)) (let ((y 2)) (+ x y)))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "3");
 }
 
@@ -365,7 +363,8 @@ fn test_let_star_sequential_binding() {
 fn test_let_star_chained_bindings() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval("(let* ((x 2) (y (* x 3)) (z (+ y 1))) z)".to_string(), env).unwrap();
+    let result =
+        parse_and_eval("(let* ((x 2) (y (* x 3)) (z (+ y 1))) z)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "7");
 }
 
@@ -401,10 +400,7 @@ fn test_let_star_rebinds_same_name() {
 fn test_let_star_nested() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        "(let* ((x 1)) (let* ((y 2)) (+ x y)))".to_string(),
-        env,
-    ).unwrap();
+    let result = parse_and_eval("(let* ((x 1)) (let* ((y 2)) (+ x y)))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "3");
 }
 
@@ -421,10 +417,8 @@ fn test_let_star_uses_outer_env() {
 fn test_let_star_body_uses_lambda() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        "(let* ((f (lambda (x) (* x x)))) (f 6))".to_string(),
-        env,
-    ).unwrap();
+    let result =
+        parse_and_eval("(let* ((f (lambda (x) (* x x)))) (f 6))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "36");
 }
 
@@ -485,11 +479,8 @@ fn test_letrec_shadows_outer_binding() {
 fn test_letrec_lambda_binding() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        "(letrec ((f (lambda (x) (* x x)))) (f 6))".to_string(),
-        env,
-    )
-    .unwrap();
+    let result =
+        parse_and_eval("(letrec ((f (lambda (x) (* x x)))) (f 6))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "36");
 }
 
@@ -499,7 +490,8 @@ fn test_letrec_self_recursion() {
     // letrec allows a binding to refer to itself.
     let env = Env::standard_env();
     let result = parse_and_eval(
-        "(letrec ((fact (lambda (n) (if (eqv? n 0) 1 (* n (fact (- n 1))))))) (fact 5))".to_string(),
+        "(letrec ((fact (lambda (n) (if (eqv? n 0) 1 (* n (fact (- n 1))))))) (fact 5))"
+            .to_string(),
         env,
     )
     .unwrap();
@@ -541,11 +533,8 @@ fn test_letrec_mutual_recursion_odd() {
 fn test_letrec_nested() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        "(letrec ((x 1)) (letrec ((y 2)) (+ x y)))".to_string(),
-        env,
-    )
-    .unwrap();
+    let result =
+        parse_and_eval("(letrec ((x 1)) (letrec ((y 2)) (+ x y)))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "3");
 }
 
@@ -722,11 +711,8 @@ fn test_letrec_star_forward_reference_undefined() {
 fn test_lambda_immediate_invocation_multiple_body_expressions() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        "((lambda (x) (+ x 1) (+ x 2) (* x 10)) 5)".to_string(),
-        env,
-    )
-    .unwrap();
+    let result =
+        parse_and_eval("((lambda (x) (+ x 1) (+ x 2) (* x 10)) 5)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "50");
 }
 
@@ -2268,7 +2254,6 @@ fn test_quasiquote_unquote_string() {
     assert_eq!(result.to_string(), "(a \"hello\" c)");
 }
 
-
 #[test]
 fn test_quasiquote_all_unquoted() {
     use crate::{env::Env, parser::parse_and_eval};
@@ -2468,8 +2453,11 @@ fn test_eqv_same_bytevector() {
 fn test_eqv_distinct_bytevectors_same_contents() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(eqv? (bytevector 1 2 3) (bytevector 1 2 3))".to_string(), env).unwrap();
+    let result = parse_and_eval(
+        "(eqv? (bytevector 1 2 3) (bytevector 1 2 3))".to_string(),
+        env,
+    )
+    .unwrap();
     assert_eq!(result.to_string(), "#f");
 }
 
@@ -2506,8 +2494,7 @@ fn test_eqv_distinct_closures() {
     // Two separately evaluated lambdas are distinct allocations.
     // (R7RS leaves this unspecified; we return #f.)
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(eqv? (lambda (x) x) (lambda (x) x))".to_string(), env).unwrap();
+    let result = parse_and_eval("(eqv? (lambda (x) x) (lambda (x) x))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#f");
 }
 
@@ -2623,8 +2610,7 @@ fn test_equal_lists_same_contents() {
     use crate::{env::Env, parser::parse_and_eval};
     // Distinct allocations with equal contents are equal? (but not eqv?).
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(equal? (list 1 2 3) (list 1 2 3))".to_string(), env).unwrap();
+    let result = parse_and_eval("(equal? (list 1 2 3) (list 1 2 3))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#t");
 }
 
@@ -2632,8 +2618,7 @@ fn test_equal_lists_same_contents() {
 fn test_equal_lists_different_contents() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(equal? (list 1 2 3) (list 1 2 4))".to_string(), env).unwrap();
+    let result = parse_and_eval("(equal? (list 1 2 3) (list 1 2 4))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#f");
 }
 
@@ -2650,8 +2635,7 @@ fn test_equal_quoted_lists() {
     use crate::{env::Env, parser::parse_and_eval};
     // R7RS: (equal? '(a (b) c) '(a (b) c)) => #t
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(equal? '(a (b) c) '(a (b) c))".to_string(), env).unwrap();
+    let result = parse_and_eval("(equal? '(a (b) c) '(a (b) c))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#t");
 }
 
@@ -2688,8 +2672,7 @@ fn test_equal_dotted_pairs() {
 fn test_equal_vectors_same_contents() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(equal? (vector 1 2 3) (vector 1 2 3))".to_string(), env).unwrap();
+    let result = parse_and_eval("(equal? (vector 1 2 3) (vector 1 2 3))".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#t");
 }
 
@@ -2729,8 +2712,11 @@ fn test_equal_bytevectors_same_contents() {
 fn test_equal_bytevectors_different_contents() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(equal? (bytevector 1 2) (bytevector 1 3))".to_string(), env).unwrap();
+    let result = parse_and_eval(
+        "(equal? (bytevector 1 2) (bytevector 1 3))".to_string(),
+        env,
+    )
+    .unwrap();
     assert_eq!(result.to_string(), "#f");
 }
 
@@ -2755,8 +2741,7 @@ fn test_equal_different_types() {
     let num_str = parse_and_eval("(equal? 1 \"1\")".to_string(), env.clone()).unwrap();
     assert_eq!(num_str.to_string(), "#f");
     // A list and a vector with the same contents are not equal?.
-    let list_vec =
-        parse_and_eval("(equal? (list 1 2) (vector 1 2))".to_string(), env).unwrap();
+    let list_vec = parse_and_eval("(equal? (list 1 2) (vector 1 2))".to_string(), env).unwrap();
     assert_eq!(list_vec.to_string(), "#f");
 }
 
@@ -3054,11 +3039,8 @@ fn test_delete_file_removes_file() {
     let path = std::env::temp_dir().join("copper_test_delete_file.txt");
     fs::write(&path, "test").unwrap();
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        format!("(delete-file \"{}\")", path.to_str().unwrap()),
-        env,
-    )
-    .unwrap();
+    let result =
+        parse_and_eval(format!("(delete-file \"{}\")", path.to_str().unwrap()), env).unwrap();
     assert!(matches!(result, Expr::Void()));
     assert!(!path.exists());
 }
@@ -3069,10 +3051,7 @@ fn test_delete_file_nonexistent_errors() {
     let path = std::env::temp_dir().join("copper_test_delete_nonexistent.txt");
     let _ = std::fs::remove_file(&path);
     let env = Env::standard_env();
-    let result = parse_and_eval(
-        format!("(delete-file \"{}\")", path.to_str().unwrap()),
-        env,
-    );
+    let result = parse_and_eval(format!("(delete-file \"{}\")", path.to_str().unwrap()), env);
     assert!(result.is_err());
 }
 

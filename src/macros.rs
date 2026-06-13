@@ -55,22 +55,22 @@ pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                                     .map_err(|_| Error::new("unable to borrow local env"))?
                                     .insert_expr(&s, value);
                             }
-                            _ => return Err(Error::new("ill-formed let binding")),
+                            _ => return Err(Error::new("ill-formed special form")),
                         }
                     }
-                    _ => return Err(Error::new("ill-formed let binding")),
+                    _ => return Err(Error::new("ill-formed special form")),
                 }
             }
 
             // Eval body
             for (i, expr) in body_expressions.iter().enumerate() {
-                if i == body_expressions.len() - 1 {
-                    return parser::eval(expr, binding_env);
-                }
+                let value = parser::eval(expr, binding_env.clone())?;
 
-                parser::eval(expr, binding_env.clone())?;
+                if i == body_expressions.len() - 1 {
+                    return Ok(value);
+                }
             }
-            Err(Error::new("missing 'let' body"))
+            Err(Error::new("missing body expression"))
         }
         _ => Err(Error::new("ill-formed special form")),
     }
@@ -115,13 +115,13 @@ pub fn let_star_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                 .last()
                 .ok_or(Error::new("expected a local binding env"))?;
             for (i, expr) in body_expressions.iter().enumerate() {
-                if i == body_expressions.len() - 1 {
-                    return parser::eval(expr, last_env.clone());
-                }
+                let value = parser::eval(expr, last_env.clone())?;
 
-                parser::eval(expr, last_env.clone())?;
+                if i == body_expressions.len() - 1 {
+                    return Ok(value);
+                }
             }
-            Err(Error::new("missing 'let' body"))
+            Err(Error::new("missing body expression"))
         }
         _ => Err(Error::new("ill-formed special form")),
     }
@@ -135,7 +135,7 @@ pub fn let_star_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 pub fn letrec_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
         [Expr::Pair(binding_pairs), body_expressions @ ..] => {
-            let binding_env_ref = Env::local_env(env.clone());
+            let binding_env = Env::local_env(env.clone());
 
             let mut bindings: Vec<(String, Expr)> = Vec::new();
 
@@ -147,23 +147,23 @@ pub fn letrec_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                         match binding_items.as_slice() {
                             [Expr::Symbol(s), value] => {
                                 bindings.push((s.clone(), value.clone()));
-                                binding_env_ref
+                                binding_env
                                     .try_borrow_mut()
                                     .map_err(|_| Error::new("unable to borrow local env"))?
                                     .insert_expr(s, Expr::Null)
                             }
-                            _ => return Err(Error::new("ill-formed let binding")),
+                            _ => return Err(Error::new("ill-formed special form")),
                         }
                     }
-                    _ => return Err(Error::new("ill-formed let binding")),
+                    _ => return Err(Error::new("ill-formed special form")),
                 }
             }
 
             // Evaluate and assign binding values in the letrec env so closures
             // capture it (enabling self- and mutual recursion).
             for (name, value_expr) in bindings {
-                let value = parser::eval(&value_expr, binding_env_ref.clone())?;
-                binding_env_ref
+                let value = parser::eval(&value_expr, binding_env.clone())?;
+                binding_env
                     .try_borrow_mut()
                     .map_err(|_| Error::new("unable to borrow local env"))?
                     .insert_expr(&name, value);
@@ -171,13 +171,13 @@ pub fn letrec_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 
             // Eval body.
             for (i, expr) in body_expressions.iter().enumerate() {
-                if i == body_expressions.len() - 1 {
-                    return parser::eval(expr, binding_env_ref.clone());
-                }
+                let value = parser::eval(expr, binding_env.clone())?;
 
-                parser::eval(expr, binding_env_ref.clone())?;
+                if i == body_expressions.len() - 1 {
+                    return Ok(value);
+                }
             }
-            Err(Error::new("missing 'let' body"))
+            Err(Error::new("missing body expression"))
         }
         _ => Err(Error::new("ill-formed special form")),
     }
