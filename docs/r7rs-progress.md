@@ -19,12 +19,12 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | Form | Status | Notes |
 | ---- | ------ | ----- |
 | `define` | yes | `macros::define` |
-| `lambda` | yes | `macros::lambda` — fixed-arity only; variadic rest args not supported |
+| `lambda` | yes | `macros::lambda` |
 | `if` | yes | `macros::if_statement` |
 | `begin` | yes | `macros::begin` |
 | `quote` | yes | `macros::quote` |
 | `quasiquote` | yes | `macros::quasiquote` |
-| `set!` | no | |
+| `set!` | yes | |
 | `cond` | partial | `macros::cond` — only two-element `(test result)` clauses; no `else`, `=>`, single-test, or multi-expr bodies |
 | `case` | no | |
 | `and` | partial | Registered as a procedure — all args evaluated before call; no short-circuit |
