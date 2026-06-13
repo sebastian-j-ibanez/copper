@@ -3263,3 +3263,61 @@ fn test_with_output_to_file_wrong_arg_count() {
     let result = parse_and_eval("(with-output-to-file)".to_string(), env);
     assert!(result.is_err());
 }
+
+// set! mutation
+
+#[test]
+fn test_set_basic() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 1)".to_string(), env.clone()).unwrap();
+    let void = parse_and_eval("(set! x 42)".to_string(), env.clone()).unwrap();
+    assert!(matches!(void, Expr::Void()));
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
+}
+
+#[test]
+fn test_set_does_not_affect_outer_scope() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // set! mutates the binding where it was defined, not just the local scope.
+    // The outer `x` should be updated because that is where it was bound.
+    let env = Env::standard_env();
+    parse_and_eval("(define x 10)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set! x 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "99");
+}
+
+#[test]
+fn test_set_inside_lambda_mutates_closed_over_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // set! inside a lambda should mutate the binding visible to the lambda.
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define (bump!) (set! x (+ x 1)) x)".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let _bump1 = parse_and_eval("(bump!)".to_string(), env.clone()).unwrap();
+    let _bump2 = parse_and_eval("(bump!)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_set_unbound_variable_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(set! undefined-var 1)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_set_ill_formed_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(set! x)".to_string(), env);
+    assert!(result.is_err());
+}

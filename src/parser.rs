@@ -46,6 +46,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             if let Expr::Symbol(s) = first {
                 match s.as_str() {
                     "define" => return macros::define(args, env),
+                    "set!" => return macros::set(args, env),
                     "begin" => return macros::begin(args, env),
                     "lambda" => return macros::lambda(args, env),
                     "quote" => return macros::quote(args, env),

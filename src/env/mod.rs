@@ -322,6 +322,25 @@ impl Env {
         self.params.insert(param.to_string(), value.clone());
     }
 
+    /// Updates an existing variable in the environment.
+    ///
+    /// Returns `Ok(true)` if the variable exists and was updated.
+    /// Returns `Ok(false)` if the variable does not exist.
+    /// Returns an `Error` if the outer environment cannot be borrowed.
+    pub fn set_expr(&mut self, name: &str, value: &Expr) -> Result<bool, Error> {
+        if self.data.contains_key(name) {
+            self.insert_expr(name, value.clone());
+            Ok(true)
+        } else if let Some(outer) = &self.outer {
+            outer
+                .try_borrow_mut()
+                .map_err(|_| Error::new("unable to borrow runtime environment"))?
+                .set_expr(name, value)
+        } else {
+            Ok(false)
+        }
+    }
+
     /// Initialize default ports:
     /// - current-input-port
     /// - current-output-port
