@@ -37,6 +37,26 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     Ok(Expr::Void())
 }
 
+/// Assigns a value to an existing variable.
+pub fn set(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Symbol(s), expr] => {
+            let value = parser::eval(expr, env.clone())?;
+
+            let mut borrowed_env = env
+                .try_borrow_mut()
+                .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+
+            if !borrowed_env.set_expr(s, &value)? {
+                return Err(Error::new(&format!("unbound variable: {}", &s)));
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
 /// Bind arguments and evaluate expressions in a locally scoped environment.
 pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
@@ -236,7 +256,6 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
         )));
     }
 
-    // new environment extends the closure’s captured env
     let new_env = Env::local_env(closure.env.clone());
 
     {

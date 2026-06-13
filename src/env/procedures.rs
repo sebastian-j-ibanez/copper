@@ -80,24 +80,6 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Exit with an exit code.
-/// Defaults to `0` if no exit code is provided.
-///
-/// Returns an error if the status code is not a number,
-/// or can't be converted into an i32 status code.
-pub fn exit(args: &[Expr], _: EnvRef) -> Result {
-    let code = match args {
-        [Expr::Number(n)] => {
-            let msg = format!("unable to convert number to status code: {}", n);
-            n.to_i32().ok_or_else(|| Error::new(&msg))?
-        }
-        [] => 0,
-        _ => return Err(Error::new("expected exit code number or no arguments")),
-    };
-
-    std::process::exit(code);
-}
-
 // Math
 
 /// Add all arguments together.
@@ -2820,4 +2802,24 @@ pub fn make_parameter(args: &[Expr], env: EnvRef) -> Result {
         }
         _ => Err(Error::new("make-parameter: expected 1 or 2 arguments")),
     }
+}
+
+// Misc
+
+/// Exit with an exit code.
+/// Defaults to `0` if no exit code is provided.
+///
+/// Returns an error if the status code is not a number,
+/// or can't be converted into an i32 status code.
+pub fn exit(args: &[Expr], _: EnvRef) -> Result {
+    let code = match args {
+        [Expr::Number(n)] => {
+            let msg = format!("unable to convert number to status code: {}", n);
+            n.to_i32().ok_or_else(|| Error::new(&msg))?
+        }
+        [] => 0,
+        _ => return Err(Error::new("expected exit code number or no arguments")),
+    };
+
+    std::process::exit(code);
 }
