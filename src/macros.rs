@@ -397,6 +397,42 @@ pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     Ok(Expr::Void())
 }
 
+/// Evaluate body expressions if first argument is truthy.
+pub fn when(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [test_expr, body @ ..] => {
+            let test_value = parser::eval(test_expr, env.clone())?;
+            if let Expr::Boolean(false) = test_value {
+                return Ok(Expr::Void());
+            }
+
+            for expr in body {
+                parser::eval(expr, env.clone())?;
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
+/// Evaluate body expressions if first argument is truthy.
+pub fn unless(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [test_expr, body @ ..] => {
+            let test_value = parser::eval(test_expr, env.clone())?;
+            if let Expr::Boolean(false) = test_value {
+                for expr in body {
+                    parser::eval(expr, env.clone())?;
+                }
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
 /// Sets the first element in a list or pair.
 pub fn set_car(args: &[Expr], _: EnvRef) -> Result<Expr, Error> {
     match args {

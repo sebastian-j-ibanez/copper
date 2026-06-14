@@ -3321,3 +3321,167 @@ fn test_set_ill_formed_errors() {
     let result = parse_and_eval("(set! x)".to_string(), env);
     assert!(result.is_err());
 }
+
+// when
+
+#[test]
+fn test_when_true_runs_body() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when #t (set! x 42))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
+}
+
+#[test]
+fn test_when_false_skips_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when #f (set! x 99))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_when_returns_void() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(when #t 1 2 3)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_when_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define a 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when #t (set! a 1) (set! b 2))".to_string(), env.clone()).unwrap();
+    let ra = parse_and_eval("a".to_string(), env.clone()).unwrap();
+    let rb = parse_and_eval("b".to_string(), env).unwrap();
+    assert_eq!(ra.to_string(), "1");
+    assert_eq!(rb.to_string(), "2");
+}
+
+#[test]
+fn test_when_truthy_non_boolean() {
+    // In Scheme, any value other than #f is truthy.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when 1 (set! x 7))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_when_with_computed_condition_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when (even? 6) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_when_with_computed_condition_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when (even? 5) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_when_no_args_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(when)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// unless
+
+#[test]
+fn test_unless_false_runs_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless #f (set! x 42))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
+}
+
+#[test]
+fn test_unless_true_skips_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless #t (set! x 99))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_unless_returns_void() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(unless #f 1 2 3)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_unless_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define a 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless #f (set! a 1) (set! b 2))".to_string(), env.clone()).unwrap();
+    let ra = parse_and_eval("a".to_string(), env.clone()).unwrap();
+    let rb = parse_and_eval("b".to_string(), env).unwrap();
+    assert_eq!(ra.to_string(), "1");
+    assert_eq!(rb.to_string(), "2");
+}
+
+#[test]
+fn test_unless_truthy_non_boolean_skips_body() {
+    // Any value other than #f is truthy, so unless skips the body.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless 1 (set! x 7))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_unless_with_computed_condition_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless (even? 5) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_unless_with_computed_condition_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless (even? 6) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_unless_no_args_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(unless)".to_string(), env);
+    assert!(result.is_err());
+}
