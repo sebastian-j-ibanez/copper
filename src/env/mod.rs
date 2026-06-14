@@ -66,6 +66,11 @@ impl Env {
             env.insert_proc("floor", procedures::floor);
             env.insert_proc("min", procedures::min);
             env.insert_proc("max", procedures::max);
+            env.insert_proc("=", procedures::num_eq);
+            env.insert_proc("<", procedures::num_less_than);
+            env.insert_proc(">", procedures::num_greater_than);
+            env.insert_proc("<=", procedures::num_less_or_eq_than);
+            env.insert_proc(">=", procedures::num_greater_or_eq_than);
             // Strings
             env.insert_proc("string", procedures::new_string);
             env.insert_proc("string-append", procedures::str_append);

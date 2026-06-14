@@ -29,8 +29,8 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `case` | no | |
 | `and` | partial | Registered as a procedure — all args evaluated before call; no short-circuit |
 | `or` | partial | Same as `and` |
-| `when` | no | |
-| `unless` | no | |
+| `when` | yes | |
+| `unless` | yes | |
 | `let` | yes | |
 | `let*` | yes | |
 | `letrec` | yes | |
@@ -87,11 +87,11 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 
 | Procedure | Status |
 | --------- | ------ |
-| `=` | no |
-| `<` | no |
-| `>` | no |
-| `<=` | no |
-| `>=` | no |
+| `=` | yes |
+| `<` | yes |
+| `>` | yes |
+| `<=` | yes |
+| `>=` | yes |
 
 #### Arithmetic
 

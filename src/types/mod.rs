@@ -122,7 +122,9 @@ impl Expr {
         let eqv = match (self, other) {
             (Expr::Boolean(a), Expr::Boolean(b)) => a == b,
             (Expr::Symbol(a), Expr::Symbol(b)) => a == b,
-            (Expr::Number(a), Expr::Number(b)) => a == b,
+            (Expr::Number(a), Expr::Number(b)) => {
+                std::mem::discriminant(a) == std::mem::discriminant(b) && a == b
+            }
             (Expr::Char(a), Expr::Char(b)) => a == b,
             (Expr::Pair(a), Expr::Pair(b)) => Rc::ptr_eq(&a.elements, &b.elements),
             (Expr::Vector(a), Expr::Vector(b)) => Rc::ptr_eq(&a.elements, &b.elements),

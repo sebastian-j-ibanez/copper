@@ -289,6 +289,86 @@ pub fn max(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Number(min.unwrap()))
 }
 
+/// Return true if numbers equal each other.
+pub fn num_eq(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] == w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in ascending order.
+pub fn num_less_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] < w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in descending order.
+pub fn num_greater_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] > w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in ascending order (or equal).
+pub fn num_less_or_eq_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] <= w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in descending order (or equal).
+pub fn num_greater_or_eq_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] >= w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
 // Strings
 
 /// Appends two strings together.
