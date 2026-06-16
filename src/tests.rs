@@ -996,6 +996,58 @@ fn test_or_one_true() {
     assert_eq!(result.to_string(), "#t");
 }
 
+#[test]
+fn test_and_empty() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(and)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_and_returns_last_value() {
+    // (and) returns the last truthy value, not just #t
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(and 1 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_and_short_circuits_on_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // (/ 1 0) must not be evaluated
+    let result = parse_and_eval("(and #f (/ 1 0))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_or_empty() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(or)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_or_returns_first_truthy_value() {
+    // (or) returns the first truthy value, not just #t
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(or #f 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_or_short_circuits_on_truthy() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // (/ 1 0) must not be evaluated
+    let result = parse_and_eval("(or 1 (/ 1 0))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
 // List Functions
 
 #[test]

@@ -448,18 +448,6 @@ pub fn not(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Returns `true` if any arguments are `false`.
-pub fn and(args: &[Expr], _: EnvRef) -> Result {
-    let contains_false = args.iter().all(|arg| !matches!(arg, Expr::Boolean(false)));
-    Ok(Expr::Boolean(contains_false))
-}
-
-/// Returns `true` if any argument is not `#f`.
-pub fn or(args: &[Expr], _: EnvRef) -> Result {
-    let contains_true = args.iter().any(|arg| !matches!(arg, Expr::Boolean(false)));
-    Ok(Expr::Boolean(contains_true))
-}
-
 // Pairs & Lists
 
 /// Construct a new pair from 2 expressions.

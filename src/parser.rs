@@ -53,6 +53,8 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     "quasiquote" => return macros::quasiquote(args, env),
                     "if" => return macros::if_statement(args, env),
                     "cond" => return macros::cond(args, env),
+                    "and" => return macros::and(args, env),
+                    "or" => return macros::or(args, env),
                     "when" => return macros::when(args, env),
                     "unless" => return macros::unless(args, env),
                     "parameterize" => return macros::parameterize(args, env),

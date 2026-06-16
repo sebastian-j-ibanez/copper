@@ -80,8 +80,6 @@ impl Env {
             env.insert_proc("string-reverse", procedures::string_reverse);
             // Booleans
             env.insert_proc("not", procedures::not);
-            env.insert_proc("and", procedures::and);
-            env.insert_proc("or", procedures::or);
             // Lists & Pairs
             env.insert_proc("cons", procedures::cons_proc);
             env.insert_proc("list", procedures::new_list);

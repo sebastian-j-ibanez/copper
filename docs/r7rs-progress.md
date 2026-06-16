@@ -27,8 +27,8 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `set!` | yes | |
 | `cond` | partial | `macros::cond` — only two-element `(test result)` clauses; no `else`, `=>`, single-test, or multi-expr bodies |
 | `case` | no | |
-| `and` | partial | Registered as a procedure — all args evaluated before call; no short-circuit |
-| `or` | partial | Same as `and` |
+| `and` | yes | |
+| `or` | yes | |
 | `when` | yes | |
 | `unless` | yes | |
 | `let` | yes | |

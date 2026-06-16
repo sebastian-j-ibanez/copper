@@ -6,7 +6,7 @@
 
 use crate::env::{Env, EnvRef, try_borrow_env};
 use crate::parser;
-use crate::types::{Pair, Vector};
+use crate::types::{Pair, Procedure, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 use std::rc::Rc;
 
@@ -395,6 +395,46 @@ pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         }
     }
     Ok(Expr::Void())
+}
+
+/// Returns the value of the last argument if all arguments
+/// evaluate to `true`.
+/// Returns `false` if any arguments are `false`.
+/// Returns `true` if no arguments are given.
+pub fn and(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    let mut last_expr = Expr::Void();
+    for arg in args {
+        last_expr = parser::eval(arg, env.clone())?;
+        if let Expr::Boolean(false) = last_expr {
+            return Ok(Expr::Boolean(false));
+        }
+    }
+
+    if args.len() > 0 {
+        return Ok(last_expr);
+    }
+
+    return Ok(Expr::Boolean(true));
+}
+
+/// Returns the value of the first argument that is `true`.
+/// Returns `false` if all arguments are `false` or if
+/// no arguments are given.
+pub fn or(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    let mut last_expr = Expr::Void();
+    for arg in args {
+        last_expr = parser::eval(arg, env.clone())?;
+        match last_expr {
+            Expr::Boolean(false) => {}
+            _ => return Ok(last_expr),
+        }
+    }
+
+    if args.len() > 0 {
+        return Ok(last_expr);
+    }
+
+    Ok(Expr::Boolean(false))
 }
 
 /// Evaluate body expressions if first argument is truthy.
