@@ -228,6 +228,9 @@ impl Env {
             env.insert_proc("parameter?", procedures::is_parameter);
             env.insert_proc("null?", procedures::is_null);
             env.insert_proc("file-exists?", procedures::file_exists);
+            env.insert_proc("zero?", procedures::is_zero);
+            env.insert_proc("positive?", procedures::is_positive);
+            env.insert_proc("negative?", procedures::is_negative);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
             // Misc

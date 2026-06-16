@@ -77,9 +77,9 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `exact?` | yes |
 | `inexact?` | yes |
 | `exact-integer?` | yes |
-| `zero?` | no |
-| `positive?` | no |
-| `negative?` | no |
+| `zero?` | yes |
+| `positive?` | yes |
+| `negative?` | yes |
 | `odd?` | yes |
 | `even?` | yes |
 

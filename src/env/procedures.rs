@@ -2825,6 +2825,30 @@ pub fn file_exists(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return `true` if argument is `0`.
+pub fn is_zero(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => Ok(Expr::Boolean(*n == Number::from_u8(0))),
+        _ => Err(Error::new("expected number")),
+    }
+}
+
+/// Return `true` if argument is positive.
+pub fn is_positive(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => Ok(Expr::Boolean(*n > Number::from_u8(0))),
+        _ => Err(Error::new("expected number")),
+    }
+}
+
+/// Return `true` if argument is negative.
+pub fn is_negative(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => Ok(Expr::Boolean(*n < Number::from_u8(0))),
+        _ => Err(Error::new("expected number")),
+    }
+}
+
 // Parameters
 
 /// Apply a converter function to a value.
