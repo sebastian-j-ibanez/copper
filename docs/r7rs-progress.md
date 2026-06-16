@@ -138,7 +138,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | --------- | ------ |
 | `not` | yes |
 | `boolean?` | yes |
-| `boolean=?` | no |
+| `boolean=?` | yes |
 
 ---
 
