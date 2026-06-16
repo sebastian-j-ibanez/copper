@@ -6,7 +6,7 @@
 
 use crate::env::{Env, EnvRef, try_borrow_env};
 use crate::parser;
-use crate::types::{Pair, Procedure, Vector};
+use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 use std::rc::Rc;
 

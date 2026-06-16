@@ -231,6 +231,7 @@ impl Env {
             env.insert_proc("zero?", procedures::is_zero);
             env.insert_proc("positive?", procedures::is_positive);
             env.insert_proc("negative?", procedures::is_negative);
+            env.insert_proc("boolean=?", procedures::are_bool_eq);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
             // Misc

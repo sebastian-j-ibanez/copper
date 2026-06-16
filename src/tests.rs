@@ -3901,3 +3901,61 @@ fn test_negative_positive_false() {
     let result = parse_and_eval("(negative? 1)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#f");
 }
+
+// boolean=?
+
+#[test]
+fn test_boolean_eq_single_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_single_non_bool_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? 42)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_boolean_eq_both_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_both_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #f #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_mixed() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_boolean_eq_three_same() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #t #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_three_mixed() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #t #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}

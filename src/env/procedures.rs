@@ -2849,6 +2849,24 @@ pub fn is_negative(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Returns `true` if all arguments are booleans of the same value.
+/// Returns an `Error` if any arguments are not booleans.
+pub fn are_bool_eq(args: &[Expr], _: EnvRef) -> Result {
+    let first_bool = match args.first() {
+        Some(Expr::Boolean(b)) => *b,
+        Some(_) => return Err(Error::new("expected boolean")),
+        None => return Err(Error::new("boolean=? requires at least 1 argument")),
+    };
+    for arg in args.iter() {
+        match arg {
+            Expr::Boolean(b) if *b == first_bool => {}
+            Expr::Boolean(_) => return Ok(Expr::Boolean(false)),
+            _ => return Err(Error::new("expected boolean")),
+        }
+    }
+    Ok(Expr::Boolean(true))
+}
+
 // Parameters
 
 /// Apply a converter function to a value.
