@@ -37,6 +37,26 @@ pub fn define(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     Ok(Expr::Void())
 }
 
+/// Assigns a value to an existing variable.
+pub fn set(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [Expr::Symbol(s), expr] => {
+            let value = parser::eval(expr, env.clone())?;
+
+            let mut borrowed_env = env
+                .try_borrow_mut()
+                .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+
+            if !borrowed_env.set_expr(s, &value)? {
+                return Err(Error::new(&format!("unbound variable: {}", &s)));
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
 /// Bind arguments and evaluate expressions in a locally scoped environment.
 pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
@@ -236,7 +256,6 @@ pub fn apply_lambda(closure: &Closure, args: Vec<Expr>) -> Result<Expr, Error> {
         )));
     }
 
-    // new environment extends the closure’s captured env
     let new_env = Env::local_env(closure.env.clone());
 
     {
@@ -376,6 +395,82 @@ pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         }
     }
     Ok(Expr::Void())
+}
+
+/// Returns the value of the last argument if all arguments
+/// evaluate to `true`.
+/// Returns `false` if any arguments are `false`.
+/// Returns `true` if no arguments are given.
+pub fn and(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    let mut last_expr = Expr::Void();
+    for arg in args {
+        last_expr = parser::eval(arg, env.clone())?;
+        if let Expr::Boolean(false) = last_expr {
+            return Ok(Expr::Boolean(false));
+        }
+    }
+
+    if args.len() > 0 {
+        return Ok(last_expr);
+    }
+
+    return Ok(Expr::Boolean(true));
+}
+
+/// Returns the value of the first argument that is `true`.
+/// Returns `false` if all arguments are `false` or if
+/// no arguments are given.
+pub fn or(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    let mut last_expr = Expr::Void();
+    for arg in args {
+        last_expr = parser::eval(arg, env.clone())?;
+        match last_expr {
+            Expr::Boolean(false) => {}
+            _ => return Ok(last_expr),
+        }
+    }
+
+    if args.len() > 0 {
+        return Ok(last_expr);
+    }
+
+    Ok(Expr::Boolean(false))
+}
+
+/// Evaluate body expressions if first argument is truthy.
+pub fn when(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [test_expr, body @ ..] => {
+            let test_value = parser::eval(test_expr, env.clone())?;
+            if let Expr::Boolean(false) = test_value {
+                return Ok(Expr::Void());
+            }
+
+            for expr in body {
+                parser::eval(expr, env.clone())?;
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
+}
+
+/// Evaluate body expressions if first argument is truthy.
+pub fn unless(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+    match args {
+        [test_expr, body @ ..] => {
+            let test_value = parser::eval(test_expr, env.clone())?;
+            if let Expr::Boolean(false) = test_value {
+                for expr in body {
+                    parser::eval(expr, env.clone())?;
+                }
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("ill-formed special form")),
+    }
 }
 
 /// Sets the first element in a list or pair.

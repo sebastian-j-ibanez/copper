@@ -22,7 +22,7 @@ use std::{
     ops::Sub,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Number {
     Int(IntVariant),
     Float(f64),
@@ -759,6 +759,12 @@ impl fmt::Display for Number {
             Float(r) => write!(f, "{}", r),
             Complex(c) => write!(f, "{}", c),
         }
+    }
+}
+
+impl PartialEq for Number {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
     }
 }
 

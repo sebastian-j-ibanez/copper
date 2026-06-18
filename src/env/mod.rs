@@ -66,6 +66,11 @@ impl Env {
             env.insert_proc("floor", procedures::floor);
             env.insert_proc("min", procedures::min);
             env.insert_proc("max", procedures::max);
+            env.insert_proc("=", procedures::num_eq);
+            env.insert_proc("<", procedures::num_less_than);
+            env.insert_proc(">", procedures::num_greater_than);
+            env.insert_proc("<=", procedures::num_less_or_eq_than);
+            env.insert_proc(">=", procedures::num_greater_or_eq_than);
             // Strings
             env.insert_proc("string", procedures::new_string);
             env.insert_proc("string-append", procedures::str_append);
@@ -75,8 +80,6 @@ impl Env {
             env.insert_proc("string-reverse", procedures::string_reverse);
             // Booleans
             env.insert_proc("not", procedures::not);
-            env.insert_proc("and", procedures::and);
-            env.insert_proc("or", procedures::or);
             // Lists & Pairs
             env.insert_proc("cons", procedures::cons_proc);
             env.insert_proc("list", procedures::new_list);
@@ -225,6 +228,10 @@ impl Env {
             env.insert_proc("parameter?", procedures::is_parameter);
             env.insert_proc("null?", procedures::is_null);
             env.insert_proc("file-exists?", procedures::file_exists);
+            env.insert_proc("zero?", procedures::is_zero);
+            env.insert_proc("positive?", procedures::is_positive);
+            env.insert_proc("negative?", procedures::is_negative);
+            env.insert_proc("boolean=?", procedures::are_bool_eq);
             // Parameters
             env.insert_proc("make-parameter", procedures::make_parameter);
             // Misc
@@ -320,6 +327,25 @@ impl Env {
     /// Set parameter in environment.
     pub fn set_param(&mut self, param: &str, value: &Expr) {
         self.params.insert(param.to_string(), value.clone());
+    }
+
+    /// Updates an existing variable in the environment.
+    ///
+    /// Returns `Ok(true)` if the variable exists and was updated.
+    /// Returns `Ok(false)` if the variable does not exist.
+    /// Returns an `Error` if the outer environment cannot be borrowed.
+    pub fn set_expr(&mut self, name: &str, value: &Expr) -> Result<bool, Error> {
+        if self.data.contains_key(name) {
+            self.insert_expr(name, value.clone());
+            Ok(true)
+        } else if let Some(outer) = &self.outer {
+            outer
+                .try_borrow_mut()
+                .map_err(|_| Error::new("unable to borrow runtime environment"))?
+                .set_expr(name, value)
+        } else {
+            Ok(false)
+        }
     }
 
     /// Initialize default ports:

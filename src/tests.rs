@@ -996,6 +996,58 @@ fn test_or_one_true() {
     assert_eq!(result.to_string(), "#t");
 }
 
+#[test]
+fn test_and_empty() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(and)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_and_returns_last_value() {
+    // (and) returns the last truthy value, not just #t
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(and 1 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_and_short_circuits_on_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // (/ 1 0) must not be evaluated
+    let result = parse_and_eval("(and #f (/ 1 0))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_or_empty() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(or)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_or_returns_first_truthy_value() {
+    // (or) returns the first truthy value, not just #t
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(or #f 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_or_short_circuits_on_truthy() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // (/ 1 0) must not be evaluated
+    let result = parse_and_eval("(or 1 (/ 1 0))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
 // List Functions
 
 #[test]
@@ -3262,4 +3314,648 @@ fn test_with_output_to_file_wrong_arg_count() {
     let env = Env::standard_env();
     let result = parse_and_eval("(with-output-to-file)".to_string(), env);
     assert!(result.is_err());
+}
+
+// set! mutation
+
+#[test]
+fn test_set_basic() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 1)".to_string(), env.clone()).unwrap();
+    let void = parse_and_eval("(set! x 42)".to_string(), env.clone()).unwrap();
+    assert!(matches!(void, Expr::Void()));
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
+}
+
+#[test]
+fn test_set_does_not_affect_outer_scope() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // set! mutates the binding where it was defined, not just the local scope.
+    // The outer `x` should be updated because that is where it was bound.
+    let env = Env::standard_env();
+    parse_and_eval("(define x 10)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(set! x 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "99");
+}
+
+#[test]
+fn test_set_inside_lambda_mutates_closed_over_binding() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // set! inside a lambda should mutate the binding visible to the lambda.
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define (bump!) (set! x (+ x 1)) x)".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let _bump1 = parse_and_eval("(bump!)".to_string(), env.clone()).unwrap();
+    let _bump2 = parse_and_eval("(bump!)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_set_unbound_variable_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(set! undefined-var 1)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_set_ill_formed_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(set! x)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// when
+
+#[test]
+fn test_when_true_runs_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when #t (set! x 42))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
+}
+
+#[test]
+fn test_when_false_skips_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when #f (set! x 99))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_when_returns_void() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(when #t 1 2 3)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_when_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define a 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when #t (set! a 1) (set! b 2))".to_string(), env.clone()).unwrap();
+    let ra = parse_and_eval("a".to_string(), env.clone()).unwrap();
+    let rb = parse_and_eval("b".to_string(), env).unwrap();
+    assert_eq!(ra.to_string(), "1");
+    assert_eq!(rb.to_string(), "2");
+}
+
+#[test]
+fn test_when_truthy_non_boolean() {
+    // In Scheme, any value other than #f is truthy.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when 1 (set! x 7))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_when_with_computed_condition_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when (even? 6) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_when_with_computed_condition_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(when (even? 5) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_when_no_args_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(when)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// unless
+
+#[test]
+fn test_unless_false_runs_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless #f (set! x 42))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "42");
+}
+
+#[test]
+fn test_unless_true_skips_body() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless #t (set! x 99))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_unless_returns_void() {
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(unless #f 1 2 3)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_unless_multiple_body_expressions() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define a 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(define b 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless #f (set! a 1) (set! b 2))".to_string(), env.clone()).unwrap();
+    let ra = parse_and_eval("a".to_string(), env.clone()).unwrap();
+    let rb = parse_and_eval("b".to_string(), env).unwrap();
+    assert_eq!(ra.to_string(), "1");
+    assert_eq!(rb.to_string(), "2");
+}
+
+#[test]
+fn test_unless_truthy_non_boolean_skips_body() {
+    // Any value other than #f is truthy, so unless skips the body.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless 1 (set! x 7))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_unless_with_computed_condition_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless (even? 5) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_unless_with_computed_condition_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(unless (even? 6) (set! x 1))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_unless_no_args_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(unless)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// Numeric comparison: =
+
+#[test]
+fn test_num_eq_equal_integers() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 1 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_num_eq_unequal_integers() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_num_eq_multiple_equal() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 5 5 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_num_eq_multiple_one_differs() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 5 5 6)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_num_eq_integer_and_float() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 1 1.0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_num_eq_rational() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 1/2 1/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_num_eq_rational_unequal() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(= 1/2 1/3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+// Numeric comparison: <
+
+#[test]
+fn test_lt_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lt_equal_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< 2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_lt_greater_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< 3 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_lt_chained_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< 1 2 3 4)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lt_chained_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< 1 2 2 4)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_lt_negative() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< -5 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lt_rational() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(< 1/3 1/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+// Numeric comparison: >
+
+#[test]
+fn test_gt_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 3 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gt_equal_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_gt_less_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_gt_chained_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 4 3 2 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gt_chained_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 4 3 3 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_gt_negative() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 0 -5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gt_rational() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(> 1/2 1/3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+// Numeric comparison: <=
+
+#[test]
+fn test_lte_less_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lte_equal_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= 2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lte_greater_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= 3 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_lte_chained_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= 1 2 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lte_chained_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= 1 2 1 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_lte_negative() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= -5 -5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_lte_rational() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(<= 1/3 1/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+// Numeric comparison: >=
+
+#[test]
+fn test_gte_greater_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= 3 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gte_equal_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= 2 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gte_less_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_gte_chained_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= 3 2 2 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gte_chained_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= 3 2 3 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_gte_negative() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= -5 -5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_gte_rational() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(>= 1/2 1/3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+// zero? positive? negative?
+
+#[test]
+fn test_zero_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(zero? 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_zero_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(zero? 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_zero_float() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(zero? 0.0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_positive_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(positive? 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_positive_zero_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(positive? 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_positive_negative_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(positive? -1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_negative_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(negative? -1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_negative_zero_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(negative? 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_negative_positive_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(negative? 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+// boolean=?
+
+#[test]
+fn test_boolean_eq_single_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_single_non_bool_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? 42)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_boolean_eq_both_true() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_both_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #f #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_mixed() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_boolean_eq_three_same() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #t #t)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_boolean_eq_three_mixed() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(boolean=? #t #t #f)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
 }

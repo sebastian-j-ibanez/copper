@@ -80,24 +80,6 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Exit with an exit code.
-/// Defaults to `0` if no exit code is provided.
-///
-/// Returns an error if the status code is not a number,
-/// or can't be converted into an i32 status code.
-pub fn exit(args: &[Expr], _: EnvRef) -> Result {
-    let code = match args {
-        [Expr::Number(n)] => {
-            let msg = format!("unable to convert number to status code: {}", n);
-            n.to_i32().ok_or_else(|| Error::new(&msg))?
-        }
-        [] => 0,
-        _ => return Err(Error::new("expected exit code number or no arguments")),
-    };
-
-    std::process::exit(code);
-}
-
 // Math
 
 /// Add all arguments together.
@@ -307,6 +289,86 @@ pub fn max(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Number(min.unwrap()))
 }
 
+/// Return true if numbers equal each other.
+pub fn num_eq(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] == w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in ascending order.
+pub fn num_less_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] < w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in descending order.
+pub fn num_greater_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] > w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in ascending order (or equal).
+pub fn num_less_or_eq_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] <= w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
+/// Return true if the numbers are in descending order (or equal).
+pub fn num_greater_or_eq_than(args: &[Expr], _: EnvRef) -> Result {
+    if args.len() < 2 {
+        return Err(Error::new("expected at least 2 arguments"));
+    }
+    let numbers = args
+        .iter()
+        .map(|e| match e {
+            Expr::Number(n) => Ok(n),
+            _ => Err(Error::new("expected number")),
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let all_eq = numbers.windows(2).all(|w| w[0] >= w[1]);
+    Ok(Expr::Boolean(all_eq))
+}
+
 // Strings
 
 /// Appends two strings together.
@@ -384,18 +446,6 @@ pub fn not(args: &[Expr], _: EnvRef) -> Result {
         [Expr::Boolean(false)] => Ok(Expr::Boolean(true)),
         _ => Ok(Expr::Boolean(false)),
     }
-}
-
-/// Returns `true` if any arguments are `false`.
-pub fn and(args: &[Expr], _: EnvRef) -> Result {
-    let contains_false = args.iter().all(|arg| !matches!(arg, Expr::Boolean(false)));
-    Ok(Expr::Boolean(contains_false))
-}
-
-/// Returns `true` if any argument is not `#f`.
-pub fn or(args: &[Expr], _: EnvRef) -> Result {
-    let contains_true = args.iter().any(|arg| !matches!(arg, Expr::Boolean(false)));
-    Ok(Expr::Boolean(contains_true))
 }
 
 // Pairs & Lists
@@ -2775,6 +2825,48 @@ pub fn file_exists(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return `true` if argument is `0`.
+pub fn is_zero(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => Ok(Expr::Boolean(*n == Number::from_u8(0))),
+        _ => Err(Error::new("expected number")),
+    }
+}
+
+/// Return `true` if argument is positive.
+pub fn is_positive(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => Ok(Expr::Boolean(*n > Number::from_u8(0))),
+        _ => Err(Error::new("expected number")),
+    }
+}
+
+/// Return `true` if argument is negative.
+pub fn is_negative(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(n)] => Ok(Expr::Boolean(*n < Number::from_u8(0))),
+        _ => Err(Error::new("expected number")),
+    }
+}
+
+/// Returns `true` if all arguments are booleans of the same value.
+/// Returns an `Error` if any arguments are not booleans.
+pub fn are_bool_eq(args: &[Expr], _: EnvRef) -> Result {
+    let first_bool = match args.first() {
+        Some(Expr::Boolean(b)) => *b,
+        Some(_) => return Err(Error::new("expected boolean")),
+        None => return Err(Error::new("boolean=? requires at least 1 argument")),
+    };
+    for arg in args.iter() {
+        match arg {
+            Expr::Boolean(b) if *b == first_bool => {}
+            Expr::Boolean(_) => return Ok(Expr::Boolean(false)),
+            _ => return Err(Error::new("expected boolean")),
+        }
+    }
+    Ok(Expr::Boolean(true))
+}
+
 // Parameters
 
 /// Apply a converter function to a value.
@@ -2820,4 +2912,24 @@ pub fn make_parameter(args: &[Expr], env: EnvRef) -> Result {
         }
         _ => Err(Error::new("make-parameter: expected 1 or 2 arguments")),
     }
+}
+
+// Misc
+
+/// Exit with an exit code.
+/// Defaults to `0` if no exit code is provided.
+///
+/// Returns an error if the status code is not a number,
+/// or can't be converted into an i32 status code.
+pub fn exit(args: &[Expr], _: EnvRef) -> Result {
+    let code = match args {
+        [Expr::Number(n)] => {
+            let msg = format!("unable to convert number to status code: {}", n);
+            n.to_i32().ok_or_else(|| Error::new(&msg))?
+        }
+        [] => 0,
+        _ => return Err(Error::new("expected exit code number or no arguments")),
+    };
+
+    std::process::exit(code);
 }

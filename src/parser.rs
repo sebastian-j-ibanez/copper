@@ -46,12 +46,17 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
             if let Expr::Symbol(s) = first {
                 match s.as_str() {
                     "define" => return macros::define(args, env),
+                    "set!" => return macros::set(args, env),
                     "begin" => return macros::begin(args, env),
                     "lambda" => return macros::lambda(args, env),
                     "quote" => return macros::quote(args, env),
                     "quasiquote" => return macros::quasiquote(args, env),
                     "if" => return macros::if_statement(args, env),
                     "cond" => return macros::cond(args, env),
+                    "and" => return macros::and(args, env),
+                    "or" => return macros::or(args, env),
+                    "when" => return macros::when(args, env),
+                    "unless" => return macros::unless(args, env),
                     "parameterize" => return macros::parameterize(args, env),
                     "let" => return macros::let_binding(args, env),
                     "let*" => return macros::let_star_binding(args, env),

@@ -19,18 +19,18 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | Form | Status | Notes |
 | ---- | ------ | ----- |
 | `define` | yes | `macros::define` |
-| `lambda` | yes | `macros::lambda` — fixed-arity only; variadic rest args not supported |
+| `lambda` | yes | `macros::lambda` |
 | `if` | yes | `macros::if_statement` |
 | `begin` | yes | `macros::begin` |
 | `quote` | yes | `macros::quote` |
 | `quasiquote` | yes | `macros::quasiquote` |
-| `set!` | no | |
+| `set!` | yes | |
 | `cond` | partial | `macros::cond` — only two-element `(test result)` clauses; no `else`, `=>`, single-test, or multi-expr bodies |
 | `case` | no | |
-| `and` | partial | Registered as a procedure — all args evaluated before call; no short-circuit |
-| `or` | partial | Same as `and` |
-| `when` | no | |
-| `unless` | no | |
+| `and` | yes | |
+| `or` | yes | |
+| `when` | yes | |
+| `unless` | yes | |
 | `let` | yes | |
 | `let*` | yes | |
 | `letrec` | yes | |
@@ -77,9 +77,9 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `exact?` | yes |
 | `inexact?` | yes |
 | `exact-integer?` | yes |
-| `zero?` | no |
-| `positive?` | no |
-| `negative?` | no |
+| `zero?` | yes |
+| `positive?` | yes |
+| `negative?` | yes |
 | `odd?` | yes |
 | `even?` | yes |
 
@@ -87,11 +87,11 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 
 | Procedure | Status |
 | --------- | ------ |
-| `=` | no |
-| `<` | no |
-| `>` | no |
-| `<=` | no |
-| `>=` | no |
+| `=` | yes |
+| `<` | yes |
+| `>` | yes |
+| `<=` | yes |
+| `>=` | yes |
 
 #### Arithmetic
 
@@ -138,7 +138,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | --------- | ------ |
 | `not` | yes |
 | `boolean?` | yes |
-| `boolean=?` | no |
+| `boolean=?` | yes |
 
 ---
 
