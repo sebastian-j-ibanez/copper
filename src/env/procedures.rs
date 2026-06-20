@@ -2600,6 +2600,7 @@ pub fn is_boolean(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_list(args: &[Expr], _: EnvRef) -> Result {
     let result = match args {
         [Expr::Pair(p)] => p.is_list(),
+        [Expr::Null] => true,
         [_] => false,
         _ => {
             return Err(Error::Message(format!(
