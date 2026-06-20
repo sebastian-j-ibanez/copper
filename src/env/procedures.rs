@@ -466,13 +466,23 @@ pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
 
 /// Append 2 lists together.
 pub fn list_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Pair(list_a), Expr::Pair(list_b)] if list_a.is_list() && list_b.is_list() => {
-            let result = list_a.clone().append(Expr::Pair(list_b.clone()))?;
-            Ok(result)
+    let mut elements: Vec<Expr> = Vec::new();
+
+    for arg in args {
+        match arg {
+            Expr::Pair(list) if list.is_list() => {
+                let mut list_elem: Vec<Expr> = list.iter().collect();
+                elements.append(&mut list_elem);
+            }
+            _ => return Err(Error::new("expected list")),
         }
-        _ => Err(Error::new("expected 2 lists")),
     }
+
+    if elements.is_empty() {
+        return Ok(Expr::Null);
+    }
+
+    Ok(Pair::list(&elements))
 }
 
 /// Get length of list.
