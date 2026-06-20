@@ -756,7 +756,12 @@ impl fmt::Display for Number {
             Int(IntVariant::Small(i)) => write!(f, "{}", i),
             Int(IntVariant::Big(b)) => write!(f, "{}", b),
             Rational(r) => write!(f, "{}", r),
-            Float(r) => write!(f, "{}", r),
+            Float(fl) => {
+                if fl.rem(1.0) == 0.0 {
+                    return write!(f, "{:.1}", fl);
+                };
+                write!(f, "{}", fl)
+            }
             Complex(c) => write!(f, "{}", c),
         }
     }
