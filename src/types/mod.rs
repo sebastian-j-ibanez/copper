@@ -1214,6 +1214,12 @@ impl ByteVector {
         Ok(end_index - start_index)
     }
 
+    /// Return a deep copy of `&self.elements`.
+    pub fn deep_copy(&self) -> ByteVector {
+        let copied_elements: Vec<u8> = self.buffer.borrow().iter().map(|e| e.clone()).collect();
+        ByteVector::from(&copied_elements)
+    }
+
     /// Return size of `buffer`.
     pub fn len(&self) -> usize {
         self.buffer.borrow().len()

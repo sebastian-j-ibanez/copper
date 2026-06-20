@@ -1020,7 +1020,7 @@ pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
                 let v_elems: Vector = v.deep_copy();
                 elements.append(v_elems);
             }
-            _ => return Err(Error::new("expected list")),
+            _ => return Err(Error::new("expected vector")),
         }
     }
 
@@ -1238,14 +1238,19 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
 /// Return a newly allocated `ByteVector` created from concatenating 2 `ByteVector`.
 pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::ByteVector(a), Expr::ByteVector(b)] => {
-            let new_slice = [a.to_slice(), b.to_slice()];
-            let bytevector = ByteVector::from(new_slice.concat().as_slice());
-            Ok(Expr::ByteVector(bytevector))
+    let mut elements: Vec<u8> = Vec::new();
+
+    for arg in args {
+        match arg {
+            Expr::ByteVector(bv) => {
+                let mut bv_items: Vec<u8> = bv.deep_copy().iter().collect();
+                elements.append(&mut bv_items);
+            }
+            _ => return Err(Error::new("expected bytevector")),
         }
-        _ => Err(Error::new("expected 2 bytevectors")),
     }
+
+    Ok(Expr::ByteVector(ByteVector::from(&elements)))
 }
 
 // Ports
