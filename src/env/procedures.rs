@@ -1985,7 +1985,7 @@ pub fn string_to_num(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(num_str)] => match Number::from_token(&num_str) {
             Ok(n) => Ok(Expr::Number(n)),
-            Err(e) => Err(e),
+            Err(_) => Ok(Expr::Boolean(false)),
         },
         _ => Err(Error::new("expected string")),
     }
