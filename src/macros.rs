@@ -5,7 +5,7 @@
 //! Define functions and variables.
 
 use crate::env::{Env, EnvRef, try_borrow_env};
-use crate::parser::{self, parse_right_expr};
+use crate::parser;
 use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 use std::rc::Rc;
@@ -385,18 +385,33 @@ pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     }
 }
 
+/// Evaluate clauses until one is `true`, then evaluate
+/// the clause's corresponding expressions.
+///
+/// Note: `=>` clause syntax is not yet supported.
+///
+/// Example:
+/// ```
+/// (cond
+///   ((string? 10) "this won't be evaluated")
+///   ((number? 10) "this will be evaluated and returned"))
+/// ```
 pub fn cond(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
-    for arg in args {
+    for (i, arg) in args.iter().enumerate() {
         match arg {
             Expr::Pair(pair) => {
                 let collected_args = pair.iter().collect::<Vec<Expr>>();
                 match collected_args.as_slice() {
-                    [conditional, result] => {
-                        let cond_result = parser::eval(conditional, env.to_owned())?;
-                        if let Expr::Boolean(true) = cond_result {
-                            return parser::eval(result, env);
+                    [Expr::Symbol(s), expr] if s == "else" => {
+                        if i != args.len() - 1 {
+                            return Err(Error::new("else clause must be last condition"));
                         }
+                        return parser::eval(expr, env);
                     }
+                    [conditional, expr] => match parser::eval(conditional, env.to_owned())? {
+                        Expr::Boolean(false) => {}
+                        _ => return parser::eval(expr, env),
+                    },
                     _ => continue,
                 }
             }
