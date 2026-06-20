@@ -23,10 +23,11 @@ fn test_add_string_result() {
 
 #[test]
 fn test_add_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_add_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(+ 1 1)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "2");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -39,10 +40,11 @@ fn test_sub_string_result() {
 
 #[test]
 fn test_sub_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_sub_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(- 1 1)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "0");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -55,10 +57,11 @@ fn test_mult_string_result() {
 
 #[test]
 fn test_mult_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_mult_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(* 1 2)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "2");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -71,10 +74,11 @@ fn test_div_string_result() {
 
 #[test]
 fn test_div_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_div_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(/ 4 2)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "2");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -87,10 +91,11 @@ fn test_multiline_nested_string_result() {
 
 #[test]
 fn test_multiline_nested_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_multiline_nested_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(+ 1\n  (* 2\n     2)\n)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "5");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -103,10 +108,11 @@ fn test_expt_string_result() {
 
 #[test]
 fn test_expt_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_expt_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(expt 2 3)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "8");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -119,10 +125,11 @@ fn test_expt_zero_exponent_string_result() {
 
 #[test]
 fn test_expt_zero_exponent_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_expt_zero_exponent_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(expt 5 0)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "1");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -135,10 +142,11 @@ fn test_expt_rational_base_string_result() {
 
 #[test]
 fn test_expt_rational_base_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_expt_rational_base_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(expt 1/2 2)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "1/4");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -151,10 +159,11 @@ fn test_expt_nested_string_result() {
 
 #[test]
 fn test_expt_nested_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to test_expt_nested_string_result: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(expt 2 (+ 1 2))".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "8");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -331,13 +340,11 @@ fn test_let_ill_formed_binding_errors() {
 #[test]
 fn test_let_empty_bindings() {
     use crate::{env::Env, parser::parse_and_eval};
-    // (let () body) with no bindings is valid — body runs in an empty local scope
-    // Note: empty bindings `()` parse as Expr::Null, which is not matched by the Pair arm.
-    // This tests the current implementation behaviour.
+    // R7RS §4.2.2: (let () body) is valid — body runs in an empty local scope and
+    // yields the body's value.
     let env = Env::standard_env();
-    let result = parse_and_eval("(let () (+ 1 2))".to_string(), env);
-    // Either succeeds with 3, or errors; either way it should not panic.
-    let _ = result;
+    let result = parse_and_eval("(let () (+ 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
 }
 
 // Let* bindings
@@ -697,11 +704,13 @@ fn test_letrec_star_mutual_recursion() {
 }
 
 #[test]
-fn test_letrec_star_forward_reference_undefined() {
+fn test_letrec_star_forward_reference_is_copper_specific() {
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
-    // Forward references in letrec* are undefined behaviour (R7RS says "it is an error").
-    // The implementation pre-allocates all names as Null, so a forward reference resolves
-    // to Null rather than producing an error.
+    // NOTE: this is NOT a spec conformance test. R7RS §4.2.2 says referencing a
+    // letrec* binding before its value has been assigned "is an error" — i.e. the
+    // behaviour is unspecified, so the spec mandates no particular result. This test
+    // documents copper's specific choice: names are pre-allocated as Null, so a
+    // forward reference resolves to Null instead of signalling an error.
     let env = Env::standard_env();
     let result = parse_and_eval("(letrec* ((y x) (x 1)) y)".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Null));
@@ -782,10 +791,11 @@ fn test_abs_positive_number_string_result() {
 
 #[test]
 fn test_abs_positive_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to the string-result test: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(abs 5)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "5");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -798,10 +808,11 @@ fn test_abs_negative_number_string_result() {
 
 #[test]
 fn test_abs_negative_number_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to the string-result test: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(abs -7)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "7");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -814,10 +825,11 @@ fn test_abs_zero_string_result() {
 
 #[test]
 fn test_abs_zero_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to the string-result test: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(abs 0)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "0");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 #[test]
@@ -830,10 +842,11 @@ fn test_abs_rational_string_result() {
 
 #[test]
 fn test_abs_rational_result() {
-    use crate::{env::Env, parser::parse_and_eval};
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    // Companion to the string-result test: assert the result *type* is a number.
     let env = Env::standard_env();
     let result = parse_and_eval("(abs -3/4)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "3/4");
+    assert!(matches!(result, Expr::Number(_)));
 }
 
 // I/O Functions
@@ -891,17 +904,21 @@ fn test_modulo() {
 #[test]
 fn test_ceil() {
     use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.2.6: ceiling of an inexact argument is inexact, so the external
+    // representation carries a decimal point: 4.0, not 4.
     let env = Env::standard_env();
     let result = parse_and_eval("(ceiling 3.2)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "4");
+    assert_eq!(result.to_string(), "4.0");
 }
 
 #[test]
 fn test_floor() {
     use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.2.6: floor of an inexact argument is inexact, so the external
+    // representation carries a decimal point: 3.0, not 3.
     let env = Env::standard_env();
     let result = parse_and_eval("(floor 3.8)".to_string(), env).unwrap();
-    assert_eq!(result.to_string(), "3");
+    assert_eq!(result.to_string(), "3.0");
 }
 
 #[test]
@@ -930,8 +947,11 @@ fn test_string_length() {
     assert_eq!(result.to_string(), "5");
 }
 
+// `string` procedure (R7RS §6.7): (string char ...) builds a string from its chars.
+// These previously carried `make_string` names but never exercised `make-string`.
+
 #[test]
-fn test_make_string_empty() {
+fn test_string_proc_empty() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
     let result = parse_and_eval("(string)".to_string(), env).unwrap();
@@ -939,11 +959,20 @@ fn test_make_string_empty() {
 }
 
 #[test]
-fn test_make_string_from_char() {
+fn test_string_proc_from_char() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
     let result = parse_and_eval("(string #\\a)".to_string(), env).unwrap();
     assert_eq!(result.formatted(), "a");
+}
+
+#[test]
+fn test_string_proc_multiple_chars() {
+    use crate::{env::Env, parser::parse_and_eval};
+    // (string #\a #\b #\c) ⇒ "abc"
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string #\\a #\\b #\\c)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "abc");
 }
 
 // Boolean Functions
@@ -1144,10 +1173,11 @@ fn test_string_to_list_empty() {
 
 #[test]
 fn test_string_to_vector() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.7: (string->vector "abc") ⇒ a vector of the string's chars.
     let env = Env::standard_env();
     let result = parse_and_eval("(string->vector \"abc\")".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Vector(_)));
+    assert_eq!(result.to_string(), "#(#\\a #\\b #\\c)");
 }
 
 #[test]
@@ -1158,76 +1188,44 @@ fn test_list_to_string() {
     assert_eq!(result.formatted(), "hi");
 }
 
-#[test]
-fn test_list_to_string_with_start() {
-    use crate::{env::Env, parser::parse_and_eval};
-    let env = Env::standard_env();
-    let result = parse_and_eval(
-        "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1)".to_string(),
-        env,
-    )
-    .unwrap();
-    assert_eq!(result.formatted(), "ello");
-}
-
-#[test]
-fn test_list_to_string_with_start_and_end() {
-    use crate::{env::Env, parser::parse_and_eval};
-    let env = Env::standard_env();
-    let result = parse_and_eval(
-        "(list->string (list #\\h #\\e #\\l #\\l #\\o) 1 4)".to_string(),
-        env,
-    )
-    .unwrap();
-    assert_eq!(result.formatted(), "ell");
-}
+// NOTE: R7RS §6.7/§6.8 define list->string and list->vector with a *single* list
+// argument — they take no start/end. Copper's start/end variants are non-standard, so
+// the tests for them were removed (see docs/test-audit.md, "Blocked / flagged").
 
 #[test]
 fn test_list_to_vector() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.8: (list->vector (list 1 2 3)) ⇒ #(1 2 3).
     let env = Env::standard_env();
     let result = parse_and_eval("(list->vector (list 1 2 3))".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Vector(_)));
-}
-
-#[test]
-fn test_list_to_vector_with_start() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
-    let env = Env::standard_env();
-    let result = parse_and_eval("(list->vector (list 1 2 3 4) 1)".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Pair(_) | Expr::Vector(_)));
-}
-
-#[test]
-fn test_list_to_vector_with_start_and_end() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
-    let env = Env::standard_env();
-    let result = parse_and_eval("(list->vector (list 1 2 3 4 5) 1 4)".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Vector(_)));
+    assert_eq!(result.to_string(), "#(1 2 3)");
 }
 
 #[test]
 fn test_vector_to_list() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.8: (vector->list (vector 1 2 3)) ⇒ (1 2 3).
     let env = Env::standard_env();
     let result = parse_and_eval("(vector->list (vector 1 2 3))".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Pair(_)));
+    assert_eq!(result.to_string(), "(1 2 3)");
 }
 
 #[test]
 fn test_vector_to_list_with_start() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.8: vector->list takes an optional start; (vector->list #(1 2 3 4) 2) ⇒ (3 4).
     let env = Env::standard_env();
     let result = parse_and_eval("(vector->list (vector 1 2 3 4) 2)".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Pair(_)));
+    assert_eq!(result.to_string(), "(3 4)");
 }
 
 #[test]
 fn test_vector_to_list_with_start_and_end() {
-    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    use crate::{env::Env, parser::parse_and_eval};
+    // R7RS §6.8: (vector->list #(1 2 3 4 5) 1 3) ⇒ (2 3).
     let env = Env::standard_env();
     let result = parse_and_eval("(vector->list (vector 1 2 3 4 5) 1 3)".to_string(), env).unwrap();
-    assert!(matches!(result, Expr::Pair(_)));
+    assert_eq!(result.to_string(), "(2 3)");
 }
 
 #[test]
@@ -3958,4 +3956,429 @@ fn test_boolean_eq_three_mixed() {
     let env = Env::standard_env();
     let result = parse_and_eval("(boolean=? #t #t #f)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#f");
+}
+
+// ============================================================================
+// Category B — missing R7RS coverage (see docs/test-audit.md).
+// Written to the spec; some fail against the current implementation and stand
+// as executable spec targets (tracked under "Expected red tests").
+// ============================================================================
+
+// --- if (R7RS §4.1.5) ---
+
+#[test]
+fn test_if_true_branch() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(if #t 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_if_false_branch() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(if #f 1 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_if_truthy_non_boolean() {
+    // Any value other than #f is true, so 0 selects the consequent.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(if 0 'yes 'no)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "yes");
+}
+
+#[test]
+fn test_if_one_armed_true() {
+    // R7RS §4.1.5: (if <test> <consequent>) is valid; a true test yields the consequent.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(if #t 'yes)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "yes");
+}
+
+// --- cond (R7RS §4.2.1) ---
+
+#[test]
+fn test_cond_first_match() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(cond (#t 1) (#t 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_cond_later_match() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(cond (#f 1) (#t 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_cond_computed_test() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(cond ((> 3 2) 'yes))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "yes");
+}
+
+#[test]
+fn test_cond_truthy_non_boolean() {
+    // A clause test of any non-#f value selects the clause; 1 is true.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(cond (1 'yes))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "yes");
+}
+
+#[test]
+fn test_cond_else_clause() {
+    // R7RS §4.2.1: else is the catch-all when no earlier test is true.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(cond (#f 1) (else 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+// --- begin (R7RS §4.2.3) ---
+
+#[test]
+fn test_begin_returns_last() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(begin 1 2 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_begin_sequences_side_effects() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval("(begin (set! x 10) (set! x (+ x 5)))".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("x".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "15");
+}
+
+// --- arithmetic identity / arity (R7RS §6.2.6) ---
+
+#[test]
+fn test_add_identity() {
+    // (+) ⇒ 0 (additive identity).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(+)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_mult_identity() {
+    // (*) ⇒ 1 (multiplicative identity).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(*)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1");
+}
+
+#[test]
+fn test_sub_unary_negation() {
+    // (- z) ⇒ negation.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(- 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "-5");
+}
+
+#[test]
+fn test_div_unary_reciprocal() {
+    // (/ z) ⇒ reciprocal.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(/ 2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "1/2");
+}
+
+#[test]
+fn test_sub_no_args_errors() {
+    // R7RS: (-) requires at least one argument; zero args is an error.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(-)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_div_no_args_errors() {
+    // R7RS: (/) requires at least one argument; zero args is an error.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(/)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// --- variadic ops with identity elements ---
+
+#[test]
+fn test_string_append_empty() {
+    // R7RS §6.7: (string-append) ⇒ "".
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-append)".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "");
+}
+
+#[test]
+fn test_string_append_three() {
+    // string-append is variadic.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-append \"a\" \"b\" \"c\")".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "abc");
+}
+
+#[test]
+fn test_append_empty() {
+    // R7RS §6.4: (append) ⇒ ().
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(append)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Null));
+}
+
+#[test]
+fn test_append_three_lists() {
+    // append is variadic.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(append (list 1) (list 2) (list 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 2 3)");
+}
+
+#[test]
+fn test_vector_append_empty() {
+    // R7RS §6.8: (vector-append) ⇒ #().
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-append)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#()");
+}
+
+#[test]
+fn test_bytevector_append_empty() {
+    // R7RS §6.9: (bytevector-append) ⇒ #u8().
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(bytevector-append)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#u8()");
+}
+
+// --- min / max (R7RS §6.2.6) ---
+
+#[test]
+fn test_max_inexact_result() {
+    // When the maximum is inexact, the result is inexact: prints 4.0, not 4.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(max 3 4.0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "4.0");
+}
+
+#[test]
+fn test_min_single_arg() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(min 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_max_no_args_errors() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(max)".to_string(), env);
+    assert!(result.is_err());
+}
+
+// --- modulo sign semantics (R7RS §6.2.6: result takes the sign of the divisor) ---
+
+#[test]
+fn test_modulo_negative_dividend() {
+    // (modulo -7 3) ⇒ 2 (sign follows the divisor, unlike remainder).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(modulo -7 3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_modulo_negative_divisor() {
+    // (modulo 7 -3) ⇒ -2.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(modulo 7 -3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "-2");
+}
+
+// --- predicate negatives & numeric tower (R7RS §6.2, §6.3) ---
+
+#[test]
+fn test_integer_predicate_on_float() {
+    // 3.0 is an integer (an integer-valued real).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(integer? 3.0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_list_predicate_improper() {
+    // An improper (dotted) pair is not a list.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(list? (cons 1 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_list_predicate_empty() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(list? '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#t");
+}
+
+#[test]
+fn test_pair_predicate_empty_list() {
+    // (pair? '()) ⇒ #f.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(pair? '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_char_alphabetic_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(char-alphabetic? #\\5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_symbol_predicate_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(symbol? 42)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_string_predicate_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string? 42)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_number_predicate_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(number? \"x\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+#[test]
+fn test_procedure_predicate_false() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(procedure? 42)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+// --- conversion edge cases (R7RS §6.2.6) ---
+
+#[test]
+fn test_string_to_number_failure_returns_false() {
+    // R7RS: string->number returns #f when the string is not a number — it must not error.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string->number \"abc\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#f");
+}
+
+// --- vector operations, direct (R7RS §6.8) ---
+
+#[test]
+fn test_vector_ref_direct() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-ref (vector 10 20 30) 1)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "20");
+}
+
+#[test]
+fn test_vector_set_mutates() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define v (vector 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(vector-set! v 0 99)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("v".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#(99 2 3)");
+}
+
+#[test]
+fn test_vector_length_direct() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-length (vector 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_make_vector_with_fill() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(make-vector 3 0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#(0 0 0)");
+}
+
+#[test]
+fn test_vector_fill_mutates() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define v (vector 1 2 3))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(vector-fill! v 7)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("v".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#(7 7 7)");
+}
+
+#[test]
+fn test_vector_copy_direct() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-copy (vector 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#(1 2 3)");
+}
+
+// --- string operations, direct (R7RS §6.7) ---
+
+#[test]
+fn test_string_upcase_direct() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-upcase \"abc\")".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "ABC");
+}
+
+#[test]
+fn test_string_downcase_direct() {
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-downcase \"ABC\")".to_string(), env).unwrap();
+    assert_eq!(result.formatted(), "abc");
 }

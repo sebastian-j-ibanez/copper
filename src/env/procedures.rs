@@ -96,7 +96,7 @@ pub fn add(args: &[Expr], _: EnvRef) -> Result {
 pub fn sub(args: &[Expr], _: EnvRef) -> Result {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
-        return Ok(Expr::Number(Number::from_i64(0)));
+        return Err(Error::new("expected at least 1 number"));
     }
 
     let mut iter = numbers.clone().into_iter();
@@ -118,7 +118,7 @@ pub fn sub(args: &[Expr], _: EnvRef) -> Result {
 pub fn mult(args: &[Expr], _: EnvRef) -> Result {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
-        return Err(Error::new("expected at least one number"));
+        return Ok(Expr::Number(Number::from_i64(1)));
     }
     let initial_value: Number = Number::from_i64(1);
     let product = numbers
@@ -160,14 +160,10 @@ pub fn exponent(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Perform modulo to number.
+/// Perform modulo on numbers.
 pub fn modulo(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Number(a), Expr::Number(b)] => {
-            let a = a.clone();
-            let b = b.clone();
-            Ok(Expr::Number((a % b)?))
-        }
+        [Expr::Number(a), Expr::Number(b)] => Ok(Expr::Number(a.clone().modulo(b.clone())?)),
         _ => Err(Error::new("expected 2 numbers")),
     }
 }
@@ -372,14 +368,15 @@ pub fn num_greater_or_eq_than(args: &[Expr], _: EnvRef) -> Result {
 // Strings
 
 /// Appends two strings together.
-pub fn str_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::String(a), Expr::String(b)] => {
-            let c = a.clone() + b;
-            Ok(Expr::String(c))
+pub fn string_append(args: &[Expr], _: EnvRef) -> Result {
+    let mut result = String::new();
+    for arg in args {
+        match arg {
+            Expr::String(s) => result += s,
+            _ => return Err(Error::new("expected string")),
         }
-        _ => Err(Error::Message(format!("expected 2 strings"))),
     }
+    Ok(Expr::String(result))
 }
 
 /// Returns the size of a string as an `Expr::Number` (more specifically an `IntVariant::Small`).
@@ -390,13 +387,16 @@ pub fn str_length(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Create either a new empty string or a string from a char.
+/// Return a newly allocated `Expr::String`, appending all character arguments.
 pub fn new_string(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [] => Ok(Expr::String(String::new())),
-        [Expr::Char(c)] => Ok(Expr::String(String::from(*c))),
-        _ => Err(Error::new("expected character")),
+    let mut result = String::new();
+    for arg in args {
+        match arg {
+            Expr::Char(c) => result.push(*c),
+            _ => return Err(Error::new("expected char")),
+        }
     }
+    Ok(Expr::String(result))
 }
 
 /// Convert string to upper case.
@@ -466,13 +466,23 @@ pub fn new_list(args: &[Expr], _: EnvRef) -> Result {
 
 /// Append 2 lists together.
 pub fn list_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Pair(list_a), Expr::Pair(list_b)] if list_a.is_list() && list_b.is_list() => {
-            let result = list_a.clone().append(Expr::Pair(list_b.clone()))?;
-            Ok(result)
+    let mut elements: Vec<Expr> = Vec::new();
+
+    for arg in args {
+        match arg {
+            Expr::Pair(list) if list.is_list() => {
+                let mut list_elem: Vec<Expr> = list.iter().collect();
+                elements.append(&mut list_elem);
+            }
+            _ => return Err(Error::new("expected list")),
         }
-        _ => Err(Error::new("expected 2 lists")),
     }
+
+    if elements.is_empty() {
+        return Ok(Expr::Null);
+    }
+
+    Ok(Pair::list(&elements))
 }
 
 /// Get length of list.
@@ -759,6 +769,16 @@ pub fn make_vector(args: &[Expr], _: EnvRef) -> Result {
                 "invalid size, expected int or float".to_string(),
             )),
         },
+        [Expr::Number(n), fill_value] => match n.to_usize() {
+            Some(size) => {
+                let vector = Vector::new();
+                vector.alloc_size(size, Some(fill_value.clone()));
+                Ok(Expr::Vector(vector))
+            }
+            _ => Err(Error::Message(
+                "invalid size, expected int or float".to_string(),
+            )),
+        },
         _ => Ok(Expr::Vector(Vector::new())),
     }
 }
@@ -992,14 +1012,19 @@ pub fn vector_fill(args: &[Expr], _: EnvRef) -> Result {
 
 /// Append two `Vector` and return resulting `Vector`.
 pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Vector(a), Expr::Vector(b)] => {
-            let new_vec = a.deep_copy();
-            new_vec.append(b.deep_copy());
-            Ok(Expr::Vector(new_vec))
+    let elements: Vector = Vector::new();
+
+    for arg in args {
+        match arg {
+            Expr::Vector(v) => {
+                let v_elems: Vector = v.deep_copy();
+                elements.append(v_elems);
+            }
+            _ => return Err(Error::new("expected vector")),
         }
-        _ => Err(Error::new("expected 2 vectors")),
     }
+
+    Ok(Expr::Vector(elements))
 }
 
 /// Bytevectors
@@ -1213,14 +1238,19 @@ pub fn bytevector_copy_from(args: &[Expr], _: EnvRef) -> Result {
 
 /// Return a newly allocated `ByteVector` created from concatenating 2 `ByteVector`.
 pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::ByteVector(a), Expr::ByteVector(b)] => {
-            let new_slice = [a.to_slice(), b.to_slice()];
-            let bytevector = ByteVector::from(new_slice.concat().as_slice());
-            Ok(Expr::ByteVector(bytevector))
+    let mut elements: Vec<u8> = Vec::new();
+
+    for arg in args {
+        match arg {
+            Expr::ByteVector(bv) => {
+                let mut bv_items: Vec<u8> = bv.deep_copy().iter().collect();
+                elements.append(&mut bv_items);
+            }
+            _ => return Err(Error::new("expected bytevector")),
         }
-        _ => Err(Error::new("expected 2 bytevectors")),
     }
+
+    Ok(Expr::ByteVector(ByteVector::from(&elements)))
 }
 
 // Ports
@@ -1960,7 +1990,7 @@ pub fn string_to_num(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::String(num_str)] => match Number::from_token(&num_str) {
             Ok(n) => Ok(Expr::Number(n)),
-            Err(e) => Err(e),
+            Err(_) => Ok(Expr::Boolean(false)),
         },
         _ => Err(Error::new("expected string")),
     }
@@ -2407,6 +2437,7 @@ pub fn is_complex(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_integer(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(Number::Int(_))] => Ok(Expr::Boolean(true)),
+        [Expr::Number(Number::Float(f))] if f % 1.0 == 0.0 => Ok(Expr::Boolean(true)),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",
@@ -2584,6 +2615,7 @@ pub fn is_boolean(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_list(args: &[Expr], _: EnvRef) -> Result {
     let result = match args {
         [Expr::Pair(p)] => p.is_list(),
+        [Expr::Null] => true,
         [_] => false,
         _ => {
             return Err(Error::Message(format!(
