@@ -769,6 +769,16 @@ pub fn make_vector(args: &[Expr], _: EnvRef) -> Result {
                 "invalid size, expected int or float".to_string(),
             )),
         },
+        [Expr::Number(n), fill_value] => match n.to_usize() {
+            Some(size) => {
+                let vector = Vector::new();
+                vector.alloc_size(size, Some(fill_value.clone()));
+                Ok(Expr::Vector(vector))
+            }
+            _ => Err(Error::Message(
+                "invalid size, expected int or float".to_string(),
+            )),
+        },
         _ => Ok(Expr::Vector(Vector::new())),
     }
 }
