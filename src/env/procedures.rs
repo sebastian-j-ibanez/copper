@@ -160,14 +160,10 @@ pub fn exponent(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Perform modulo to number.
+/// Perform modulo on numbers.
 pub fn modulo(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::Number(a), Expr::Number(b)] => {
-            let a = a.clone();
-            let b = b.clone();
-            Ok(Expr::Number((a % b)?))
-        }
+        [Expr::Number(a), Expr::Number(b)] => Ok(Expr::Number(a.clone().modulo(b.clone())?)),
         _ => Err(Error::new("expected 2 numbers")),
     }
 }

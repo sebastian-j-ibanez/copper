@@ -372,6 +372,23 @@ impl Number {
             None => false,
         }
     }
+
+    /// Perform modulo with another `Number`.
+    ///
+    /// Note: the result takes the sign of the divisor.
+    pub fn modulo(self, divisor: Number) -> Result<Number, Error> {
+        let remainder = (self % divisor.clone())?;
+        let shifted = (remainder + divisor.clone())?;
+        let mut result = (shifted % divisor.clone())?;
+
+        // Make sure the result takes the sign of the divisor.
+        let zero = Number::from_i64(0);
+        if (divisor < zero && result > zero) || (divisor > zero && result < zero) {
+            result = (result * Number::from_i64(-1))?;
+        }
+
+        Ok(result)
+    }
 }
 
 impl Add for Number {
