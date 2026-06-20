@@ -96,7 +96,7 @@ pub fn add(args: &[Expr], _: EnvRef) -> Result {
 pub fn sub(args: &[Expr], _: EnvRef) -> Result {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
-        return Ok(Expr::Number(Number::from_i64(0)));
+        return Err(Error::new("expected at least 1 number"));
     }
 
     let mut iter = numbers.clone().into_iter();
@@ -118,7 +118,7 @@ pub fn sub(args: &[Expr], _: EnvRef) -> Result {
 pub fn mult(args: &[Expr], _: EnvRef) -> Result {
     let numbers = parser::parse_number_list(args)?;
     if numbers.is_empty() {
-        return Err(Error::new("expected at least one number"));
+        return Ok(Expr::Number(Number::from_i64(1)));
     }
     let initial_value: Number = Number::from_i64(1);
     let product = numbers
