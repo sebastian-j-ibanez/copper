@@ -1002,14 +1002,19 @@ pub fn vector_fill(args: &[Expr], _: EnvRef) -> Result {
 
 /// Append two `Vector` and return resulting `Vector`.
 pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::Vector(a), Expr::Vector(b)] => {
-            let new_vec = a.deep_copy();
-            new_vec.append(b.deep_copy());
-            Ok(Expr::Vector(new_vec))
+    let elements: Vector = Vector::new();
+
+    for arg in args {
+        match arg {
+            Expr::Vector(v) => {
+                let v_elems: Vector = v.deep_copy();
+                elements.append(v_elems);
+            }
+            _ => return Err(Error::new("expected list")),
         }
-        _ => Err(Error::new("expected 2 vectors")),
     }
+
+    Ok(Expr::Vector(elements))
 }
 
 /// Bytevectors
