@@ -5,7 +5,7 @@
 //! Define functions and variables.
 
 use crate::env::{Env, EnvRef, try_borrow_env};
-use crate::parser;
+use crate::parser::{self, parse_right_expr};
 use crate::types::{Pair, Vector};
 use crate::{error::Error, types::Closure, types::Expr, types::Parameter};
 use std::rc::Rc;
@@ -370,11 +370,16 @@ fn resolve_unquoted_symbol(symbol: &String, env: EnvRef) -> Result<Expr, Error> 
 pub fn if_statement(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
     match args {
         [conditional, first_branch, second_branch] => {
-            let cond_result = parser::eval(conditional, env.to_owned())?;
-            match cond_result {
+            match parser::eval(conditional, env.to_owned())? {
                 Expr::Boolean(false) => parser::eval(second_branch, env),
                 _ => parser::eval(first_branch, env),
             }
+        }
+        [conditional, first_branch] => {
+            if let Expr::Boolean(false) = parser::eval(conditional, env.to_owned())? {
+                return Ok(Expr::Void());
+            }
+            parser::eval(first_branch, env)
         }
         _ => Err(Error::new("ill-formed special form")),
     }
