@@ -387,13 +387,16 @@ pub fn str_length(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Create either a new empty string or a string from a char.
+/// Return a newly allocated `Expr::String`, appending all character arguments.
 pub fn new_string(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [] => Ok(Expr::String(String::new())),
-        [Expr::Char(c)] => Ok(Expr::String(String::from(*c))),
-        _ => Err(Error::new("expected character")),
+    let mut result = String::new();
+    for arg in args {
+        match arg {
+            Expr::Char(c) => result.push(*c),
+            _ => return Err(Error::new("expected char")),
+        }
     }
+    Ok(Expr::String(result))
 }
 
 /// Convert string to upper case.
