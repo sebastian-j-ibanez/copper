@@ -368,14 +368,15 @@ pub fn num_greater_or_eq_than(args: &[Expr], _: EnvRef) -> Result {
 // Strings
 
 /// Appends two strings together.
-pub fn str_append(args: &[Expr], _: EnvRef) -> Result {
-    match args {
-        [Expr::String(a), Expr::String(b)] => {
-            let c = a.clone() + b;
-            Ok(Expr::String(c))
+pub fn string_append(args: &[Expr], _: EnvRef) -> Result {
+    let mut result = String::new();
+    for arg in args {
+        match arg {
+            Expr::String(s) => result += s,
+            _ => return Err(Error::new("expected string")),
         }
-        _ => Err(Error::Message(format!("expected 2 strings"))),
     }
+    Ok(Expr::String(result))
 }
 
 /// Returns the size of a string as an `Expr::Number` (more specifically an `IntVariant::Small`).

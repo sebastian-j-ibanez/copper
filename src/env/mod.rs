@@ -73,7 +73,7 @@ impl Env {
             env.insert_proc(">=", procedures::num_greater_or_eq_than);
             // Strings
             env.insert_proc("string", procedures::new_string);
-            env.insert_proc("string-append", procedures::str_append);
+            env.insert_proc("string-append", procedures::string_append);
             env.insert_proc("string-length", procedures::str_length);
             env.insert_proc("string-upcase", procedures::string_to_upcase);
             env.insert_proc("string-downcase", procedures::string_to_downcase);
