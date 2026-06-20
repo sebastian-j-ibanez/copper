@@ -2407,6 +2407,7 @@ pub fn is_complex(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_integer(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(Number::Int(_))] => Ok(Expr::Boolean(true)),
+        [Expr::Number(Number::Float(f))] if f % 1.0 == 0.0 => Ok(Expr::Boolean(true)),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",
