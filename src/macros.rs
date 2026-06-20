@@ -59,9 +59,9 @@ pub fn set(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
 
 /// Bind arguments and evaluate expressions in a locally scoped environment.
 pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
-    match args {
+    let binding_env = Env::local_env(env.clone());
+    let body_expressions = match args {
         [Expr::Pair(bindings), body_expressions @ ..] => {
-            let binding_env = Env::local_env(env.clone());
             // Eval bindings in outer env, then insert into new env.
             for binding_pair in bindings.iter() {
                 match binding_pair {
@@ -82,18 +82,22 @@ pub fn let_binding(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
                 }
             }
 
-            // Eval body
-            for (i, expr) in body_expressions.iter().enumerate() {
-                let value = parser::eval(expr, binding_env.clone())?;
-
-                if i == body_expressions.len() - 1 {
-                    return Ok(value);
-                }
-            }
-            Err(Error::new("missing body expression"))
+            body_expressions
         }
-        _ => Err(Error::new("ill-formed special form")),
+        [Expr::Null, body_expressions @ ..] => body_expressions,
+        _ => return Err(Error::new("ill-formed special form")),
+    };
+
+    // Eval body
+    for (i, expr) in body_expressions.iter().enumerate() {
+        let value = parser::eval(expr, binding_env.clone())?;
+
+        if i == body_expressions.len() - 1 {
+            return Ok(value);
+        }
     }
+
+    Err(Error::new("missing body expression"))
 }
 
 /// Bind arguments and evaluate expressions in a locally scoped environment.
