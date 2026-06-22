@@ -137,6 +137,8 @@ impl Env {
             env.insert_proc("bytevector-copy", procedures::bytevector_copy);
             env.insert_proc("bytevector-append", procedures::bytevector_append);
             env.insert_proc("bytevector-copy!", procedures::bytevector_copy_from);
+            // Iterators & Control flow
+            env.insert_proc("apply", procedures::apply);
             // Ports & Files
             env.insert_proc("open-input-file", procedures::open_input_file);
             env.insert_proc("open-output-file", procedures::open_output_file);

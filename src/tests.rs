@@ -4382,3 +4382,102 @@ fn test_string_downcase_direct() {
     let result = parse_and_eval("(string-downcase \"ABC\")".to_string(), env).unwrap();
     assert_eq!(result.formatted(), "abc");
 }
+
+// --- apply (R7RS §6.10) ---
+
+#[test]
+fn test_apply_builtin_with_list() {
+    // Core form: (apply proc args) spreads the list as the procedure's arguments.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply + (list 1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "6");
+}
+
+#[test]
+fn test_apply_leading_args_before_list() {
+    // (apply proc arg1 ... args): leading args are prepended onto the final list.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply + 1 2 (list 3 4))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "10");
+}
+
+#[test]
+fn test_apply_empty_list() {
+    // Empty final list with no leading args: proc is called with zero arguments.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply + '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "0");
+}
+
+#[test]
+fn test_apply_leading_args_with_empty_list() {
+    // Leading args with an empty final list: only the leading args are passed.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply + 1 2 '())".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3");
+}
+
+#[test]
+fn test_apply_user_lambda() {
+    // apply must work with user-defined procedures, not just builtins.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(apply (lambda (x y) (* x y)) (list 3 4))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "12");
+}
+
+#[test]
+fn test_apply_last_arg_not_list_errors() {
+    // The final argument to apply must be a list.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply + 1 2 3)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_apply_non_procedure_errors() {
+    // The first argument to apply must be a procedure.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply 5 (list 1 2))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_apply_missing_args_errors() {
+    // apply requires at least a procedure and a final list argument.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply +)".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_apply_preserves_argument_order() {
+    // R7RS: proc is called with the elements of (append (list arg1 ...) args),
+    // so argument order must be preserved. Uses a non-commutative operator to
+    // catch ordering bugs that a commutative one (e.g. +) would hide.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    // Spread list only: (- 10 3 2) => 5.
+    let result = parse_and_eval("(apply - (list 10 3 2))".to_string(), env.clone()).unwrap();
+    assert_eq!(result.to_string(), "5");
+    // Leading args prepended before the spread: (- 10 3 2) => 5.
+    let result = parse_and_eval("(apply - 10 (list 3 2))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_apply_improper_list_errors() {
+    // R7RS: the final argument must be a (proper) list; an improper list errors.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(apply + 1 '(2 . 3))".to_string(), env);
+    assert!(result.is_err());
+}

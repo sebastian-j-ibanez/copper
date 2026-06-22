@@ -14,7 +14,7 @@ use crate::{io, parser};
 use std::fs;
 use std::ops::{Add, Deref, Div, Mul, Sub};
 
-// I/O
+// >I/O
 
 /// Print expression in stdout.
 ///
@@ -80,7 +80,7 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Math
+// >Math
 
 /// Add all arguments together.
 pub fn add(args: &[Expr], _: EnvRef) -> Result {
@@ -438,7 +438,7 @@ pub fn string_reverse(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Boolean
+// >Boolean
 
 /// Returns the opposite value of a `bool`.
 pub fn not(args: &[Expr], _: EnvRef) -> Result {
@@ -448,7 +448,7 @@ pub fn not(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Pairs & Lists
+// >Pairs & Lists
 
 /// Construct a new pair from 2 expressions.
 pub fn cons_proc(args: &[Expr], _: EnvRef) -> Result {
@@ -749,7 +749,7 @@ pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Vectors
+// >Vectors
 
 /// Create a new vector containing the given arguments.
 pub fn new_vector(args: &[Expr], _: EnvRef) -> Result {
@@ -1027,7 +1027,7 @@ pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Vector(elements))
 }
 
-/// Bytevectors
+// >Bytevectors
 
 /// Return a newly allocated `ByteVector` filled with all `u8` arguments.
 pub fn new_bytevector(args: &[Expr], _: EnvRef) -> Result {
@@ -1253,7 +1253,68 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::ByteVector(ByteVector::from(&elements)))
 }
 
-// Ports
+// >Iterators & Control flow
+
+pub fn apply(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), optional_args @ .., Expr::Pair(list)] if list.is_list() => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            arg_list.append(&mut list.iter().collect());
+
+            let value = proc(&arg_list, env.clone())?;
+
+            Ok(value)
+        }
+        [Expr::Procedure(proc), optional_args @ .., Expr::Null] => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            let value = proc(&arg_list, env.clone())?;
+
+            Ok(value)
+        }
+        [Expr::Closure(proc), optional_args @ .., Expr::Pair(list)] if list.is_list() => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            arg_list.append(&mut list.iter().collect());
+
+            let value = apply_lambda(proc, arg_list)?;
+
+            Ok(value)
+        }
+        [Expr::Closure(proc), optional_args @ .., Expr::Null] => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            let value = apply_lambda(proc, arg_list)?;
+
+            Ok(value)
+        }
+        [Expr::Procedure(_), .., Expr::Pair(_)] => {
+            Err(Error::new("expected list as last argument"))
+        }
+        _ => Err(Error::new(
+            "expected procedure as first argument and list as last argument",
+        )),
+    }
+}
+
+// >Ports
 
 /// Open textual input file `Port`.
 pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
@@ -1360,7 +1421,7 @@ pub fn close_port(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Ports input
+// >Ports input
 
 /// Read a char from a `Port`.
 /// Defaults to `current-input-port` if port is not specified.
@@ -1625,7 +1686,7 @@ pub fn read_into_bytevector(args: &[Expr], env: EnvRef) -> Result {
     Ok(Expr::Eof)
 }
 
-// Ports output
+// >Ports output
 
 /// Write `char` to a textual `Port`.
 /// Defaults to `current-output-port` if port is not specified.
@@ -1948,7 +2009,7 @@ pub fn eof_object(_: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Eof)
 }
 
-// Files
+// >Files
 
 /// Evaluate the contents of a file.
 pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
@@ -1975,7 +2036,7 @@ pub fn delete_file(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Conversion
+// >Conversion
 
 /// Convert a `Number` into a `String`.
 pub fn num_to_string(args: &[Expr], _: EnvRef) -> Result {
