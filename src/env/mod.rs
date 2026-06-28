@@ -140,7 +140,11 @@ impl Env {
             // Iterators & Control flow
             env.insert_proc("apply", procedures::apply);
             env.insert_proc("map", procedures::map);
+            env.insert_proc("string-map", procedures::string_map);
+            env.insert_proc("vector-map", procedures::vector_map);
             env.insert_proc("for-each", procedures::for_each);
+            env.insert_proc("string-for-each", procedures::string_for_each);
+            env.insert_proc("vector-for-each", procedures::vector_for_each);
             // Ports & Files
             env.insert_proc("open-input-file", procedures::open_input_file);
             env.insert_proc("open-output-file", procedures::open_output_file);

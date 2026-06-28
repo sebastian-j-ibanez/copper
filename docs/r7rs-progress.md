@@ -282,11 +282,11 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `procedure?` | yes |
 | `apply` | yes |
 | `map` | yes |
-| `string-map` | no |
-| `vector-map` | no |
+| `string-map` | yes |
+| `vector-map` | yes |
 | `for-each` | yes |
-| `string-for-each` | no |
-| `vector-for-each` | no |
+| `string-for-each` | yes |
+| `vector-for-each` | yes |
 | `call-with-current-continuation` | no |
 | `call/cc` | no |
 | `values` | no |

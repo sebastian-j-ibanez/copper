@@ -1384,6 +1384,165 @@ pub fn map(args: &[Expr], env: EnvRef) -> Result {
     }
 }
 
+/// Apply a procedure across one or more strings,
+/// returning a new list of the results.
+pub fn string_map(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<String> = vec![String::new(); lists[0].len()];
+            for list in lists {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(c);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&[Expr::String(list)], env.clone())?);
+            }
+
+            let result_string = results
+                .iter()
+                .map(|r| match r {
+                    Expr::Char(c) => Ok(c),
+                    _ => Err(Error::new("expected char")),
+                })
+                .collect::<std::result::Result<String, Error>>()?;
+
+            Ok(Expr::String(result_string))
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<String> = vec![String::new(); lists[0].len()];
+            for list in lists {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(c);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(
+                    proc,
+                    list.chars().map(|c| Expr::Char(c)).collect(),
+                )?);
+            }
+
+            let result_string = results
+                .iter()
+                .map(|r| match r {
+                    Expr::Char(c) => Ok(c),
+                    _ => Err(Error::new("expected char")),
+                })
+                .collect::<std::result::Result<String, Error>>()?;
+
+            Ok(Expr::String(result_string))
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of strings",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more vectors,
+/// returning a new list of the results.
+pub fn vector_map(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Vector(Vector::from(&results)))
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Expr::Vector(Vector::from(&results)))
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of vectors",
+        )),
+    }
+}
+
 /// Apply a procedure across one or more lists,
 /// returns `Expr::Void()`.
 pub fn for_each(args: &[Expr], env: EnvRef) -> Result {
@@ -1450,6 +1609,149 @@ pub fn for_each(args: &[Expr], env: EnvRef) -> Result {
         }
         _ => Err(Error::new(
             "expected procedure and a variadic number of lists",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more strings,
+/// returns `Expr::Void()`.
+pub fn string_for_each(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let strings = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let strings_same_size = strings
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !strings_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); strings[0].len()];
+            for list in strings {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(Expr::Char(c));
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Void())
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<String> = vec![String::new(); lists[0].len()];
+            for list in lists {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(c);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(
+                    proc,
+                    list.chars().map(|c| Expr::Char(c)).collect(),
+                )?);
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of strings",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more vectors,
+/// returns `Expr::Void()`.
+pub fn vector_for_each(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Void())
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of vectors",
         )),
     }
 }

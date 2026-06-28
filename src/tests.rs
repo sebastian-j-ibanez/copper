@@ -4577,3 +4577,195 @@ fn test_for_each_unequal_length_lists_errors() {
     let result = parse_and_eval("(for-each + '(1 2 3) '(10 20))".to_string(), env);
     assert!(result.is_err());
 }
+
+#[test]
+fn test_string_for_each_returns_void() {
+    // R7RS §6.10: string-for-each is like for-each over a string; the return is unspecified.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-for-each (lambda (c) c) \"abc\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_string_for_each_applies_proc_to_each_char() {
+    // R7RS §6.10: proc is applied to each character in order, for its side effects.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define s \"\")".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(string-for-each (lambda (c) (set! s (string-append s (string c)))) \"abc\")".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("s".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"abc\"");
+}
+
+#[test]
+fn test_string_for_each_multiple_strings() {
+    // R7RS §6.10: with more than one string, proc receives one character from each.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define s \"\")".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(string-for-each (lambda (a b) (set! s (string-append s (string a) (string b)))) \"ad\" \"be\")".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("s".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"abde\"");
+}
+
+#[test]
+fn test_string_for_each_empty_string() {
+    // R7RS §6.10: an empty string is valid; proc is never called and the return is unspecified.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-for-each (lambda (c) c) \"\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_string_for_each_unequal_length_strings_errors() {
+    // This implementation checks lengths up front and errors when the strings differ in length.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-for-each (lambda (a b) a) \"ab\" \"cde\")".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_vector_for_each_returns_void() {
+    // R7RS §6.10: vector-for-each is like for-each over a vector; the return is unspecified.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(vector-for-each (lambda (x) x) (vector 1 2 3))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_vector_for_each_applies_proc_to_each_element() {
+    // R7RS §6.10: proc is applied to each element in order, for its side effects.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define sum 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(vector-for-each (lambda (x) (set! sum (+ sum x))) (vector 1 2 3))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("sum".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "6");
+}
+
+#[test]
+fn test_vector_for_each_multiple_vectors() {
+    // R7RS §6.10: with more than one vector, proc receives one element from each.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define total 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(vector-for-each (lambda (a b) (set! total (+ total (* a b)))) (vector 1 2 3) (vector 4 5 6))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("total".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "32");
+}
+
+#[test]
+fn test_vector_for_each_empty_vector() {
+    // R7RS §6.10: an empty vector is valid; proc is never called and the return is unspecified.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-for-each (lambda (x) x) (vector))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_vector_for_each_unequal_length_vectors_errors() {
+    // This implementation checks lengths up front and errors when the vectors differ in length.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-for-each + (vector 1 2 3) (vector 10 20))".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_string_map_returns_string() {
+    // R7RS §6.10: string-map applies proc to the characters and returns a string.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-map (lambda (c) c) \"abc\")".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::String(_)));
+    assert_eq!(result.to_string(), "\"abc\"");
+}
+
+#[test]
+fn test_string_map_multiple_strings() {
+    // R7RS §6.10: with more than one string, proc receives one character from each.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(string-map (lambda (a b) a) \"ad\" \"be\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"ad\"");
+}
+
+#[test]
+fn test_string_map_empty_string() {
+    // R7RS §6.10: mapping over an empty string yields the empty string.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-map (lambda (c) c) \"\")".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"\"");
+}
+
+#[test]
+fn test_string_map_unequal_length_strings_errors() {
+    // This implementation checks lengths up front and errors when the strings differ in length.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(string-map (lambda (a b) a) \"ab\" \"cde\")".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_vector_map_returns_vector() {
+    // R7RS §6.10: vector-map applies proc to the elements and returns a vector.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(vector-map (lambda (x) (* x x)) (vector 1 2 3))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Vector(_)));
+    assert_eq!(result.to_string(), "#(1 4 9)");
+}
+
+#[test]
+fn test_vector_map_multiple_vectors() {
+    // R7RS §6.10: with more than one vector, proc receives one element from each.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(vector-map + (vector 1 2 3) (vector 4 5 6))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#(5 7 9)");
+}
+
+#[test]
+fn test_vector_map_empty_vector() {
+    // R7RS §6.10: mapping over an empty vector yields the empty vector.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-map (lambda (x) x) (vector))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#()");
+}
+
+#[test]
+fn test_vector_map_unequal_length_vectors_errors() {
+    // This implementation checks lengths up front and errors when the vectors differ in length.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(vector-map + (vector 1 2 3) (vector 10 20))".to_string(), env);
+    assert!(result.is_err());
+}
