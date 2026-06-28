@@ -317,7 +317,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 
 | Procedure | Status | Notes |
 | --------- | ------ | ----- |
-| `port?` | no | |
+| `port?` | yes | |
 | `input-port?` | yes | |
 | `output-port?` | yes | |
 | `textual-port?` | yes | |

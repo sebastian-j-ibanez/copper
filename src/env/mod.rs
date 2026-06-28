@@ -221,6 +221,7 @@ impl Env {
             env.insert_proc("vector?", procedures::is_vector);
             env.insert_proc("procedure?", procedures::is_procedure);
             env.insert_proc("bytevector?", procedures::is_bytevector);
+            env.insert_proc("port?", procedures::is_port);
             env.insert_proc("input-port?", procedures::is_input_port);
             env.insert_proc("output-port?", procedures::is_output_port);
             env.insert_proc("textual-port?", procedures::is_textual_port);

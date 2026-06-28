@@ -3177,6 +3177,18 @@ pub fn is_bytevector(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Return true if arg is a `Port`.
+pub fn is_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
 /// Return true if arg is an output `Port`.
 pub fn is_output_port(args: &[Expr], _: EnvRef) -> Result {
     match args {
