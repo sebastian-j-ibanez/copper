@@ -362,7 +362,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `write-char` | yes |
 | `write-string` | yes |
 | `write-u8` | yes |
-| `write-bytevector` | no |
+| `write-bytevector` | yes |
 | `newline` | yes |
 | `flush-output-port` | yes |
 

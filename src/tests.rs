@@ -4769,3 +4769,89 @@ fn test_vector_map_unequal_length_vectors_errors() {
     let result = parse_and_eval("(vector-map + (vector 1 2 3) (vector 10 20))".to_string(), env);
     assert!(result.is_err());
 }
+
+#[test]
+fn test_write_bytevector_basic() {
+    // R7RS §6.13: write-bytevector writes the bytes of the bytevector to a binary output port.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write-bytevector (bytevector 1 2 3) p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-bytevector p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#u8(1 2 3)");
+}
+
+#[test]
+fn test_write_bytevector_returns_void() {
+    // R7RS §6.13: the return value of write-bytevector is unspecified.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    let result =
+        parse_and_eval("(write-bytevector (bytevector 1 2 3) p)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_write_bytevector_with_start() {
+    // R7RS §6.13: the optional start argument selects the first byte written.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(write-bytevector (bytevector 1 2 3 4 5) p 2)".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(get-output-bytevector p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#u8(3 4 5)");
+}
+
+#[test]
+fn test_write_bytevector_with_start_and_end() {
+    // R7RS §6.13: start and end bound the written range as [start, end).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(write-bytevector (bytevector 1 2 3 4 5) p 1 3)".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("(get-output-bytevector p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#u8(2 3)");
+}
+
+#[test]
+fn test_write_bytevector_empty() {
+    // R7RS §6.13: writing an empty bytevector produces no output.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write-bytevector (bytevector) p)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-bytevector p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "#u8()");
+}
+
+#[test]
+fn test_write_string_with_start_and_end() {
+    // R7RS §6.13: start and end are character indices bounding the half-open range [start, end).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    parse_and_eval("(write-string \"hello\" p 1 3)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"el\"");
+}
+
+#[test]
+fn test_write_string_multibyte_chars() {
+    // R7RS §6.13: start/end index by character, not byte, so multi-byte UTF-8 must be respected.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define p (open-output-string))".to_string(), env.clone()).unwrap();
+    // "áéíóú" is multi-byte per char; characters [1, 3) are "éí".
+    parse_and_eval("(write-string \"áéíóú\" p 1 3)".to_string(), env.clone()).unwrap();
+    let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "\"éí\"");
+}

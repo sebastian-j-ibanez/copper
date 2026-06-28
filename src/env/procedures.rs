@@ -1825,11 +1825,11 @@ pub fn open_input_bytevector(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Open binary output `Port` from bytevector.
+/// Open a fresh binary output `Port` backed by a bytevector.
 pub fn open_output_bytevector(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::ByteVector(bv)] => Ok(Expr::Port(Port::binary_output_bytevector(bv)?)),
-        _ => Err(Error::new("expected file path string")),
+        [] => Ok(Expr::Port(Port::binary_output_bytevector()?)),
+        _ => Err(Error::new("expected no arguments")),
     }
 }
 
@@ -2166,7 +2166,7 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             let port = env
                 .borrow()
                 .find_param("current-output-port")
-                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
 
             if let Expr::Port(Port::TextOutput(port)) = port {
                 let mut port = port.borrow_mut();
@@ -2174,7 +2174,7 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
                 return Ok(Expr::Void());
             }
 
-            Err(Error::new("expected textual input port"))
+            Err(Error::new("expected textual output port"))
         }
         [Expr::String(s), Expr::Port(Port::TextOutput(input))] => {
             let mut port = input.borrow_mut();
@@ -2189,11 +2189,13 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             let start = start
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
-            if start >= s.len() {
+
+            if start > s.chars().count() {
                 return Err(Error::new("index out of range"));
             }
+            let substr: String = s.chars().skip(start).collect();
             let mut port = input.borrow_mut();
-            port.write_string(&s[start..])?;
+            port.write_string(&substr)?;
             Ok(Expr::Void())
         }
         [
@@ -2208,11 +2210,13 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             let end = end
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
-            if start > end || start >= s.len() || end >= s.len() {
+
+            if start > end || end > s.chars().count() {
                 return Err(Error::new("index out of range"));
             }
+            let substr: String = s.chars().skip(start).take(end - start).collect();
             let mut port = input.borrow_mut();
-            port.write_string(&s[start..end + 1])?;
+            port.write_string(&substr)?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected string and text output port")),
@@ -2227,7 +2231,7 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
             let port = env
                 .borrow()
                 .find_param("current-output-port")
-                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
             let byte = byte
                 .to_u8()
                 .ok_or_else(|| Error::new("unable to convert num to byte"))?;
@@ -2238,7 +2242,7 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
                 return Ok(Expr::Void());
             }
 
-            Err(Error::new("expected textual input port"))
+            Err(Error::new("expected binary output port"))
         }
         [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
@@ -2250,6 +2254,70 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected byte and binary port")),
+    }
+}
+
+/// Write `ByteVector` to binary output `Port`.
+/// Defaults to `current-output-port` if port is not specified.
+pub fn write_bytevector(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::BinaryOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_bytevector(bv.clone())?;
+                return Ok(Expr::Void());
+            }
+
+            Err(Error::new("expected binary output port"))
+        }
+        [Expr::ByteVector(bv), Expr::Port(Port::BinaryOutput(input))] => {
+            let mut port = input.borrow_mut();
+            port.write_bytevector(bv.clone())?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::ByteVector(bv),
+            Expr::Port(Port::BinaryOutput(input)),
+            Expr::Number(start),
+        ] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start >= bv.len() {
+                return Err(Error::new("index out of range"));
+            }
+            let mut port = input.borrow_mut();
+            let byte_slice = bv.to_slice();
+            port.write_bytevector(ByteVector::from(&byte_slice[start..]))?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::ByteVector(bv),
+            Expr::Port(Port::BinaryOutput(input)),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            // R7RS: the written range is [start, end) with 0 <= start <= end <= length.
+            if start > end || end > bv.len() {
+                return Err(Error::new("index out of range"));
+            }
+            let mut port = input.borrow_mut();
+            let byte_slice = bv.to_slice();
+            port.write_bytevector(ByteVector::from(&byte_slice[start..end]))?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected string and binary output port")),
     }
 }
 
