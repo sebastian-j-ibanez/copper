@@ -4481,3 +4481,40 @@ fn test_apply_improper_list_errors() {
     let result = parse_and_eval("(apply + 1 '(2 . 3))".to_string(), env);
     assert!(result.is_err());
 }
+
+#[test]
+fn test_map_single_list() {
+    // R7RS §6.10: map applies proc element-wise and returns a list of the results.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(map (lambda (x) (* x x)) '(1 2 3))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(1 4 9)");
+}
+
+#[test]
+fn test_map_empty_list_errors() {
+    // This implementation rejects an empty list argument to map.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(map (lambda (x) (* x x)) '())".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_map_multiple_lists() {
+    // R7RS §6.10: with more than one list, proc receives one element from each list.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(map + '(1 2 3) '(4 5 6))".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "(5 7 9)");
+}
+
+#[test]
+fn test_map_unequal_length_lists_errors() {
+    // Like Guile, this implementation checks lengths up front and errors when the
+    // lists differ in length rather than terminating at the shortest.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(map + '(1 2 3) '(10 20))".to_string(), env);
+    assert!(result.is_err());
+}

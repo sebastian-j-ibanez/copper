@@ -1314,6 +1314,76 @@ pub fn apply(args: &[Expr], env: EnvRef) -> Result {
     }
 }
 
+/// Apply a procedure across one or more lists,
+/// returning a new list of the results.
+pub fn map(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Pair(p) => Ok(p.clone()),
+                    _ => Err(Error::new("expected list")),
+                })
+                .collect::<std::result::Result<Vec<Pair>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized lists"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Pair::list(&results))
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Pair(p) => Ok(p.clone()),
+                    _ => Err(Error::new("expected list")),
+                })
+                .collect::<std::result::Result<Vec<Pair>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized lists"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Pair::list(&results))
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of lists",
+        )),
+    }
+}
+
 // >Ports
 
 /// Open textual input file `Port`.

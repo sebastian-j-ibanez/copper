@@ -280,8 +280,8 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | Procedure | Status |
 | --------- | ------ |
 | `procedure?` | yes |
-| `apply` | no |
-| `map` | no |
+| `apply` | yes |
+| `map` | yes |
 | `string-map` | no |
 | `vector-map` | no |
 | `for-each` | no |
