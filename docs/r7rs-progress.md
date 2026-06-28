@@ -284,7 +284,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `map` | yes |
 | `string-map` | no |
 | `vector-map` | no |
-| `for-each` | no |
+| `for-each` | yes |
 | `string-for-each` | no |
 | `vector-for-each` | no |
 | `call-with-current-continuation` | no |

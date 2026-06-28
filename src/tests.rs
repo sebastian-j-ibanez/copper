@@ -4518,3 +4518,62 @@ fn test_map_unequal_length_lists_errors() {
     let result = parse_and_eval("(map + '(1 2 3) '(10 20))".to_string(), env);
     assert!(result.is_err());
 }
+
+#[test]
+fn test_for_each_returns_void() {
+    // R7RS §6.10: for-each is like map but the return value is unspecified.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result =
+        parse_and_eval("(for-each (lambda (x) x) '(1 2 3))".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Void()));
+}
+
+#[test]
+fn test_for_each_applies_proc_to_each_element() {
+    // R7RS §6.10: for-each calls proc on the elements in order, for its side effects.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define sum 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(for-each (lambda (x) (set! sum (+ sum x))) '(1 2 3))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("sum".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "6");
+}
+
+#[test]
+fn test_for_each_multiple_lists() {
+    // R7RS §6.10: with more than one list, proc receives one element from each list.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    parse_and_eval("(define total 0)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(for-each (lambda (a b) (set! total (+ total (* a b)))) '(1 2 3) '(4 5 6))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    let result = parse_and_eval("total".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "32");
+}
+
+#[test]
+fn test_for_each_empty_list_errors() {
+    // Like map, this implementation rejects an empty list argument.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(for-each (lambda (x) x) '())".to_string(), env);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_for_each_unequal_length_lists_errors() {
+    // Like map, this implementation checks lengths up front and errors when the
+    // lists differ in length.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(for-each + '(1 2 3) '(10 20))".to_string(), env);
+    assert!(result.is_err());
+}
