@@ -77,9 +77,9 @@ impl Port {
         Ok(Port::BinaryInput(Rc::new(RefCell::new(input))))
     }
 
-    /// Create new `Port::BinaryOutput` from bytevector.
-    pub fn binary_output_bytevector(bv: &ByteVector) -> Result<Self, Error> {
-        let output = BinaryOutputPort::from_bytes(bv)?;
+    /// Create a fresh, empty bytevector-backed `Port::BinaryOutput`.
+    pub fn binary_output_bytevector() -> Result<Self, Error> {
+        let output = BinaryOutputPort::new_bytevector()?;
         Ok(Port::BinaryOutput(Rc::new(RefCell::new(output))))
     }
 
@@ -672,49 +672,45 @@ impl BinaryInputPort {
 
 #[derive(Debug, Clone)]
 pub struct ByteVecWriter {
-    byte_vec: Option<ByteVector>,
-    cursor: usize,
+    // An output-bytevector port accumulates bytes in a growable buffer; the
+    // fixed-length `ByteVector` is only produced on demand by `get_bytes`.
+    buffer: Option<Vec<u8>>,
 }
 
 impl ByteVecWriter {
-    /// Create `ByteVecWriter` from `ByteVector`.
-    pub fn from(bv: &ByteVector) -> Self {
+    /// Create a new, empty `ByteVecWriter`.
+    pub fn new() -> Self {
         Self {
-            byte_vec: Some(bv.clone()),
-            cursor: 0,
+            buffer: Some(Vec::new()),
         }
     }
 
-    /// Return if `ByteVectorReader` is open.
+    /// Return if the writer is open.
     pub fn is_open(&self) -> bool {
-        self.byte_vec.is_some()
+        self.buffer.is_some()
     }
 
-    /// Delete `ByteVector`.
+    /// Close the writer, discarding the buffer.
     pub fn close(&mut self) {
-        self.byte_vec.take();
+        self.buffer.take();
     }
 
-    /// Write byte to next position in `ByteVector` buffer.
-    /// Returns `Error` if port is closed or `ByteVector` is full.
+    /// Append a byte to the buffer.
+    /// Returns `Error` if the port is closed.
     pub fn write(&mut self, byte: u8) -> Result<(), Error> {
-        if let Some(bv) = self.byte_vec.as_ref() {
-            let mut buf = bv.buffer.borrow_mut();
-            if self.cursor == buf.len() - 1 {
-                return Err(Error::new("bytevector buffer is full"));
+        match self.buffer.as_mut() {
+            Some(buf) => {
+                buf.push(byte);
+                Ok(())
             }
-            buf[self.cursor] = byte;
+            None => Err(Error::new("bytevector output port is closed")),
         }
-        Err(Error::new("bytevector output port is closed"))
     }
 
-    /// Return bytes written to `ByteVector` so far.
+    /// Return a `ByteVector` of the bytes written so far.
     pub fn get_bytes(&self) -> Option<ByteVector> {
-        if let Some(bv) = self.byte_vec.as_ref() {
-            let buf = bv.buffer.borrow();
-            assert!(self.cursor < buf.len());
-            let new_bv = ByteVector::from(&buf[..self.cursor + 1]); // range upper bound is exclusive.
-            return Some(new_bv);
+        if let Some(buf) = self.buffer.as_ref() {
+            return Some(ByteVector::from(buf.as_slice()));
         }
         None
     }
@@ -734,9 +730,9 @@ impl BinaryOutputPort {
         Ok(Self::File(Some(BufWriter::new(file))))
     }
 
-    /// Create `BinaryOutputPort` from `ByteVector`.
-    pub fn from_bytes(bv: &ByteVector) -> Result<Self, Error> {
-        Ok(Self::ByteVector(ByteVecWriter::from(&bv)))
+    /// Create a fresh, empty bytevector-backed `BinaryOutputPort`.
+    pub fn new_bytevector() -> Result<Self, Error> {
+        Ok(Self::ByteVector(ByteVecWriter::new()))
     }
 
     /// Close `BinaryOutputPort`.
@@ -766,6 +762,14 @@ impl BinaryOutputPort {
             Self::File(None) => Err(Error::new("port is closed")),
             Self::ByteVector(bv) => bv.write(byte),
         }
+    }
+
+    /// Write `ByteVector` to `BinaryOutputPort`.
+    pub fn write_bytevector(&mut self, bv: ByteVector) -> Result<(), Error> {
+        for byte in bv.iter() {
+            self.write_byte(byte)?;
+        }
+        Ok(())
     }
 
     /// Flush output port buffer.

@@ -14,7 +14,7 @@ use crate::{io, parser};
 use std::fs;
 use std::ops::{Add, Deref, Div, Mul, Sub};
 
-// I/O
+// >I/O
 
 /// Print expression in stdout.
 ///
@@ -80,7 +80,7 @@ pub fn pretty_print(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Math
+// >Math
 
 /// Add all arguments together.
 pub fn add(args: &[Expr], _: EnvRef) -> Result {
@@ -438,7 +438,7 @@ pub fn string_reverse(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Boolean
+// >Boolean
 
 /// Returns the opposite value of a `bool`.
 pub fn not(args: &[Expr], _: EnvRef) -> Result {
@@ -448,7 +448,7 @@ pub fn not(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Pairs & Lists
+// >Pairs & Lists
 
 /// Construct a new pair from 2 expressions.
 pub fn cons_proc(args: &[Expr], _: EnvRef) -> Result {
@@ -749,7 +749,7 @@ pub fn list_reverse(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Vectors
+// >Vectors
 
 /// Create a new vector containing the given arguments.
 pub fn new_vector(args: &[Expr], _: EnvRef) -> Result {
@@ -1027,7 +1027,7 @@ pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Vector(elements))
 }
 
-/// Bytevectors
+// >Bytevectors
 
 /// Return a newly allocated `ByteVector` filled with all `u8` arguments.
 pub fn new_bytevector(args: &[Expr], _: EnvRef) -> Result {
@@ -1253,7 +1253,510 @@ pub fn bytevector_append(args: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::ByteVector(ByteVector::from(&elements)))
 }
 
-// Ports
+// >Iterators & Control flow
+
+pub fn apply(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), optional_args @ .., Expr::Pair(list)] if list.is_list() => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            arg_list.append(&mut list.iter().collect());
+
+            let value = proc(&arg_list, env.clone())?;
+
+            Ok(value)
+        }
+        [Expr::Procedure(proc), optional_args @ .., Expr::Null] => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            let value = proc(&arg_list, env.clone())?;
+
+            Ok(value)
+        }
+        [Expr::Closure(proc), optional_args @ .., Expr::Pair(list)] if list.is_list() => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            arg_list.append(&mut list.iter().collect());
+
+            let value = apply_lambda(proc, arg_list)?;
+
+            Ok(value)
+        }
+        [Expr::Closure(proc), optional_args @ .., Expr::Null] => {
+            let mut arg_list: Vec<Expr> = Vec::new();
+
+            if !optional_args.is_empty() {
+                arg_list.append(&mut optional_args.to_vec());
+            }
+
+            let value = apply_lambda(proc, arg_list)?;
+
+            Ok(value)
+        }
+        [Expr::Procedure(_), .., Expr::Pair(_)] => {
+            Err(Error::new("expected list as last argument"))
+        }
+        _ => Err(Error::new(
+            "expected procedure as first argument and list as last argument",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more lists,
+/// returning a new list of the results.
+pub fn map(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Pair(p) => Ok(p.clone()),
+                    _ => Err(Error::new("expected list")),
+                })
+                .collect::<std::result::Result<Vec<Pair>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized lists"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Pair::list(&results))
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Pair(p) => Ok(p.clone()),
+                    _ => Err(Error::new("expected list")),
+                })
+                .collect::<std::result::Result<Vec<Pair>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized lists"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Pair::list(&results))
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of lists",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more strings,
+/// returning a new list of the results.
+pub fn string_map(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<String> = vec![String::new(); lists[0].len()];
+            for list in lists {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(c);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&[Expr::String(list)], env.clone())?);
+            }
+
+            let result_string = results
+                .iter()
+                .map(|r| match r {
+                    Expr::Char(c) => Ok(c),
+                    _ => Err(Error::new("expected char")),
+                })
+                .collect::<std::result::Result<String, Error>>()?;
+
+            Ok(Expr::String(result_string))
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<String> = vec![String::new(); lists[0].len()];
+            for list in lists {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(c);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(
+                    proc,
+                    list.chars().map(|c| Expr::Char(c)).collect(),
+                )?);
+            }
+
+            let result_string = results
+                .iter()
+                .map(|r| match r {
+                    Expr::Char(c) => Ok(c),
+                    _ => Err(Error::new("expected char")),
+                })
+                .collect::<std::result::Result<String, Error>>()?;
+
+            Ok(Expr::String(result_string))
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of strings",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more vectors,
+/// returning a new list of the results.
+pub fn vector_map(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Vector(Vector::from(&results)))
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Expr::Vector(Vector::from(&results)))
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of vectors",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more lists,
+/// returns `Expr::Void()`.
+pub fn for_each(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Pair(p) => Ok(p.clone()),
+                    _ => Err(Error::new("expected list")),
+                })
+                .collect::<std::result::Result<Vec<Pair>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized lists"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Void())
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Pair(p) => Ok(p.clone()),
+                    _ => Err(Error::new("expected list")),
+                })
+                .collect::<std::result::Result<Vec<Pair>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized lists"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of lists",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more strings,
+/// returns `Expr::Void()`.
+pub fn string_for_each(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let strings = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let strings_same_size = strings
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !strings_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); strings[0].len()];
+            for list in strings {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(Expr::Char(c));
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Void())
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::String(s) => Ok(s.clone()),
+                    _ => Err(Error::new("expected string")),
+                })
+                .collect::<std::result::Result<Vec<String>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized strings"));
+            }
+
+            let mut arg_lists: Vec<String> = vec![String::new(); lists[0].len()];
+            for list in lists {
+                for (i, c) in list.chars().enumerate() {
+                    arg_lists[i].push(c);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(
+                    proc,
+                    list.chars().map(|c| Expr::Char(c)).collect(),
+                )?);
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of strings",
+        )),
+    }
+}
+
+/// Apply a procedure across one or more vectors,
+/// returns `Expr::Void()`.
+pub fn vector_for_each(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::Procedure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(proc(&list, env.clone())?);
+            }
+
+            Ok(Expr::Void())
+        }
+        [Expr::Closure(proc), rest @ ..] => {
+            let lists = rest
+                .iter()
+                .map(|expr| match expr {
+                    Expr::Vector(v) => Ok(v.clone()),
+                    _ => Err(Error::new("expected vector")),
+                })
+                .collect::<std::result::Result<Vec<Vector>, Error>>()?;
+
+            let lists_same_size = lists
+                .windows(2)
+                .all(|lists| lists[0].len() == lists[1].len());
+            if !lists_same_size {
+                return Err(Error::new("unequal sized vectors"));
+            }
+
+            let mut arg_lists: Vec<Vec<Expr>> = vec![Vec::new(); lists[0].len()];
+            for list in lists {
+                for (i, expr) in list.iter().enumerate() {
+                    arg_lists[i].push(expr);
+                }
+            }
+
+            let mut results = Vec::new();
+            for list in arg_lists {
+                results.push(apply_lambda(proc, list)?);
+            }
+
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new(
+            "expected procedure and a variadic number of vectors",
+        )),
+    }
+}
+
+// >Ports
 
 /// Open textual input file `Port`.
 pub fn open_input_file(args: &[Expr], _: EnvRef) -> Result {
@@ -1322,11 +1825,11 @@ pub fn open_input_bytevector(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-/// Open binary output `Port` from bytevector.
+/// Open a fresh binary output `Port` backed by a bytevector.
 pub fn open_output_bytevector(args: &[Expr], _: EnvRef) -> Result {
     match args {
-        [Expr::ByteVector(bv)] => Ok(Expr::Port(Port::binary_output_bytevector(bv)?)),
-        _ => Err(Error::new("expected file path string")),
+        [] => Ok(Expr::Port(Port::binary_output_bytevector()?)),
+        _ => Err(Error::new("expected no arguments")),
     }
 }
 
@@ -1360,7 +1863,7 @@ pub fn close_port(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Ports input
+// >Ports input
 
 /// Read a char from a `Port`.
 /// Defaults to `current-input-port` if port is not specified.
@@ -1625,7 +2128,7 @@ pub fn read_into_bytevector(args: &[Expr], env: EnvRef) -> Result {
     Ok(Expr::Eof)
 }
 
-// Ports output
+// >Ports output
 
 /// Write `char` to a textual `Port`.
 /// Defaults to `current-output-port` if port is not specified.
@@ -1663,7 +2166,7 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             let port = env
                 .borrow()
                 .find_param("current-output-port")
-                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
 
             if let Expr::Port(Port::TextOutput(port)) = port {
                 let mut port = port.borrow_mut();
@@ -1671,7 +2174,7 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
                 return Ok(Expr::Void());
             }
 
-            Err(Error::new("expected textual input port"))
+            Err(Error::new("expected textual output port"))
         }
         [Expr::String(s), Expr::Port(Port::TextOutput(input))] => {
             let mut port = input.borrow_mut();
@@ -1686,11 +2189,13 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             let start = start
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
-            if start >= s.len() {
+
+            if start > s.chars().count() {
                 return Err(Error::new("index out of range"));
             }
+            let substr: String = s.chars().skip(start).collect();
             let mut port = input.borrow_mut();
-            port.write_string(&s[start..])?;
+            port.write_string(&substr)?;
             Ok(Expr::Void())
         }
         [
@@ -1705,11 +2210,13 @@ pub fn write_string(args: &[Expr], env: EnvRef) -> Result {
             let end = end
                 .to_usize()
                 .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
-            if start > end || start >= s.len() || end >= s.len() {
+
+            if start > end || end > s.chars().count() {
                 return Err(Error::new("index out of range"));
             }
+            let substr: String = s.chars().skip(start).take(end - start).collect();
             let mut port = input.borrow_mut();
-            port.write_string(&s[start..end + 1])?;
+            port.write_string(&substr)?;
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected string and text output port")),
@@ -1724,7 +2231,7 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
             let port = env
                 .borrow()
                 .find_param("current-output-port")
-                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+                .ok_or_else(|| Error::new("current-output-port is not initialized"))?;
             let byte = byte
                 .to_u8()
                 .ok_or_else(|| Error::new("unable to convert num to byte"))?;
@@ -1735,7 +2242,7 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
                 return Ok(Expr::Void());
             }
 
-            Err(Error::new("expected textual input port"))
+            Err(Error::new("expected binary output port"))
         }
         [Expr::Number(byte), Expr::Port(Port::BinaryOutput(port_ref))] => {
             let mut port = port_ref.borrow_mut();
@@ -1747,6 +2254,70 @@ pub fn write_u8(args: &[Expr], env: EnvRef) -> Result {
             Ok(Expr::Void())
         }
         _ => Err(Error::new("expected byte and binary port")),
+    }
+}
+
+/// Write `ByteVector` to binary output `Port`.
+/// Defaults to `current-output-port` if port is not specified.
+pub fn write_bytevector(args: &[Expr], env: EnvRef) -> Result {
+    match args {
+        [Expr::ByteVector(bv)] => {
+            let port = env
+                .borrow()
+                .find_param("current-output-port")
+                .ok_or_else(|| Error::new("current-input-port is not initialized"))?;
+
+            if let Expr::Port(Port::BinaryOutput(port)) = port {
+                let mut port = port.borrow_mut();
+                port.write_bytevector(bv.clone())?;
+                return Ok(Expr::Void());
+            }
+
+            Err(Error::new("expected binary output port"))
+        }
+        [Expr::ByteVector(bv), Expr::Port(Port::BinaryOutput(input))] => {
+            let mut port = input.borrow_mut();
+            port.write_bytevector(bv.clone())?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::ByteVector(bv),
+            Expr::Port(Port::BinaryOutput(input)),
+            Expr::Number(start),
+        ] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            if start >= bv.len() {
+                return Err(Error::new("index out of range"));
+            }
+            let mut port = input.borrow_mut();
+            let byte_slice = bv.to_slice();
+            port.write_bytevector(ByteVector::from(&byte_slice[start..]))?;
+            Ok(Expr::Void())
+        }
+        [
+            Expr::ByteVector(bv),
+            Expr::Port(Port::BinaryOutput(input)),
+            Expr::Number(start),
+            Expr::Number(end),
+        ] => {
+            let start = start
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            let end = end
+                .to_usize()
+                .ok_or_else(|| Error::new("invalid index, expected int or float"))?;
+            // R7RS: the written range is [start, end) with 0 <= start <= end <= length.
+            if start > end || end > bv.len() {
+                return Err(Error::new("index out of range"));
+            }
+            let mut port = input.borrow_mut();
+            let byte_slice = bv.to_slice();
+            port.write_bytevector(ByteVector::from(&byte_slice[start..end]))?;
+            Ok(Expr::Void())
+        }
+        _ => Err(Error::new("expected string and binary output port")),
     }
 }
 
@@ -1948,7 +2519,7 @@ pub fn eof_object(_: &[Expr], _: EnvRef) -> Result {
     Ok(Expr::Eof)
 }
 
-// Files
+// >Files
 
 /// Evaluate the contents of a file.
 pub fn load_file(args: &[Expr], env: EnvRef) -> Result {
@@ -1975,7 +2546,7 @@ pub fn delete_file(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
-// Conversion
+// >Conversion
 
 /// Convert a `Number` into a `String`.
 pub fn num_to_string(args: &[Expr], _: EnvRef) -> Result {
@@ -2666,6 +3237,18 @@ pub fn is_procedure(args: &[Expr], _: EnvRef) -> Result {
 pub fn is_bytevector(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::ByteVector(_)] => Ok(Expr::Boolean(true)),
+        [_] => Ok(Expr::Boolean(false)),
+        _ => Err(Error::Message(format!(
+            "expected 1 argument, got {}",
+            args.len()
+        ))),
+    }
+}
+
+/// Return true if arg is a `Port`.
+pub fn is_port(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Port(_)] => Ok(Expr::Boolean(true)),
         [_] => Ok(Expr::Boolean(false)),
         _ => Err(Error::Message(format!(
             "expected 1 argument, got {}",

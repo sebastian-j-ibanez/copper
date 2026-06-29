@@ -137,6 +137,14 @@ impl Env {
             env.insert_proc("bytevector-copy", procedures::bytevector_copy);
             env.insert_proc("bytevector-append", procedures::bytevector_append);
             env.insert_proc("bytevector-copy!", procedures::bytevector_copy_from);
+            // Iterators & Control flow
+            env.insert_proc("apply", procedures::apply);
+            env.insert_proc("map", procedures::map);
+            env.insert_proc("string-map", procedures::string_map);
+            env.insert_proc("vector-map", procedures::vector_map);
+            env.insert_proc("for-each", procedures::for_each);
+            env.insert_proc("string-for-each", procedures::string_for_each);
+            env.insert_proc("vector-for-each", procedures::vector_for_each);
             // Ports & Files
             env.insert_proc("open-input-file", procedures::open_input_file);
             env.insert_proc("open-output-file", procedures::open_output_file);
@@ -161,6 +169,7 @@ impl Env {
             env.insert_proc("write-char", procedures::write_char);
             env.insert_proc("write-string", procedures::write_string);
             env.insert_proc("write-u8", procedures::write_u8);
+            env.insert_proc("write-bytevector", procedures::write_bytevector);
             env.insert_proc("write", procedures::write);
             env.insert_proc("write-simple", procedures::write_simple);
             env.insert_proc("write-shared", procedures::write_shared);
@@ -213,6 +222,7 @@ impl Env {
             env.insert_proc("vector?", procedures::is_vector);
             env.insert_proc("procedure?", procedures::is_procedure);
             env.insert_proc("bytevector?", procedures::is_bytevector);
+            env.insert_proc("port?", procedures::is_port);
             env.insert_proc("input-port?", procedures::is_input_port);
             env.insert_proc("output-port?", procedures::is_output_port);
             env.insert_proc("textual-port?", procedures::is_textual_port);

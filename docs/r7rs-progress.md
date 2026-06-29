@@ -280,13 +280,13 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | Procedure | Status |
 | --------- | ------ |
 | `procedure?` | yes |
-| `apply` | no |
-| `map` | no |
-| `string-map` | no |
-| `vector-map` | no |
-| `for-each` | no |
-| `string-for-each` | no |
-| `vector-for-each` | no |
+| `apply` | yes |
+| `map` | yes |
+| `string-map` | yes |
+| `vector-map` | yes |
+| `for-each` | yes |
+| `string-for-each` | yes |
+| `vector-for-each` | yes |
 | `call-with-current-continuation` | no |
 | `call/cc` | no |
 | `values` | no |
@@ -317,7 +317,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 
 | Procedure | Status | Notes |
 | --------- | ------ | ----- |
-| `port?` | no | |
+| `port?` | yes | |
 | `input-port?` | yes | |
 | `output-port?` | yes | |
 | `textual-port?` | yes | |
@@ -362,7 +362,7 @@ Tracks status of all procedures and syntax forms defined in the [Revised⁷ Repo
 | `write-char` | yes |
 | `write-string` | yes |
 | `write-u8` | yes |
-| `write-bytevector` | no |
+| `write-bytevector` | yes |
 | `newline` | yes |
 | `flush-output-port` | yes |
 
