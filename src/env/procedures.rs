@@ -221,6 +221,9 @@ pub fn floor(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Round number to the nearest integer.
+///
+/// Round to the nearest even number when there is a tie.
 pub fn round(args: &[Expr], _: EnvRef) -> Result {
     match args {
         [Expr::Number(Number::Complex(_))] => Err(Error::new("expected real number")),

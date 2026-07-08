@@ -250,7 +250,9 @@ pub fn eval_atom(token: &str) -> crate::types::Result {
     }
 
     // Number
-    if let Ok(num) = Number::from_token(token) {
+    if let Ok(num) = Number::from_token(token)
+        && token != "i"
+    {
         return Ok(Expr::Number(num));
     }
 
