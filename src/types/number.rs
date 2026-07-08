@@ -10,7 +10,7 @@ use num_bigint::BigInt;
 use num_complex::Complex64;
 use num_integer::Integer;
 use num_rational::Rational64;
-use num_traits::{FromPrimitive, Num, Pow, ToPrimitive, Zero};
+use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
 use std::cmp::Ordering;
 use std::num::ParseFloatError;
 use std::ops::Rem;
@@ -400,8 +400,13 @@ impl Number {
             Int(_) => Some(self),
             Float(f) => Some(Number::Float(f.round())),
             Rational(ratio) => {
-                let result = ratio.round().to_i64()?;
-                Some(Number::Int(IntVariant::Small(result)))
+                let quotient = *ratio.numer() as f64 / *ratio.denom() as f64;
+                let mut result = quotient.floor();
+                let decimal = quotient - result;
+                if decimal >= 0.5 && (result % 2.0 != 0.0) {
+                    result += 1.0;
+                }
+                Some(Number::Int(IntVariant::Small(result as i64)))
             }
             Complex(_) => None,
         }
