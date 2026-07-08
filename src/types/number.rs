@@ -389,6 +389,23 @@ impl Number {
 
         Ok(result)
     }
+
+    /// Round `self` to the nearest whole number.
+    ///
+    /// Returns `None` when `self` is:
+    /// - `Number::Complex`
+    /// - `Number::Rational` and can't be converted to `i64`.
+    pub fn round(self) -> Option<Number> {
+        match self {
+            Int(_) => Some(self),
+            Float(f) => Some(Number::Float(f.round())),
+            Rational(ratio) => {
+                let result = ratio.round().to_i64()?;
+                Some(Number::Int(IntVariant::Small(result)))
+            }
+            Complex(_) => None,
+        }
+    }
 }
 
 impl Add for Number {
