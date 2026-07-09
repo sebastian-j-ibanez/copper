@@ -221,6 +221,23 @@ pub fn floor(args: &[Expr], _: EnvRef) -> Result {
     }
 }
 
+/// Round number to the nearest integer.
+///
+/// Round to the nearest even number when there is a tie.
+pub fn round(args: &[Expr], _: EnvRef) -> Result {
+    match args {
+        [Expr::Number(Number::Complex(_))] => Err(Error::new("expected real number")),
+        [Expr::Number(n)] => {
+            let rounded = n
+                .clone()
+                .round()
+                .ok_or_else(|| Error::new("unable to convert rational number to i64"))?;
+            Ok(Expr::Number(rounded.clone()))
+        }
+        _ => Err(Error::new("expected real number")),
+    }
+}
+
 /// Return smallest real number from arguments.
 pub fn min(args: &[Expr], _: EnvRef) -> Result {
     if args.is_empty() {

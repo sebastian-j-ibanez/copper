@@ -10,10 +10,10 @@ use num_bigint::BigInt;
 use num_complex::Complex64;
 use num_integer::Integer;
 use num_rational::Rational64;
-use num_traits::{FromPrimitive, Num, Pow, ToPrimitive, Zero};
+use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
 use std::cmp::Ordering;
 use std::num::ParseFloatError;
-use std::ops::Rem;
+use std::ops::{Rem, RemAssign};
 use std::{
     fmt::{self},
     ops::Add,
@@ -388,6 +388,53 @@ impl Number {
         }
 
         Ok(result)
+    }
+
+    /// Round `self` to the nearest whole number,
+    /// rounded to the nearest even number if tied.
+    ///
+    /// Returns `None` when `self` is:
+    /// - `Number::Complex`
+    /// - `Number::Rational` and can't be converted to `i64`.
+    pub fn round(self) -> Option<Number> {
+        match self {
+            Int(_) => Some(self),
+            Float(f) => {
+                let result = Number::round_to_nearest_even(f);
+                Some(Number::Float(result))
+            }
+            Rational(ratio) => {
+                let quotient = *ratio.numer() as f64 / *ratio.denom() as f64;
+                let result = Number::round_to_nearest_even(quotient);
+                Some(Number::Int(IntVariant::Small(result as i64)))
+            }
+            Complex(_) => None,
+        }
+    }
+
+    /// Round `f64` to the nearest whole number,
+    /// rounded to the nearest even number if tied.
+    ///
+    /// Helper function for `Number::round()`.
+    fn round_to_nearest_even(f: f64) -> f64 {
+        let mut result = f.abs().floor();
+        let decimal;
+        if f.is_sign_positive() {
+            decimal = f - result;
+        } else {
+            decimal = f + result;
+        }
+
+        let result_odd = result % 2.0 != 0.0;
+        if decimal > 0.5 || (decimal == 0.5 && result_odd) {
+            result += 1.0;
+        }
+
+        // Ensure result matches argument's sign.
+        if f.is_sign_negative() {
+            result *= -1.0;
+        }
+        result
     }
 }
 

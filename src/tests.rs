@@ -4059,7 +4059,11 @@ fn test_begin_sequences_side_effects() {
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
     parse_and_eval("(define x 0)".to_string(), env.clone()).unwrap();
-    parse_and_eval("(begin (set! x 10) (set! x (+ x 5)))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(begin (set! x 10) (set! x (+ x 5)))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     let result = parse_and_eval("x".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "15");
 }
@@ -4524,8 +4528,7 @@ fn test_for_each_returns_void() {
     // R7RS §6.10: for-each is like map but the return value is unspecified.
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(for-each (lambda (x) x) '(1 2 3))".to_string(), env).unwrap();
+    let result = parse_and_eval("(for-each (lambda (x) x) '(1 2 3))".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Void()));
 }
 
@@ -4583,7 +4586,8 @@ fn test_string_for_each_returns_void() {
     // R7RS §6.10: string-for-each is like for-each over a string; the return is unspecified.
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result = parse_and_eval("(string-for-each (lambda (c) c) \"abc\")".to_string(), env).unwrap();
+    let result =
+        parse_and_eval("(string-for-each (lambda (c) c) \"abc\")".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Void()));
 }
 
@@ -4631,7 +4635,10 @@ fn test_string_for_each_unequal_length_strings_errors() {
     // This implementation checks lengths up front and errors when the strings differ in length.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval("(string-for-each (lambda (a b) a) \"ab\" \"cde\")".to_string(), env);
+    let result = parse_and_eval(
+        "(string-for-each (lambda (a b) a) \"ab\" \"cde\")".to_string(),
+        env,
+    );
     assert!(result.is_err());
 }
 
@@ -4640,8 +4647,11 @@ fn test_vector_for_each_returns_void() {
     // R7RS §6.10: vector-for-each is like for-each over a vector; the return is unspecified.
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(vector-for-each (lambda (x) x) (vector 1 2 3))".to_string(), env).unwrap();
+    let result = parse_and_eval(
+        "(vector-for-each (lambda (x) x) (vector 1 2 3))".to_string(),
+        env,
+    )
+    .unwrap();
     assert!(matches!(result, Expr::Void()));
 }
 
@@ -4680,7 +4690,8 @@ fn test_vector_for_each_empty_vector() {
     // R7RS §6.10: an empty vector is valid; proc is never called and the return is unspecified.
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result = parse_and_eval("(vector-for-each (lambda (x) x) (vector))".to_string(), env).unwrap();
+    let result =
+        parse_and_eval("(vector-for-each (lambda (x) x) (vector))".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Void()));
 }
 
@@ -4689,7 +4700,10 @@ fn test_vector_for_each_unequal_length_vectors_errors() {
     // This implementation checks lengths up front and errors when the vectors differ in length.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval("(vector-for-each + (vector 1 2 3) (vector 10 20))".to_string(), env);
+    let result = parse_and_eval(
+        "(vector-for-each + (vector 1 2 3) (vector 10 20))".to_string(),
+        env,
+    );
     assert!(result.is_err());
 }
 
@@ -4708,8 +4722,11 @@ fn test_string_map_multiple_strings() {
     // R7RS §6.10: with more than one string, proc receives one character from each.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(string-map (lambda (a b) a) \"ad\" \"be\")".to_string(), env).unwrap();
+    let result = parse_and_eval(
+        "(string-map (lambda (a b) a) \"ad\" \"be\")".to_string(),
+        env,
+    )
+    .unwrap();
     assert_eq!(result.to_string(), "\"ad\"");
 }
 
@@ -4727,7 +4744,10 @@ fn test_string_map_unequal_length_strings_errors() {
     // This implementation checks lengths up front and errors when the strings differ in length.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval("(string-map (lambda (a b) a) \"ab\" \"cde\")".to_string(), env);
+    let result = parse_and_eval(
+        "(string-map (lambda (a b) a) \"ab\" \"cde\")".to_string(),
+        env,
+    );
     assert!(result.is_err());
 }
 
@@ -4736,8 +4756,11 @@ fn test_vector_map_returns_vector() {
     // R7RS §6.10: vector-map applies proc to the elements and returns a vector.
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(vector-map (lambda (x) (* x x)) (vector 1 2 3))".to_string(), env).unwrap();
+    let result = parse_and_eval(
+        "(vector-map (lambda (x) (* x x)) (vector 1 2 3))".to_string(),
+        env,
+    )
+    .unwrap();
     assert!(matches!(result, Expr::Vector(_)));
     assert_eq!(result.to_string(), "#(1 4 9)");
 }
@@ -4747,8 +4770,11 @@ fn test_vector_map_multiple_vectors() {
     // R7RS §6.10: with more than one vector, proc receives one element from each.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result =
-        parse_and_eval("(vector-map + (vector 1 2 3) (vector 4 5 6))".to_string(), env).unwrap();
+    let result = parse_and_eval(
+        "(vector-map + (vector 1 2 3) (vector 4 5 6))".to_string(),
+        env,
+    )
+    .unwrap();
     assert_eq!(result.to_string(), "#(5 7 9)");
 }
 
@@ -4766,7 +4792,10 @@ fn test_vector_map_unequal_length_vectors_errors() {
     // This implementation checks lengths up front and errors when the vectors differ in length.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    let result = parse_and_eval("(vector-map + (vector 1 2 3) (vector 10 20))".to_string(), env);
+    let result = parse_and_eval(
+        "(vector-map + (vector 1 2 3) (vector 10 20))".to_string(),
+        env,
+    );
     assert!(result.is_err());
 }
 
@@ -4775,8 +4804,16 @@ fn test_write_bytevector_basic() {
     // R7RS §6.13: write-bytevector writes the bytes of the bytevector to a binary output port.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
-    parse_and_eval("(write-bytevector (bytevector 1 2 3) p)".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define p (open-output-bytevector))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
+    parse_and_eval(
+        "(write-bytevector (bytevector 1 2 3) p)".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     let result = parse_and_eval("(get-output-bytevector p)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#u8(1 2 3)");
 }
@@ -4786,7 +4823,11 @@ fn test_write_bytevector_returns_void() {
     // R7RS §6.13: the return value of write-bytevector is unspecified.
     use crate::{env::Env, parser::parse_and_eval, types::Expr};
     let env = Env::standard_env();
-    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define p (open-output-bytevector))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     let result =
         parse_and_eval("(write-bytevector (bytevector 1 2 3) p)".to_string(), env).unwrap();
     assert!(matches!(result, Expr::Void()));
@@ -4797,7 +4838,11 @@ fn test_write_bytevector_with_start() {
     // R7RS §6.13: the optional start argument selects the first byte written.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define p (open-output-bytevector))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     parse_and_eval(
         "(write-bytevector (bytevector 1 2 3 4 5) p 2)".to_string(),
         env.clone(),
@@ -4812,7 +4857,11 @@ fn test_write_bytevector_with_start_and_end() {
     // R7RS §6.13: start and end bound the written range as [start, end).
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define p (open-output-bytevector))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     parse_and_eval(
         "(write-bytevector (bytevector 1 2 3 4 5) p 1 3)".to_string(),
         env.clone(),
@@ -4827,7 +4876,11 @@ fn test_write_bytevector_empty() {
     // R7RS §6.13: writing an empty bytevector produces no output.
     use crate::{env::Env, parser::parse_and_eval};
     let env = Env::standard_env();
-    parse_and_eval("(define p (open-output-bytevector))".to_string(), env.clone()).unwrap();
+    parse_and_eval(
+        "(define p (open-output-bytevector))".to_string(),
+        env.clone(),
+    )
+    .unwrap();
     parse_and_eval("(write-bytevector (bytevector) p)".to_string(), env.clone()).unwrap();
     let result = parse_and_eval("(get-output-bytevector p)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "#u8()");
@@ -4854,4 +4907,121 @@ fn test_write_string_multibyte_chars() {
     parse_and_eval("(write-string \"áéíóú\" p 1 3)".to_string(), env.clone()).unwrap();
     let result = parse_and_eval("(get-output-string p)".to_string(), env).unwrap();
     assert_eq!(result.to_string(), "\"éí\"");
+}
+
+#[test]
+fn test_round_integer_identity_string_result() {
+    // R7RS §6.2.6: round on an exact integer returns it unchanged (and exact).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "5");
+}
+
+#[test]
+fn test_round_rational_below_half_string_result() {
+    // R7RS §6.2.6: 7/3 ≈ 2.33 rounds down to the nearest integer; exact in, exact out.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 7/3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_round_rational_above_half_string_result() {
+    // R7RS §6.2.6: 5/3 ≈ 1.67 rounds up to the nearest integer.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 5/3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_round_rational_tie_rounds_to_even_down_string_result() {
+    // R7RS §6.2.6: halfway values round to even, so 5/2 (2.5) rounds to 2, not 3.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 5/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2");
+}
+
+#[test]
+fn test_round_rational_tie_rounds_to_even_up_string_result() {
+    // R7RS §6.2.6: halfway values round to even, so 7/2 (3.5) rounds to 4.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 7/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "4");
+}
+
+#[test]
+fn test_round_negative_rational_tie_rounds_to_even_string_result() {
+    // R7RS §6.2.6: round-to-even is symmetric, so -5/2 (-2.5) rounds to -2.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round -5/2)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "-2");
+}
+
+#[test]
+fn test_round_rational_number_result() {
+    // Companion to the rational cases: rounding an exact rational yields an Expr::Number.
+    use crate::{env::Env, parser::parse_and_eval, types::Expr};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 5/2)".to_string(), env).unwrap();
+    assert!(matches!(result, Expr::Number(_)));
+}
+
+#[test]
+fn test_round_float_below_half_string_result() {
+    // R7RS §6.2.6: rounding an inexact number yields an inexact result (2.3 -> 2.0).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 2.3)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2.0");
+}
+
+#[test]
+fn test_round_float_above_half_string_result() {
+    // R7RS §6.2.6: 2.7 rounds up to 3.0, remaining inexact.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 2.7)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3.0");
+}
+
+#[test]
+fn test_round_float_tie_rounds_to_even_down_string_result() {
+    // R7RS §6.2.6: halfway values round to even, so 2.5 rounds to 2.0, not 3.0.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 2.5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "2.0");
+}
+
+#[test]
+fn test_round_float_tie_rounds_to_even_up_string_result() {
+    // R7RS §6.2.6: halfway values round to even, so 3.5 rounds to 4.0.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 3.5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "4.0");
+}
+
+#[test]
+fn test_round_negative_float_tie_rounds_to_even_string_result() {
+    // R7RS §6.2.6: round-to-even is symmetric, so -2.5 rounds to -2.0.
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round -2.5)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "-2.0");
+}
+
+#[test]
+fn test_round_whole_float_preserves_inexactness_string_result() {
+    // R7RS §6.2.6: an already-integral float stays inexact, so 3.0 rounds to 3.0 (not 3).
+    use crate::{env::Env, parser::parse_and_eval};
+    let env = Env::standard_env();
+    let result = parse_and_eval("(round 3.0)".to_string(), env).unwrap();
+    assert_eq!(result.to_string(), "3.0");
 }

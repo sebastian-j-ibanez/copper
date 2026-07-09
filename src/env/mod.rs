@@ -64,6 +64,7 @@ impl Env {
             env.insert_proc("abs", procedures::abs);
             env.insert_proc("ceiling", procedures::ceil);
             env.insert_proc("floor", procedures::floor);
+            env.insert_proc("round", procedures::round);
             env.insert_proc("min", procedures::min);
             env.insert_proc("max", procedures::max);
             env.insert_proc("=", procedures::num_eq);
