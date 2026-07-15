@@ -4,21 +4,140 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
+use std::rc::Rc;
+
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::macros;
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter};
 
+type Cont = Option<Rc<Node>>;
+
+#[derive(Debug, Clone)]
+enum State {
+    Eval(Expr, EnvRef, Cont),
+    Return(Expr, Cont),
+}
+
+#[derive(Debug, Clone)]
+enum Node {
+    Application {
+        done: Vec<Expr>,
+        pending: Vec<Expr>,
+        env: EnvRef,
+        next: Cont,
+    },
+    If {
+        if_branch: Expr,
+        else_branch: Option<Expr>,
+        env: EnvRef,
+        next: Cont,
+    },
+}
+
+pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+    let mut state = State::Eval(expr.clone(), env, None);
+    loop {
+        state = match state {
+            State::Eval(expr, env, cont) => match expr {
+                Expr::Number(_)
+                | Expr::String(_)
+                | Expr::Char(_)
+                | Expr::Boolean(_)
+                | Expr::Vector(_)
+                | Expr::ByteVector(_)
+                | Expr::Procedure(_)
+                | Expr::Closure(_)
+                | Expr::Port(_)
+                | Expr::Parameter(_) => State::Return(expr.clone(), cont),
+                Expr::Symbol(k) => {
+                    let value = env
+                        .borrow()
+                        .find_value(&k)
+                        .ok_or(Error::Message(format!("unbound symbol '{}'", k)))?;
+                    State::Return(value, cont)
+                }
+                Expr::Pair(pair) => {
+                    let list_elements: Vec<Expr> = pair.iter().collect();
+
+                    let [first, args @ ..] = list_elements.as_slice() else {
+                        return Ok(Expr::Null);
+                    };
+
+                    let apply_frame = Node::Application {
+                        done: vec![],
+                        pending: args.to_vec(),
+                        env: env.clone(),
+                        next: cont,
+                    };
+
+                    State::Eval(first.clone(), env.clone(), Some(Rc::new(apply_frame)))
+                }
+                Expr::Null => State::Return(Expr::Null, cont),
+                Expr::Eof => State::Return(Expr::Eof, cont),
+                Expr::Void() => State::Return(Expr::Void(), cont),
+            },
+            State::Return(value, Some(cont)) => match cont.as_ref() {
+                Node::Application {
+                    done,
+                    pending,
+                    env,
+                    next,
+                } => {
+                    let mut updated_done = done.clone();
+                    updated_done.push(value);
+
+                    match pending.as_slice() {
+                        [expr, updated_pending @ ..] => {
+                            let new_frame = Node::Application {
+                                done: updated_done,
+                                pending: updated_pending.to_vec(),
+                                env: env.clone(),
+                                next: next.clone(),
+                            };
+                            State::Eval(expr.clone(), env.clone(), Some(Rc::new(new_frame)))
+                        }
+                        _ => {
+                            let (first, args) = match updated_done.as_slice() {
+                                [first, args @ ..] => (first, args),
+                                _ => return Err(Error::new("empty application")),
+                            };
+
+                            let result = match first {
+                                Expr::Procedure(p) => p(args, env.clone())?,
+                                e => {
+                                    let msg = format!("not a function: {}", e);
+                                    dbg!(updated_done);
+                                    return Err(Error::Message(msg));
+                                }
+                            };
+
+                            State::Return(result, next.clone())
+                        }
+                    }
+                }
+                Node::If {
+                    if_branch: _,
+                    else_branch: _,
+                    env: _,
+                    next: _,
+                } => State::Return(value, None),
+            },
+            State::Return(value, None) => return Ok(value),
+        };
+    }
+}
+
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
     let tokens = tokenize(expr);
     let (parsed_exp, _) = parse(&tokens)?;
-    let evaled_exp = eval(&parsed_exp, env)?;
+    let evaled_exp = eval(&parsed_exp, env.clone())?;
     Ok(evaled_exp)
 }
 
 /// Evaluate an s-expression.
-pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+pub fn old_eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_)
         | Expr::String(_)
