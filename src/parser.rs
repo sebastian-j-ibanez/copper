@@ -35,11 +35,49 @@ enum Node {
     },
 }
 
+impl Node {
+    /// Construct `Node::If` from `args`.
+    ///
+    /// Expects the form:
+    /// ```scm
+    /// (if <expression>
+    ///   <value if true>
+    ///   <optional value if false>)
+    /// ```
+    pub fn init_if(
+        args: &[Expr],
+        env: EnvRef,
+        next: Cont,
+    ) -> std::result::Result<(Expr, Node), Error> {
+        match args {
+            [expr, if_expr] => Ok((
+                expr.clone(),
+                Node::If {
+                    if_branch: if_expr.clone(),
+                    else_branch: None,
+                    env: env.clone(),
+                    next: next.clone(),
+                },
+            )),
+            [expr, if_expr, else_expr] => Ok((
+                expr.clone(),
+                Node::If {
+                    if_branch: if_expr.clone(),
+                    else_branch: Some(else_expr.clone()),
+                    env: env.clone(),
+                    next: next.clone(),
+                },
+            )),
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
+}
+
 pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     let mut state = State::Eval(expr.clone(), env, None);
     loop {
         state = match state {
-            State::Eval(expr, env, cont) => match expr {
+            State::Eval(expr, env, next) => match expr {
                 Expr::Number(_)
                 | Expr::String(_)
                 | Expr::Char(_)
@@ -49,13 +87,13 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                 | Expr::Procedure(_)
                 | Expr::Closure(_)
                 | Expr::Port(_)
-                | Expr::Parameter(_) => State::Return(expr.clone(), cont),
+                | Expr::Parameter(_) => State::Return(expr.clone(), next),
                 Expr::Symbol(k) => {
                     let value = env
                         .borrow()
                         .find_value(&k)
                         .ok_or(Error::Message(format!("unbound symbol '{}'", k)))?;
-                    State::Return(value, cont)
+                    State::Return(value, next)
                 }
                 Expr::Pair(pair) => {
                     let list_elements: Vec<Expr> = pair.iter().collect();
@@ -64,18 +102,32 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                         return Ok(Expr::Null);
                     };
 
-                    let apply_frame = Node::Application {
-                        done: vec![],
-                        pending: args.to_vec(),
-                        env: env.clone(),
-                        next: cont,
-                    };
+                    if let Expr::Symbol(s) = first {
+                        let (value, frame) = match s.as_str() {
+                            "if" => Node::init_if(args, env.clone(), next),
+                            _ => {
+                                return Err(Error::new(&format!(
+                                    "expected procedure or macro, got symbol: {}",
+                                    s,
+                                )));
+                            }
+                        }?;
 
-                    State::Eval(first.clone(), env.clone(), Some(Rc::new(apply_frame)))
+                        State::Eval(value.clone(), env.clone(), Some(Rc::new(frame)))
+                    } else {
+                        let apply_frame = Node::Application {
+                            done: vec![],
+                            pending: args.to_vec(),
+                            env: env.clone(),
+                            next,
+                        };
+
+                        State::Eval(first.clone(), env.clone(), Some(Rc::new(apply_frame)))
+                    }
                 }
-                Expr::Null => State::Return(Expr::Null, cont),
-                Expr::Eof => State::Return(Expr::Eof, cont),
-                Expr::Void() => State::Return(Expr::Void(), cont),
+                Expr::Null => State::Return(Expr::Null, next),
+                Expr::Eof => State::Return(Expr::Eof, next),
+                Expr::Void() => State::Return(Expr::Void(), next),
             },
             State::Return(value, Some(cont)) => match cont.as_ref() {
                 Node::Application {
@@ -117,11 +169,20 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                     }
                 }
                 Node::If {
-                    if_branch: _,
-                    else_branch: _,
-                    env: _,
-                    next: _,
-                } => State::Return(value, None),
+                    if_branch: if_value,
+                    else_branch: else_value,
+                    env: _env,
+                    next,
+                } => match value {
+                    Expr::Boolean(false) => {
+                        if let Some(expr) = else_value {
+                            State::Return(expr.clone(), next.clone())
+                        } else {
+                            State::Return(Expr::Void(), None)
+                        }
+                    }
+                    _ => State::Return(if_value.clone(), next.clone()),
+                },
             },
             State::Return(value, None) => return Ok(value),
         };
