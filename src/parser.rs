@@ -21,18 +21,22 @@ enum State {
 
 #[derive(Debug, Clone)]
 enum Node {
-    Application {
-        done: Vec<Expr>,
-        pending: Vec<Expr>,
-        env: EnvRef,
-        next: Cont,
-    },
-    If {
-        if_branch: Expr,
-        else_branch: Option<Expr>,
-        env: EnvRef,
-        next: Cont,
-    },
+    Application(Application),
+    If(If),
+}
+
+#[derive(Debug, Clone)]
+struct Application {
+    done: Vec<Expr>,
+    pending: Vec<Expr>,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct If {
+    if_branch: Expr,
+    else_branch: Option<Expr>,
+    next: Cont,
 }
 
 impl Node {
@@ -44,37 +48,41 @@ impl Node {
     ///   <value if true>
     ///   <optional value if false>)
     /// ```
-    pub fn init_if(
-        args: &[Expr],
-        env: EnvRef,
-        next: Cont,
-    ) -> std::result::Result<(Expr, Node), Error> {
+    pub fn new_if(args: &[Expr], next: Cont) -> std::result::Result<(Expr, Node), Error> {
         match args {
             [expr, if_expr] => Ok((
                 expr.clone(),
-                Node::If {
+                Node::If(If {
                     if_branch: if_expr.clone(),
                     else_branch: None,
-                    env: env.clone(),
                     next: next.clone(),
-                },
+                }),
             )),
             [expr, if_expr, else_expr] => Ok((
                 expr.clone(),
-                Node::If {
+                Node::If(If {
                     if_branch: if_expr.clone(),
                     else_branch: Some(else_expr.clone()),
-                    env: env.clone(),
                     next: next.clone(),
-                },
+                }),
             )),
             _ => Err(Error::new("ill-formed special form")),
         }
     }
 }
 
+/// Parse s-expression, evaluate it, and return result.
+pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
+    let tokens = tokenize(expr);
+    let (parsed_exp, _) = parse(&tokens)?;
+    let evaled_exp = eval(&parsed_exp, env.clone())?;
+    Ok(evaled_exp)
+}
+
+// Evaluation
+
 pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
-    let mut state = State::Eval(expr.clone(), env, None);
+    let mut state = State::Eval(expr.clone(), env.clone(), None);
     loop {
         state = match state {
             State::Eval(expr, env, next) => match expr {
@@ -102,103 +110,105 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                         return Ok(Expr::Null);
                     };
 
-                    if let Expr::Symbol(s) = first {
-                        let (value, frame) = match s.as_str() {
-                            "if" => Node::init_if(args, env.clone(), next),
-                            _ => {
-                                return Err(Error::new(&format!(
-                                    "expected procedure or macro, got symbol: {}",
-                                    s,
-                                )));
-                            }
-                        }?;
-
-                        State::Eval(value.clone(), env.clone(), Some(Rc::new(frame)))
-                    } else {
-                        let apply_frame = Node::Application {
-                            done: vec![],
-                            pending: args.to_vec(),
-                            env: env.clone(),
-                            next,
-                        };
-
-                        State::Eval(first.clone(), env.clone(), Some(Rc::new(apply_frame)))
-                    }
+                    eval_pair(first, args, env, next)?
                 }
                 Expr::Null => State::Return(Expr::Null, next),
                 Expr::Eof => State::Return(Expr::Eof, next),
                 Expr::Void() => State::Return(Expr::Void(), next),
             },
             State::Return(value, Some(cont)) => match cont.as_ref() {
-                Node::Application {
-                    done,
-                    pending,
-                    env,
-                    next,
-                } => {
-                    let mut updated_done = done.clone();
-                    updated_done.push(value);
-
-                    match pending.as_slice() {
-                        [expr, updated_pending @ ..] => {
-                            let new_frame = Node::Application {
-                                done: updated_done,
-                                pending: updated_pending.to_vec(),
-                                env: env.clone(),
-                                next: next.clone(),
-                            };
-                            State::Eval(expr.clone(), env.clone(), Some(Rc::new(new_frame)))
-                        }
-                        _ => {
-                            let (first, args) = match updated_done.as_slice() {
-                                [first, args @ ..] => (first, args),
-                                _ => return Err(Error::new("empty application")),
-                            };
-
-                            let result = match first {
-                                Expr::Procedure(p) => p(args, env.clone())?,
-                                e => {
-                                    let msg = format!("not a function: {}", e);
-                                    dbg!(updated_done);
-                                    return Err(Error::Message(msg));
-                                }
-                            };
-
-                            State::Return(result, next.clone())
-                        }
-                    }
-                }
-                Node::If {
-                    if_branch: if_value,
-                    else_branch: else_value,
-                    env: _env,
-                    next,
-                } => match value {
-                    Expr::Boolean(false) => {
-                        if let Some(expr) = else_value {
-                            State::Return(expr.clone(), next.clone())
-                        } else {
-                            State::Return(Expr::Void(), None)
-                        }
-                    }
-                    _ => State::Return(if_value.clone(), next.clone()),
-                },
+                Node::Application(app) => eval_apply(app, value, env.clone(), Some(cont.clone()))?,
+                Node::If(if_node) => eval_if(if_node, value),
             },
             State::Return(value, None) => return Ok(value),
         };
     }
 }
 
-/// Parse s-expression, evaluate it, and return result.
-pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
-    let tokens = tokenize(expr);
-    let (parsed_exp, _) = parse(&tokens)?;
-    let evaled_exp = eval(&parsed_exp, env.clone())?;
-    Ok(evaled_exp)
+fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<State, Error> {
+    if let Expr::Symbol(s) = first {
+        let (value, frame) = match s.as_str() {
+            "if" => Node::new_if(args, next),
+            _ => {
+                return Err(Error::new(&format!(
+                    "expected procedure or macro, got symbol: {}",
+                    s,
+                )));
+            }
+        }?;
+
+        Ok(State::Eval(
+            value.clone(),
+            env.clone(),
+            Some(Rc::new(frame)),
+        ))
+    } else {
+        let apply_frame = Application {
+            done: vec![],
+            pending: args.to_vec(),
+            next,
+        };
+
+        Ok(State::Eval(
+            first.clone(),
+            env.clone(),
+            Some(Rc::new(Node::Application(apply_frame))),
+        ))
+    }
+}
+
+fn eval_apply(app: &Application, expr: Expr, env: EnvRef, next: Cont) -> Result<State, Error> {
+    let mut updated_done = app.done.clone();
+    updated_done.push(expr);
+
+    let state = match app.pending.as_slice() {
+        [expr, updated_pending @ ..] => {
+            let new_frame = Application {
+                done: updated_done,
+                pending: updated_pending.to_vec(),
+                next: app.next.clone(),
+            };
+            State::Eval(
+                expr.clone(),
+                env.clone(),
+                Some(Rc::new(Node::Application(new_frame))),
+            )
+        }
+        _ => {
+            let (first, args) = match updated_done.as_slice() {
+                [first, args @ ..] => (first, args),
+                _ => return Err(Error::new("empty application")),
+            };
+
+            let result = match first {
+                Expr::Procedure(p) => p(args, env.clone())?,
+                e => {
+                    return Err(Error::new(&format!("not a function: {}", e)));
+                }
+            };
+
+            State::Return(result, next.clone())
+        }
+    };
+
+    Ok(state)
+}
+
+fn eval_if(if_node: &If, case: Expr) -> State {
+    match case {
+        Expr::Boolean(false) => {
+            if let Some(expr) = if_node.else_branch.clone() {
+                State::Return(expr.clone(), if_node.next.clone())
+            } else {
+                State::Return(Expr::Void(), None)
+            }
+        }
+        _ => State::Return(if_node.if_branch.clone(), if_node.next.clone()),
+    }
 }
 
 /// Evaluate an s-expression.
-pub fn old_eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+pub fn _old_eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_)
         | Expr::String(_)
@@ -300,6 +310,8 @@ fn apply_parameter(param: &Parameter, args: Vec<Expr>, env: EnvRef) -> Result<Ex
         _ => Err(Error::new("parameter: expected 0 or 1 arguments")),
     }
 }
+
+// Parser
 
 /// Parse tokenized s-expressions.
 pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
@@ -450,6 +462,8 @@ pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     }
 }
 
+// Tokenizer
+
 /// Tokenize a string s-expression.
 pub fn tokenize(expression: String) -> Vec<String> {
     let chars: Vec<char> = expression.chars().collect();
@@ -530,8 +544,8 @@ pub fn tokenize(expression: String) -> Vec<String> {
 /// Check if s-expression has been closed with a parenthesis.
 pub fn expression_closed(buf: &str) -> bool {
     let expression = buf.trim();
-    let mut open_paren = 0;
-    let mut close_paren = 0;
+    let mut open_paren_count = 0;
+    let mut close_paren_count = 0;
 
     for line in expression
         .lines()
@@ -539,8 +553,8 @@ pub fn expression_closed(buf: &str) -> bool {
     {
         for e in line.chars() {
             match e {
-                '(' => open_paren += 1,
-                ')' => close_paren += 1,
+                '(' => open_paren_count += 1,
+                ')' => close_paren_count += 1,
                 _ => {}
             }
         }
@@ -549,6 +563,6 @@ pub fn expression_closed(buf: &str) -> bool {
     // Not a symbolic expression. Covers edge case when an atom contains parentheses.
     // For example, "example string (with parentheses)".
     let not_an_expression = !expression.starts_with('(') && !expression.ends_with(')');
-    let paren_are_equal = open_paren == close_paren;
+    let paren_are_equal = open_paren_count == close_paren_count;
     not_an_expression || paren_are_equal
 }
