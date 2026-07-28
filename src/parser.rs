@@ -19,17 +19,26 @@ enum State {
     Return(Expr, Cont),
 }
 
+impl State {
+    pub fn new_eval(expr: Expr, env: EnvRef, node: Node) -> State {
+        State::Eval(expr, env, Some(Rc::new(node)))
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Node {
     Application(Application),
     If(If),
     Define(Define),
+    Set(Set),
+    Quote(Quote),
 }
 
 #[derive(Debug, Clone)]
 struct Application {
     done: Vec<Expr>,
     pending: Vec<Expr>,
+    env: EnvRef,
     next: Cont,
 }
 
@@ -37,12 +46,26 @@ struct Application {
 struct If {
     if_branch: Expr,
     else_branch: Option<Expr>,
+    env: EnvRef,
     next: Cont,
 }
 
 #[derive(Debug, Clone)]
 struct Define {
     name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Set {
+    name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Quote {
     next: Cont,
 }
 
@@ -55,49 +78,79 @@ impl Node {
     ///   <value if true>
     ///   <optional value if false>)
     /// ```
-    pub fn new_if(args: &[Expr], env: EnvRef, next: Cont) -> Result<State, Error> {
-        let (expr, node) = match args {
-            [expr, if_expr] => (
+    pub fn if_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [expr, if_expr] => Ok((
                 expr.clone(),
                 Node::If(If {
                     if_branch: if_expr.clone(),
                     else_branch: None,
+                    env: env.clone(),
                     next: next.clone(),
                 }),
-            ),
-            [expr, if_expr, else_expr] => (
+            )),
+            [expr, if_expr, else_expr] => Ok((
                 expr.clone(),
                 Node::If(If {
                     if_branch: if_expr.clone(),
                     else_branch: Some(else_expr.clone()),
+                    env: env.clone(),
                     next: next.clone(),
                 }),
-            ),
+            )),
             _ => return Err(Error::new("ill-formed special form")),
-        };
-
-        Ok(State::Eval(expr.clone(), env, Some(Rc::new(node))))
+        }
     }
 
     /// Construct `Node::Define` from `args`.
+    ///
+    /// Returns the current `Expr` to eval, and the next `Node`.
     ///
     /// Expects the form:
     /// ```scm
     /// (define <name> <value>)
     /// ```
-    pub fn new_define(args: &[Expr], env: EnvRef, next: Cont) -> Result<State, Error> {
-        let (expr, node) = match args {
-            [Expr::Symbol(name), value] => (
+    pub fn define_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [Expr::Symbol(name), value] => Ok((
                 value.clone(),
                 Node::Define(Define {
                     name: name.clone(),
+                    env: env.clone(),
                     next: next,
                 }),
-            ),
+            )),
             _ => return Err(Error::new("ill-formed special form")),
-        };
+        }
+    }
 
-        Ok(State::Eval(expr.clone(), env, Some(Rc::new(node))))
+    /// Construct `Node::Set` from `args`.
+    ///
+    /// Returns the current `Expr` to eval, and the next `Node`.
+    ///
+    /// Expectes the form:
+    /// ```scm
+    /// (set <name> <value>)
+    /// ```
+    pub fn set_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [Expr::Symbol(name), value] => Ok((
+                value.clone(),
+                Node::Set(Set {
+                    name: name.clone(),
+                    env: env.clone(),
+                    next: next,
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn quote_from(args: &[Expr], next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [expr] => Ok((expr.clone(), Node::Quote(Quote { next }))),
+            _ => Err(Error::new("ill-formed special form")),
+        }
     }
 }
 
@@ -147,9 +200,11 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                 Expr::Void() => State::Return(Expr::Void(), next),
             },
             State::Return(value, Some(cont)) => match cont.as_ref() {
-                Node::Application(app) => eval_apply(app, value, env.clone())?,
+                Node::Application(app) => eval_apply(app, value)?,
                 Node::If(if_node) => eval_if(if_node, value),
-                Node::Define(define) => eval_define(define, value, env.clone())?,
+                Node::Define(define) => eval_define(define, value)?,
+                Node::Set(set) => eval_set(set, value)?,
+                Node::Quote(quote) => State::Return(value, quote.next.clone()),
             },
             State::Return(value, None) => return Ok(value),
         };
@@ -159,8 +214,22 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
 fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<State, Error> {
     if let Expr::Symbol(s) = first {
         match s.as_str() {
-            "if" => return Node::new_if(args, env, next),
-            "define" => return Node::new_define(args, env, next),
+            "if" => {
+                let (expr, node) = Node::if_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env.clone(), node));
+            }
+            "define" => {
+                let (expr, node) = Node::define_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, node));
+            }
+            "set!" => {
+                let (expr, node) = Node::set_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, node));
+            }
+            "quote" => {
+                let (expr, node) = Node::quote_from(args, next)?;
+                return Ok(State::Return(expr.clone(), Some(Rc::new(node))));
+            }
             _ => {}
         }
     }
@@ -168,6 +237,7 @@ fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<Sta
     let apply_frame = Application {
         done: vec![],
         pending: args.to_vec(),
+        env: env.clone(),
         next,
     };
 
@@ -178,7 +248,7 @@ fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<Sta
     ))
 }
 
-fn eval_apply(app: &Application, expr: Expr, env: EnvRef) -> Result<State, Error> {
+fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
     let mut updated_done = app.done.clone();
     updated_done.push(expr);
 
@@ -187,11 +257,12 @@ fn eval_apply(app: &Application, expr: Expr, env: EnvRef) -> Result<State, Error
             let new_frame = Application {
                 done: updated_done,
                 pending: updated_pending.to_vec(),
+                env: app.env.clone(),
                 next: app.next.clone(),
             };
             State::Eval(
                 expr.clone(),
-                env.clone(),
+                app.env.clone(),
                 Some(Rc::new(Node::Application(new_frame))),
             )
         }
@@ -202,7 +273,7 @@ fn eval_apply(app: &Application, expr: Expr, env: EnvRef) -> Result<State, Error
             };
 
             let result = match first {
-                Expr::Procedure(p) => p(args, env.clone())?,
+                Expr::Procedure(p) => p(args, app.env.clone())?,
                 e => {
                     return Err(Error::new(&format!("not a function: {}", e)));
                 }
@@ -219,21 +290,40 @@ fn eval_if(if_node: &If, case: Expr) -> State {
     match case {
         Expr::Boolean(false) => {
             if let Some(expr) = if_node.else_branch.clone() {
-                State::Return(expr.clone(), if_node.next.clone())
+                // State::Return(expr.clone(), if_node.next.clone())
+                State::Eval(expr, if_node.env.clone(), if_node.next.clone())
             } else {
                 State::Return(Expr::Void(), None)
             }
         }
-        _ => State::Return(if_node.if_branch.clone(), if_node.next.clone()),
+        _ => State::Eval(
+            if_node.if_branch.clone(),
+            if_node.env.clone(),
+            if_node.next.clone(),
+        ),
     }
 }
 
-fn eval_define(define: &Define, value: Expr, env: EnvRef) -> Result<State, Error> {
-    let mut borrowed_env = env
+fn eval_define(define: &Define, value: Expr) -> Result<State, Error> {
+    let mut borrowed_env = define
+        .env
         .try_borrow_mut()
         .map_err(|_| Error::new("unable to borrow runtime environment"))?;
     borrowed_env.data.insert(define.name.clone(), value);
     Ok(State::Return(Expr::Void(), define.next.clone()))
+}
+
+fn eval_set(set: &Set, value: Expr) -> Result<State, Error> {
+    let mut borrowed_env = set
+        .env
+        .try_borrow_mut()
+        .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+
+    if !borrowed_env.set_expr(&set.name, &value)? {
+        return Err(Error::new(&format!("unbound variable: {}", &set.name)));
+    }
+
+    Ok(State::Return(Expr::Void(), set.next.clone()))
 }
 
 /// Evaluate an s-expression.
