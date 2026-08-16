@@ -31,7 +31,9 @@ enum Node {
     If(If),
     Define(Define),
     Set(Set),
-    Quote(Quote),
+    Quote(Cont),
+    Quasiquote(Cont),
+    Unquote(Cont)
 }
 
 #[derive(Debug, Clone)]
@@ -61,11 +63,6 @@ struct Define {
 struct Set {
     name: String,
     env: EnvRef,
-    next: Cont,
-}
-
-#[derive(Debug, Clone)]
-struct Quote {
     next: Cont,
 }
 
@@ -146,9 +143,9 @@ impl Node {
         }
     }
 
-    pub fn quote_from(args: &[Expr], next: Cont) -> Result<(Expr, Node), Error> {
+    pub fn quote_from(args: &[Expr]) -> Result<Expr, Error> {
         match args {
-            [expr] => Ok((expr.clone(), Node::Quote(Quote { next }))),
+            [expr] => Ok(expr.clone()),
             _ => Err(Error::new("ill-formed special form")),
         }
     }
@@ -204,7 +201,20 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                 Node::If(if_node) => eval_if(if_node, value),
                 Node::Define(define) => eval_define(define, value)?,
                 Node::Set(set) => eval_set(set, value)?,
-                Node::Quote(quote) => State::Return(value, quote.next.clone()),
+                Node::Quote(node_next) => State::Return(value, node_next.clone()),
+                Node::Quasiquote(node_next) => {
+                    match value {
+                        Expr::Symbol(s) => {},
+                        _ => todo!()
+                    }
+
+                    if value.to_string().starts_with('\'') {
+                        
+                    }
+
+                    State::Return(value, node_next.clone())
+                },
+                Node::Unquote(node_next) => eval_unquote(value, unquote.env);
             },
             State::Return(value, None) => return Ok(value),
         };
@@ -227,8 +237,8 @@ fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<Sta
                 return Ok(State::new_eval(expr.clone(), env, node));
             }
             "quote" => {
-                let (expr, node) = Node::quote_from(args, next)?;
-                return Ok(State::Return(expr.clone(), Some(Rc::new(node))));
+                let expr = Node::quote_from(args)?;
+                return Ok(State::Return(expr.clone(), next));
             }
             _ => {}
         }
