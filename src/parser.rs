@@ -31,9 +31,7 @@ enum Node {
     If(If),
     Define(Define),
     Set(Set),
-    Quote(Cont),
-    Quasiquote(Cont),
-    Unquote(Cont)
+    Quasiquote(Quasiquote),
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +60,14 @@ struct Define {
 #[derive(Debug, Clone)]
 struct Set {
     name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Quasiquote {
+    done: Vec<Expr>,
+    pending: Vec<Expr>,
     env: EnvRef,
     next: Cont,
 }
@@ -149,6 +155,21 @@ impl Node {
             _ => Err(Error::new("ill-formed special form")),
         }
     }
+
+    pub fn quasiquote_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [arg, rest @ ..] => Ok((
+                arg.clone(),
+                Node::Quasiquote(Quasiquote {
+                    done: Vec::new(),
+                    pending: rest.to_vec(),
+                    env: env.clone(),
+                    next,
+                }),
+            )),
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
 }
 
 /// Parse s-expression, evaluate it, and return result.
@@ -201,20 +222,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                 Node::If(if_node) => eval_if(if_node, value),
                 Node::Define(define) => eval_define(define, value)?,
                 Node::Set(set) => eval_set(set, value)?,
-                Node::Quote(node_next) => State::Return(value, node_next.clone()),
-                Node::Quasiquote(node_next) => {
-                    match value {
-                        Expr::Symbol(s) => {},
-                        _ => todo!()
-                    }
-
-                    if value.to_string().starts_with('\'') {
-                        
-                    }
-
-                    State::Return(value, node_next.clone())
-                },
-                Node::Unquote(node_next) => eval_unquote(value, unquote.env);
+                Node::Quasiquote(qq) => eval_quasiquote(qq, value)?,
             },
             State::Return(value, None) => return Ok(value),
         };
@@ -240,6 +248,10 @@ fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<Sta
                 let expr = Node::quote_from(args)?;
                 return Ok(State::Return(expr.clone(), next));
             }
+            "quasiquote" => {
+                let (expr, node) = Node::quasiquote_from(args, env.clone(), next)?;
+                return Ok(State::Return(expr.clone(), Some(Rc::new(node))));
+            }
             _ => {}
         }
     }
@@ -263,15 +275,15 @@ fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
     updated_done.push(expr);
 
     let state = match app.pending.as_slice() {
-        [expr, updated_pending @ ..] => {
+        [first, rest @ ..] => {
             let new_frame = Application {
                 done: updated_done,
-                pending: updated_pending.to_vec(),
+                pending: rest.to_vec(),
                 env: app.env.clone(),
                 next: app.next.clone(),
             };
             State::Eval(
-                expr.clone(),
+                first.clone(),
                 app.env.clone(),
                 Some(Rc::new(Node::Application(new_frame))),
             )
@@ -334,6 +346,69 @@ fn eval_set(set: &Set, value: Expr) -> Result<State, Error> {
     }
 
     Ok(State::Return(Expr::Void(), set.next.clone()))
+}
+
+fn eval_quasiquote(qq: &Quasiquote, expr: Expr) -> Result<State, Error> {
+    let state = match qq.pending.as_slice() {
+        // Still work to do after expr,
+        // eval expr then return next expr + new node
+        [first, rest @ ..] => {
+            let mut new_done = qq.done.clone();
+            // I'm pretty sure this needs to be evaluated before
+            // being pushed to the done buffer.
+            new_done.push(expr.clone());
+            let new_frame = Quasiquote {
+                done: new_done,
+                pending: rest.to_vec(),
+                env: qq.env.clone(),
+                next: qq.next.clone(),
+            };
+            State::Return(first.clone(), Some(Rc::new(Node::Quasiquote(new_frame))))
+        }
+        // No more work to do after evaluating expr,
+        // append and return everything in 'done' buf
+        _ => {
+            // See eval_apply:
+            //   - After we've evaluated the last expr,
+            //     we need to take everything in qq.done, concat it, and return it.
+            match expr.clone() {
+                Expr::Symbol(s) if s.starts_with(",") => {
+                    if let Some(unquoted_symbol) = s.strip_prefix(",") {
+                        // Unquote symbol
+                        State::Eval(
+                            Expr::Symbol(unquoted_symbol.to_string()),
+                            qq.env.clone(),
+                            qq.next.clone(),
+                        )
+                    } else {
+                        // Quote symbol
+                        State::Return(expr, qq.next.clone())
+                    }
+                }
+                // Expr::Pair(p) if p.is_pair() => todo!(),
+                Expr::Pair(p) => {
+                    let rest = match p.car() {
+                        Expr::Symbol(s) if s.starts_with(",") => {
+                            vec![Expr::Null]
+                        }
+                        _ => p.iter().skip(1).collect::<Vec<Expr>>(),
+                    };
+                    let new_frame = Quasiquote {
+                        done: Vec::new(),
+                        pending: rest,
+                        env: qq.env.clone(),
+                        next: qq.next.clone(),
+                    };
+
+                    State::Return(p.car(), Some(Rc::new(Node::Quasiquote(new_frame))))
+                }
+                Expr::Vector(v) => todo!(),
+                _ => State::Return(expr, qq.next.clone()),
+            }
+        }
+    };
+
+    Ok(state)
 }
 
 /// Evaluate an s-expression.
