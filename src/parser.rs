@@ -372,43 +372,90 @@ fn eval_quasiquote(qq: &Quasiquote, expr: Expr) -> Result<State, Error> {
             //   - After we've evaluated the last expr,
             //     we need to take everything in qq.done, concat it, and return it.
             match expr.clone() {
-                Expr::Symbol(s) if s.starts_with(",") => {
-                    if let Some(unquoted_symbol) = s.strip_prefix(",") {
-                        // Unquote symbol
-                        State::Eval(
-                            Expr::Symbol(unquoted_symbol.to_string()),
-                            qq.env.clone(),
-                            qq.next.clone(),
-                        )
-                    } else {
-                        // Quote symbol
-                        State::Return(expr, qq.next.clone())
-                    }
-                }
-                // Expr::Pair(p) if p.is_pair() => todo!(),
                 Expr::Pair(p) => {
-                    let rest = match p.car() {
-                        Expr::Symbol(s) if s.starts_with(",") => {
-                            vec![Expr::Null]
-                        }
-                        _ => p.iter().skip(1).collect::<Vec<Expr>>(),
-                    };
-                    let new_frame = Quasiquote {
-                        done: Vec::new(),
-                        pending: rest,
-                        env: qq.env.clone(),
-                        next: qq.next.clone(),
-                    };
+                    // Case 1: (unquote expr)
+                    //   - We need to check if it is an (unquote expr)
+                    //   - If so, create a new State::Eval frame to eval expr
+                    //   - After expr is evaluated, we somehow need to compile
+                    //     the resulting value in the original quasiquote
+                    // Case 2: (<anything else>)
+                    //   -
 
-                    State::Return(p.car(), Some(Rc::new(Node::Quasiquote(new_frame))))
+                    match p.car() {
+                        Expr::Symbol(s) if s == "unquote" => {
+                            let new_frame = Quasiquote {
+                                done: qq.done.clone(),
+                                pending: qq.pending.clone(),
+                                env: qq.env.clone(),
+                                next: Some(Rc::new(Node::Quasiquote(qq.clone()))),
+                            };
+                            // let rest = p.iter().skip(1).map(|e| e.clone()).collect::<Vec<Expr>>();
+                            let eval_frame = State::Eval(
+                                p.cdr(),
+                                // rest,
+                                qq.env.clone(),
+                                Some(Rc::new(Node::Quasiquote(new_frame))),
+                            );
+                            eval_frame
+                        }
+                        p @ Expr::Pair(_) => {
+                            // let (first, rest) = (
+                            //     p.car(),
+                            //     p.iter().skip(1).map(|e| e.clone()).collect::<Vec<Expr>>(),
+                            // );
+                            let new_frame = Quasiquote {
+                                done: vec![],
+                                pending: vec![],
+                                env: qq.env.clone(),
+                                next: Some(Rc::new(Node::Quasiquote(qq.clone()))),
+                            };
+                            State::Return(p, Some(Rc::new(Node::Quasiquote(new_frame))))
+                        }
+                        _ => finish_quasiquote(qq, &expr, false),
+                    }
+
+                    // IGNORE BELOW, OLD IMPLEMENTATION
+                    // let rest = match p.car() {
+                    //     // This case might be bogus, and unecessary.
+                    //     Expr::Symbol(s) if s.starts_with(",") => {
+                    //         vec![Expr::Null]
+                    //     }
+                    //     _ => p.iter().skip(1).collect::<Vec<Expr>>(),
+                    // };
+                    // let new_frame = Quasiquote {
+                    //     done: Vec::new(),
+                    //     pending: rest,
+                    //     env: qq.env.clone(),
+                    //     next: qq.next.clone(),
+                    // };
+
+                    // State::Return(p.car(), Some(Rc::new(Node::Quasiquote(new_frame))))
                 }
-                Expr::Vector(v) => todo!(),
-                _ => State::Return(expr, qq.next.clone()),
+                // Expr::Vector(v) => todo!(),
+                // _ => State::Return(expr, qq.next.clone()),
+                _ => finish_quasiquote(qq, &expr, false),
             }
         }
     };
 
     Ok(state)
+}
+
+fn finish_quasiquote(qq: &Quasiquote, expr: &Expr, unquote: bool) -> State {
+    let result = Expr::Symbol(
+        expr.to_string()
+            + &qq
+                .done
+                .iter()
+                .map(|e| " ".to_string() + &e.to_string())
+                .collect::<String>(),
+    );
+
+    if unquote {
+        State::Eval(result, qq.env.clone(), qq.next.clone())
+    } else {
+        State::Return(result, qq.next.clone())
+    }
 }
 
 /// Evaluate an s-expression.
@@ -538,6 +585,11 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
         "`" => {
             let (quasiquoted_expr, remaining) = parse(right_expr)?;
             let slice = vec![Expr::Symbol("quasiquote".to_string()), quasiquoted_expr];
+            Ok((Pair::list(slice.as_slice()), remaining))
+        }
+        "," => {
+            let (unquoted_expr, remaining) = parse(right_expr)?;
+            let slice = vec![Expr::Symbol("unquote".to_string()), unquoted_expr];
             Ok((Pair::list(slice.as_slice()), remaining))
         }
         "#(" => {
@@ -708,6 +760,10 @@ pub fn tokenize(expression: String) -> Vec<String> {
             }
             '`' => {
                 tokens.push("`".to_string());
+                i += 1;
+            }
+            ',' => {
+                tokens.push(",".to_string());
                 i += 1;
             }
             '#' => {
