@@ -4,21 +4,462 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
+use std::rc::Rc;
+
 use crate::env::EnvRef;
 use crate::error::Error;
 use crate::macros;
 use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter};
 
+type Cont = Option<Rc<Node>>;
+
+#[derive(Debug, Clone)]
+enum State {
+    Eval(Expr, EnvRef, Cont),
+    Return(Expr, Cont),
+}
+
+impl State {
+    pub fn new_eval(expr: Expr, env: EnvRef, node: Node) -> State {
+        State::Eval(expr, env, Some(Rc::new(node)))
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Node {
+    Application(Application),
+    If(If),
+    Define(Define),
+    Set(Set),
+    Quasiquote(Quasiquote),
+}
+
+#[derive(Debug, Clone)]
+struct Application {
+    done: Vec<Expr>,
+    pending: Vec<Expr>,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct If {
+    if_branch: Expr,
+    else_branch: Option<Expr>,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Define {
+    name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Set {
+    name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Quasiquote {
+    done: Vec<Expr>,
+    pending: Vec<Expr>,
+    env: EnvRef,
+    next: Cont,
+}
+
+impl Node {
+    /// Construct `Node::If` from `args`.
+    ///
+    /// Expects the form:
+    /// ```scm
+    /// (if <expression>
+    ///   <value if true>
+    ///   <optional value if false>)
+    /// ```
+    pub fn if_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [expr, if_expr] => Ok((
+                expr.clone(),
+                Node::If(If {
+                    if_branch: if_expr.clone(),
+                    else_branch: None,
+                    env: env.clone(),
+                    next: next.clone(),
+                }),
+            )),
+            [expr, if_expr, else_expr] => Ok((
+                expr.clone(),
+                Node::If(If {
+                    if_branch: if_expr.clone(),
+                    else_branch: Some(else_expr.clone()),
+                    env: env.clone(),
+                    next: next.clone(),
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    /// Construct `Node::Define` from `args`.
+    ///
+    /// Returns the current `Expr` to eval, and the next `Node`.
+    ///
+    /// Expects the form:
+    /// ```scm
+    /// (define <name> <value>)
+    /// ```
+    pub fn define_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [Expr::Symbol(name), value] => Ok((
+                value.clone(),
+                Node::Define(Define {
+                    name: name.clone(),
+                    env: env.clone(),
+                    next: next,
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    /// Construct `Node::Set` from `args`.
+    ///
+    /// Returns the current `Expr` to eval, and the next `Node`.
+    ///
+    /// Expectes the form:
+    /// ```scm
+    /// (set <name> <value>)
+    /// ```
+    pub fn set_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [Expr::Symbol(name), value] => Ok((
+                value.clone(),
+                Node::Set(Set {
+                    name: name.clone(),
+                    env: env.clone(),
+                    next: next,
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn quote_from(args: &[Expr]) -> Result<Expr, Error> {
+        match args {
+            [expr] => Ok(expr.clone()),
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn quasiquote_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [arg, rest @ ..] => Ok((
+                arg.clone(),
+                Node::Quasiquote(Quasiquote {
+                    done: Vec::new(),
+                    pending: rest.to_vec(),
+                    env: env.clone(),
+                    next,
+                }),
+            )),
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
+}
+
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
     let tokens = tokenize(expr);
     let (parsed_exp, _) = parse(&tokens)?;
-    let evaled_exp = eval(&parsed_exp, env)?;
+    let evaled_exp = eval(&parsed_exp, env.clone())?;
     Ok(evaled_exp)
 }
 
-/// Evaluate an s-expression.
+// Evaluation
+
 pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+    let mut state = State::Eval(expr.clone(), env.clone(), None);
+    loop {
+        state = match state {
+            State::Eval(expr, env, next) => match expr {
+                Expr::Number(_)
+                | Expr::String(_)
+                | Expr::Char(_)
+                | Expr::Boolean(_)
+                | Expr::Vector(_)
+                | Expr::ByteVector(_)
+                | Expr::Procedure(_)
+                | Expr::Closure(_)
+                | Expr::Port(_)
+                | Expr::Parameter(_) => State::Return(expr.clone(), next),
+                Expr::Symbol(k) => {
+                    let value = env
+                        .borrow()
+                        .find_value(&k)
+                        .ok_or(Error::Message(format!("unbound symbol '{}'", k)))?;
+                    State::Return(value, next)
+                }
+                Expr::Pair(pair) => {
+                    let list_elements: Vec<Expr> = pair.iter().collect();
+
+                    let [first, args @ ..] = list_elements.as_slice() else {
+                        return Ok(Expr::Null);
+                    };
+
+                    eval_pair(first, args, env, next)?
+                }
+                Expr::Null => State::Return(Expr::Null, next),
+                Expr::Eof => State::Return(Expr::Eof, next),
+                Expr::Void() => State::Return(Expr::Void(), next),
+            },
+            State::Return(value, Some(cont)) => match cont.as_ref() {
+                Node::Application(app) => eval_apply(app, value)?,
+                Node::If(if_node) => eval_if(if_node, value),
+                Node::Define(define) => eval_define(define, value)?,
+                Node::Set(set) => eval_set(set, value)?,
+                Node::Quasiquote(qq) => eval_quasiquote(qq, value)?,
+            },
+            State::Return(value, None) => return Ok(value),
+        };
+    }
+}
+
+fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<State, Error> {
+    if let Expr::Symbol(s) = first {
+        match s.as_str() {
+            "if" => {
+                let (expr, node) = Node::if_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env.clone(), node));
+            }
+            "define" => {
+                let (expr, node) = Node::define_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, node));
+            }
+            "set!" => {
+                let (expr, node) = Node::set_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, node));
+            }
+            "quote" => {
+                let expr = Node::quote_from(args)?;
+                return Ok(State::Return(expr.clone(), next));
+            }
+            "quasiquote" => {
+                let (expr, node) = Node::quasiquote_from(args, env.clone(), next)?;
+                return Ok(State::Return(expr.clone(), Some(Rc::new(node))));
+            }
+            _ => {}
+        }
+    }
+
+    let apply_frame = Application {
+        done: vec![],
+        pending: args.to_vec(),
+        env: env.clone(),
+        next,
+    };
+
+    Ok(State::Eval(
+        first.clone(),
+        env.clone(),
+        Some(Rc::new(Node::Application(apply_frame))),
+    ))
+}
+
+fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
+    let mut updated_done = app.done.clone();
+    updated_done.push(expr);
+
+    let state = match app.pending.as_slice() {
+        [first, rest @ ..] => {
+            let new_frame = Application {
+                done: updated_done,
+                pending: rest.to_vec(),
+                env: app.env.clone(),
+                next: app.next.clone(),
+            };
+            State::Eval(
+                first.clone(),
+                app.env.clone(),
+                Some(Rc::new(Node::Application(new_frame))),
+            )
+        }
+        _ => {
+            let (first, args) = match updated_done.as_slice() {
+                [first, args @ ..] => (first, args),
+                _ => return Err(Error::new("empty application")),
+            };
+
+            let result = match first {
+                Expr::Procedure(p) => p(args, app.env.clone())?,
+                e => {
+                    return Err(Error::new(&format!("not a function: {}", e)));
+                }
+            };
+
+            State::Return(result, app.next.clone())
+        }
+    };
+
+    Ok(state)
+}
+
+fn eval_if(if_node: &If, case: Expr) -> State {
+    match case {
+        Expr::Boolean(false) => {
+            if let Some(expr) = if_node.else_branch.clone() {
+                // State::Return(expr.clone(), if_node.next.clone())
+                State::Eval(expr, if_node.env.clone(), if_node.next.clone())
+            } else {
+                State::Return(Expr::Void(), None)
+            }
+        }
+        _ => State::Eval(
+            if_node.if_branch.clone(),
+            if_node.env.clone(),
+            if_node.next.clone(),
+        ),
+    }
+}
+
+fn eval_define(define: &Define, value: Expr) -> Result<State, Error> {
+    let mut borrowed_env = define
+        .env
+        .try_borrow_mut()
+        .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+    borrowed_env.data.insert(define.name.clone(), value);
+    Ok(State::Return(Expr::Void(), define.next.clone()))
+}
+
+fn eval_set(set: &Set, value: Expr) -> Result<State, Error> {
+    let mut borrowed_env = set
+        .env
+        .try_borrow_mut()
+        .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+
+    if !borrowed_env.set_expr(&set.name, &value)? {
+        return Err(Error::new(&format!("unbound variable: {}", &set.name)));
+    }
+
+    Ok(State::Return(Expr::Void(), set.next.clone()))
+}
+
+fn eval_quasiquote(qq: &Quasiquote, expr: Expr) -> Result<State, Error> {
+    let state = match qq.pending.as_slice() {
+        // Still work to do after expr,
+        // eval expr then return next expr + new node
+        [first, rest @ ..] => {
+            let mut new_done = qq.done.clone();
+            // I'm pretty sure this needs to be evaluated before
+            // being pushed to the done buffer.
+            new_done.push(expr.clone());
+            let new_frame = Quasiquote {
+                done: new_done,
+                pending: rest.to_vec(),
+                env: qq.env.clone(),
+                next: qq.next.clone(),
+            };
+            State::Return(first.clone(), Some(Rc::new(Node::Quasiquote(new_frame))))
+        }
+        // No more work to do after evaluating expr,
+        // append and return everything in 'done' buf
+        _ => {
+            // See eval_apply:
+            //   - After we've evaluated the last expr,
+            //     we need to take everything in qq.done, concat it, and return it.
+            match expr.clone() {
+                Expr::Pair(p) => {
+                    // Case 1: (unquote expr)
+                    //   - We need to check if it is an (unquote expr)
+                    //   - If so, create a new State::Eval frame to eval expr
+                    //   - After expr is evaluated, we somehow need to compile
+                    //     the resulting value in the original quasiquote
+                    // Case 2: (<anything else>)
+                    //   -
+
+                    match p.car() {
+                        Expr::Symbol(s) if s == "unquote" => {
+                            let new_frame = Quasiquote {
+                                done: qq.done.clone(),
+                                pending: qq.pending.clone(),
+                                env: qq.env.clone(),
+                                next: Some(Rc::new(Node::Quasiquote(qq.clone()))),
+                            };
+                            // let rest = p.iter().skip(1).map(|e| e.clone()).collect::<Vec<Expr>>();
+                            let eval_frame = State::Eval(
+                                p.cdr(),
+                                // rest,
+                                qq.env.clone(),
+                                Some(Rc::new(Node::Quasiquote(new_frame))),
+                            );
+                            eval_frame
+                        }
+                        p @ Expr::Pair(_) => {
+                            // let (first, rest) = (
+                            //     p.car(),
+                            //     p.iter().skip(1).map(|e| e.clone()).collect::<Vec<Expr>>(),
+                            // );
+                            let new_frame = Quasiquote {
+                                done: vec![],
+                                pending: vec![],
+                                env: qq.env.clone(),
+                                next: Some(Rc::new(Node::Quasiquote(qq.clone()))),
+                            };
+                            State::Return(p, Some(Rc::new(Node::Quasiquote(new_frame))))
+                        }
+                        _ => finish_quasiquote(qq, &expr, false),
+                    }
+
+                    // IGNORE BELOW, OLD IMPLEMENTATION
+                    // let rest = match p.car() {
+                    //     // This case might be bogus, and unecessary.
+                    //     Expr::Symbol(s) if s.starts_with(",") => {
+                    //         vec![Expr::Null]
+                    //     }
+                    //     _ => p.iter().skip(1).collect::<Vec<Expr>>(),
+                    // };
+                    // let new_frame = Quasiquote {
+                    //     done: Vec::new(),
+                    //     pending: rest,
+                    //     env: qq.env.clone(),
+                    //     next: qq.next.clone(),
+                    // };
+
+                    // State::Return(p.car(), Some(Rc::new(Node::Quasiquote(new_frame))))
+                }
+                // Expr::Vector(v) => todo!(),
+                // _ => State::Return(expr, qq.next.clone()),
+                _ => finish_quasiquote(qq, &expr, false),
+            }
+        }
+    };
+
+    Ok(state)
+}
+
+fn finish_quasiquote(qq: &Quasiquote, expr: &Expr, unquote: bool) -> State {
+    let result = Expr::Symbol(
+        expr.to_string()
+            + &qq
+                .done
+                .iter()
+                .map(|e| " ".to_string() + &e.to_string())
+                .collect::<String>(),
+    );
+
+    if unquote {
+        State::Eval(result, qq.env.clone(), qq.next.clone())
+    } else {
+        State::Return(result, qq.next.clone())
+    }
+}
+
+/// Evaluate an s-expression.
+pub fn _old_eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
     match expr {
         Expr::Number(_)
         | Expr::String(_)
@@ -121,6 +562,8 @@ fn apply_parameter(param: &Parameter, args: Vec<Expr>, env: EnvRef) -> Result<Ex
     }
 }
 
+// Parser
+
 /// Parse tokenized s-expressions.
 pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     if tokens.is_empty() {
@@ -142,6 +585,11 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
         "`" => {
             let (quasiquoted_expr, remaining) = parse(right_expr)?;
             let slice = vec![Expr::Symbol("quasiquote".to_string()), quasiquoted_expr];
+            Ok((Pair::list(slice.as_slice()), remaining))
+        }
+        "," => {
+            let (unquoted_expr, remaining) = parse(right_expr)?;
+            let slice = vec![Expr::Symbol("unquote".to_string()), unquoted_expr];
             Ok((Pair::list(slice.as_slice()), remaining))
         }
         "#(" => {
@@ -270,6 +718,8 @@ pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     }
 }
 
+// Tokenizer
+
 /// Tokenize a string s-expression.
 pub fn tokenize(expression: String) -> Vec<String> {
     let chars: Vec<char> = expression.chars().collect();
@@ -312,6 +762,10 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 tokens.push("`".to_string());
                 i += 1;
             }
+            ',' => {
+                tokens.push(",".to_string());
+                i += 1;
+            }
             '#' => {
                 // Vector literal: '#('.
                 if i + 1 < chars.len() && chars[i + 1] == '(' {
@@ -350,8 +804,8 @@ pub fn tokenize(expression: String) -> Vec<String> {
 /// Check if s-expression has been closed with a parenthesis.
 pub fn expression_closed(buf: &str) -> bool {
     let expression = buf.trim();
-    let mut open_paren = 0;
-    let mut close_paren = 0;
+    let mut open_paren_count = 0;
+    let mut close_paren_count = 0;
 
     for line in expression
         .lines()
@@ -359,8 +813,8 @@ pub fn expression_closed(buf: &str) -> bool {
     {
         for e in line.chars() {
             match e {
-                '(' => open_paren += 1,
-                ')' => close_paren += 1,
+                '(' => open_paren_count += 1,
+                ')' => close_paren_count += 1,
                 _ => {}
             }
         }
@@ -369,6 +823,6 @@ pub fn expression_closed(buf: &str) -> bool {
     // Not a symbolic expression. Covers edge case when an atom contains parentheses.
     // For example, "example string (with parentheses)".
     let not_an_expression = !expression.starts_with('(') && !expression.ends_with(')');
-    let paren_are_equal = open_paren == close_paren;
+    let paren_are_equal = open_paren_count == close_paren_count;
     not_an_expression || paren_are_equal
 }
