@@ -1170,6 +1170,20 @@ impl ByteVector {
         vec
     }
 
+    pub fn from_expr(args: &[Expr]) -> std::result::Result<Self, Error> {
+        let vector = ByteVector::new(args.len());
+        for (i, arg) in args.iter().enumerate() {
+            match arg {
+                Expr::Number(n) if n.is_byte() => {
+                    let byte = n.to_u8().expect("value should have been converted to byte");
+                    vector.set(i, byte).expect("index should be in bounds");
+                }
+                _ => return Err(Error::new("expected byte")),
+            }
+        }
+        Ok(vector)
+    }
+
     /// Create new `ByteVector` from a String.
     pub fn from_string(s: String) -> ByteVector {
         let chars = s.chars().map(|c| c as u8).collect::<Vec<u8>>();
