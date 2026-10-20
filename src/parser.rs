@@ -367,101 +367,76 @@ fn eval_set(set: &Set, value: Expr) -> Result<State, Error> {
 }
 
 fn eval_quasiquote(qq: &Quasiquote, expr: Expr) -> Result<State, Error> {
-    let state = match qq.state {
-        QState::Inspect => {}
-        QState::Collect(collect) => {}
+    let state = match &qq.state {
+        QState::Inspect => match expr {
+            Expr::Pair(p) => match p.car() {
+                Expr::Symbol(s) if s == "unquote" => {
+                    let args = p.iter().skip(1).collect::<Vec<Expr>>();
+                    let [arg] = args.as_slice() else {
+                        return Err(Error::new("ill-formed special form"));
+                    };
+                    State::Eval(arg.clone(), qq.env.clone(), qq.next.clone())
+                }
+                _ => {
+                    let elements = p.iter().collect::<Vec<Expr>>();
+                    collect_next(qq, ContainerType::List, vec![], &elements)
+                }
+            },
+            Expr::Vector(v) => {
+                let elements = v.iter().collect::<Vec<Expr>>();
+                collect_next(qq, ContainerType::Vector, vec![], &elements)
+            }
+            _ => State::Return(expr, qq.next.clone()),
+        },
+        QState::Collect(collect) => {
+            let mut done = collect.done.clone();
+            done.push(expr);
+            collect_next(qq, collect.cont_type.clone(), done, &collect.pending)
+        }
     };
 
     Ok(state)
-
-    // let process_pair = |p: Pair| -> Result<State, Error> {
-    //     match p.car() {
-    //         Expr::Symbol(s) if s == "unquote" => {
-    //             let first = p.iter().skip(1).next().ok_or(Error::new(""))?;
-    //             let new_frame = Quasiquote {
-    //                 state: QState::Collect(Collect {
-    //                     cont_type: ContainerType::List,
-    //                     done: qq.done.clone(),
-    //                     pending: qq.pending.clone(),
-    //                 }),
-    //                 env: qq.env.clone(),
-    //                 next: qq.next.clone(),
-    //             };
-    //             Ok(State::Eval(
-    //                 first.clone(),
-    //                 qq.env.clone(),
-    //                 Some(Rc::new(Node::Quasiquote(new_frame))),
-    //             ))
-    //         }
-    //         _ => {
-    //             let rest = p.iter().skip(1).collect::<Vec<Expr>>();
-    //             let new_frame = Quasiquote {
-    //                 done: vec![],
-    //                 pending: rest,
-    //                 env: qq.env.clone(),
-    //                 next: qq.next.clone(),
-    //             };
-    //             Ok(State::Return(
-    //                 p.car(),
-    //                 Some(Rc::new(Node::Quasiquote(new_frame))),
-    //             ))
-    //         }
-    //     }
-    // };
-
-    // let state = match qq.pending.as_slice() {
-    //     [first, rest @ ..] => {
-    //         let mut new_done = qq.done.clone();
-    //         new_done.push(expr.clone());
-    //         let new_frame = Quasiquote {
-    //             done: new_done,
-    //             pending: rest.to_vec(),
-    //             env: qq.env.clone(),
-    //             next: qq.next.clone(),
-    //         };
-    //         State::Return(first.clone(), Some(Rc::new(Node::Quasiquote(new_frame))))
-    //     }
-    //     _ => match expr.clone() {
-    //         Expr::Pair(p) => process_pair(p)?,
-    //         Expr::Vector(v) => {
-    //             let mut vec_iter = v.iter();
-    //             match vec_iter.next() {
-    //                 Some(Expr::Pair(p)) => process_pair(p)?,
-    //                 Some(expr) => {
-    //                     let rest = vec_iter.collect::<Vec<Expr>>();
-    //                     let new_frame = Quasiquote {
-    //                         done: vec![],
-    //                         pending: rest,
-    //                         env: qq.env.clone(),
-    //                         next: qq.next.clone(),
-    //                     };
-    //                     State::Return(expr, Some(Rc::new(Node::Quasiquote(new_frame))))
-    //                 }
-    //                 None => State::Return(Expr::Vector(Vector::new()), qq.next.clone()),
-    //             }
-    //         }
-    //         _ => finish_quasiquote(qq, &expr),
-    //     },
-    // };
-
-    // Ok(state)
 }
 
-fn finish_quasiquote(qq: &Quasiquote, expr: &Expr) -> State {
-    let result = if !qq.done.is_empty() {
-        let expr_vec = Vec::from_iter(
-            qq.done
-                .iter()
-                .chain(std::iter::once(expr))
-                .map(|e| e.clone()),
-        );
+/// Inspect the next pending element, or finish the container if none remain.
+fn collect_next(
+    qq: &Quasiquote,
+    cont_type: ContainerType,
+    done: Vec<Expr>,
+    pending: &[Expr],
+) -> State {
+    match pending {
+        [first, rest @ ..] => {
+            let collect_frame = Quasiquote {
+                state: QState::Collect(Collect {
+                    cont_type,
+                    done,
+                    pending: rest.to_vec(),
+                }),
+                env: qq.env.clone(),
+                next: qq.next.clone(),
+            };
+            let inspect_frame = Quasiquote {
+                state: QState::Inspect,
+                env: qq.env.clone(),
+                next: Some(Rc::new(Node::Quasiquote(collect_frame))),
+            };
+            State::Return(
+                first.clone(),
+                Some(Rc::new(Node::Quasiquote(inspect_frame))),
+            )
+        }
+        [] => collect_quasiquote_elem(&cont_type, &done, qq.next.clone()),
+    }
+}
 
-        Pair::list(expr_vec.as_slice())
-    } else {
-        Expr::Symbol(expr.to_string())
+fn collect_quasiquote_elem(cont_type: &ContainerType, done: &[Expr], next: Cont) -> State {
+    let result = match cont_type {
+        ContainerType::List => Pair::list(done),
+        ContainerType::Vector => Expr::Vector(Vector::from(done)),
     };
 
-    State::Return(result, qq.next.clone())
+    State::Return(result, next)
 }
 
 /// Apply a parameter object.
