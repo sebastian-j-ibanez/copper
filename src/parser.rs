@@ -189,6 +189,26 @@ impl Node {
             _ => Err(Error::new("ill-formed special form")),
         }
     }
+
+    pub fn lambda_from(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+        match args {
+            // (x y) (+ x y)
+            [Expr::Pair(parameters), body @ ..] => {
+                let param_string = parameters
+                    .iter()
+                    .map(|p| {
+                        let Expr::String(s) = p else {
+                            return Err(Error::new("expected string"));
+                        };
+                        Ok(s)
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?;
+                let cl = types::Closure::init(env.clone(), param_string, body.to_vec());
+                Ok(Expr::Closure(Rc::new(cl)))
+            }
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
 }
 
 /// Parse s-expression, evaluate it, and return result.
@@ -270,6 +290,10 @@ fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<Sta
             "quasiquote" => {
                 let (expr, node) = Node::quasiquote_from(args, env.clone(), next)?;
                 return Ok(State::Return(expr.clone(), Some(Rc::new(node))));
+            }
+            "lambda" => {
+                let closure = Node::lambda_from(args, env)?;
+                return Ok(State::Return(closure.clone(), next));
             }
             _ => {}
         }
