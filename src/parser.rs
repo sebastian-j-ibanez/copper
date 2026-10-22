@@ -32,6 +32,7 @@ enum Node {
     Define(Define),
     Set(Set),
     Quasiquote(Quasiquote),
+    Begin(Begin),
 }
 
 #[derive(Debug, Clone)]
@@ -66,8 +67,6 @@ struct Set {
 
 #[derive(Debug, Clone)]
 struct Quasiquote {
-    // done: Vec<Expr>,
-    // pending: Vec<Expr>,
     state: QState,
     env: EnvRef,
     next: Cont,
@@ -90,6 +89,13 @@ struct Collect {
 enum ContainerType {
     List,
     Vector,
+}
+
+#[derive(Debug, Clone)]
+struct Begin {
+    body_expr: Vec<Expr>,
+    env: EnvRef,
+    next: Cont,
 }
 
 impl Node {
@@ -192,6 +198,8 @@ impl Node {
 
     pub fn lambda_from(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
         match args {
+            // expected format:
+            // params  body
             // (x y) (+ x y)
             [Expr::Pair(parameters), body @ ..] => {
                 let param_string = parameters
@@ -208,6 +216,16 @@ impl Node {
             }
             _ => Err(Error::new("ill-formed special form")),
         }
+    }
+
+    pub fn begin_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        let first = args[0].clone();
+        let b = Begin {
+            body_expr: args[1..].to_vec(),
+            env: env.clone(),
+            next: next,
+        };
+        Ok((first, Node::Begin(b)))
     }
 }
 
@@ -262,6 +280,7 @@ pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
                 Node::Define(define) => eval_define(define, value)?,
                 Node::Set(set) => eval_set(set, value)?,
                 Node::Quasiquote(qq) => eval_quasiquote(qq, value)?,
+                Node::Begin(b) => eval_begin(b, value)?,
             },
             State::Return(value, None) => return Ok(value),
         };
@@ -294,6 +313,10 @@ fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<Sta
             "lambda" => {
                 let closure = Node::lambda_from(args, env)?;
                 return Ok(State::Return(closure.clone(), next));
+            }
+            "begin" => {
+                let (expr, begin_node) = Node::begin_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, begin_node));
             }
             _ => {}
         }
@@ -419,6 +442,21 @@ fn eval_quasiquote(qq: &Quasiquote, expr: Expr) -> Result<State, Error> {
         }
     };
 
+    Ok(state)
+}
+
+fn eval_begin(b: &Begin, expr: Expr) -> Result<State, Error> {
+    let state = if !b.body_expr.is_empty() {
+        let next_expr = b.body_expr[0].clone();
+        let next_begin = Node::Begin(Begin {
+            body_expr: b.body_expr.iter().skip(1).map(|e| e.clone()).collect(),
+            env: b.env.clone(),
+            next: b.next.clone(),
+        });
+        State::Eval(next_expr, b.env.clone(), Some(Rc::new(next_begin)))
+    } else {
+        State::Eval(expr, b.env.clone(), b.next.clone())
+    };
     Ok(state)
 }
 
