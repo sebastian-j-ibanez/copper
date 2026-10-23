@@ -4,88 +4,539 @@
 
 //! Functions that parse text and convert s-expressions to data types.
 
+use std::rc::Rc;
+
 use crate::env::EnvRef;
 use crate::error::Error;
-use crate::macros;
-use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter};
+use crate::types::{BOOLEAN_FALSE_STR, BOOLEAN_TRUE_STR, Expr, Number, Pair, Parameter, Vector};
+use crate::{macros, types};
+
+type Cont = Option<Rc<Node>>;
+
+#[derive(Debug, Clone)]
+enum State {
+    Eval(Expr, EnvRef, Cont),
+    Return(Expr, Cont),
+}
+
+impl State {
+    pub fn new_eval(expr: Expr, env: EnvRef, node: Node) -> State {
+        State::Eval(expr, env, Some(Rc::new(node)))
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Node {
+    Application(Application),
+    If(If),
+    Define(Define),
+    Set(Set),
+    Quasiquote(Quasiquote),
+    Begin(Begin),
+}
+
+#[derive(Debug, Clone)]
+struct Application {
+    done: Vec<Expr>,
+    pending: Vec<Expr>,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct If {
+    if_branch: Expr,
+    else_branch: Option<Expr>,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Define {
+    name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Set {
+    name: String,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+struct Quasiquote {
+    state: QState,
+    env: EnvRef,
+    next: Cont,
+}
+
+#[derive(Debug, Clone)]
+enum QState {
+    Inspect,
+    Collect(Collect),
+}
+
+#[derive(Debug, Clone)]
+struct Collect {
+    cont_type: ContainerType,
+    done: Vec<Expr>,
+    pending: Vec<Expr>,
+}
+
+#[derive(Debug, Clone)]
+enum ContainerType {
+    List,
+    Vector,
+}
+
+#[derive(Debug, Clone)]
+struct Begin {
+    body_expr: Vec<Expr>,
+    env: EnvRef,
+    next: Cont,
+}
+
+impl Node {
+    /// Construct `Node::If` from `args`.
+    ///
+    /// Expects the form:
+    /// ```scm
+    /// (if <expression>
+    ///   <value if true>
+    ///   <optional value if false>)
+    /// ```
+    pub fn if_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [expr, if_expr] => Ok((
+                expr.clone(),
+                Node::If(If {
+                    if_branch: if_expr.clone(),
+                    else_branch: None,
+                    env: env.clone(),
+                    next: next.clone(),
+                }),
+            )),
+            [expr, if_expr, else_expr] => Ok((
+                expr.clone(),
+                Node::If(If {
+                    if_branch: if_expr.clone(),
+                    else_branch: Some(else_expr.clone()),
+                    env: env.clone(),
+                    next: next.clone(),
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    /// Construct `Node::Define` from `args`.
+    ///
+    /// Returns the current `Expr` to eval, and the next `Node`.
+    ///
+    /// Expects the form:
+    /// ```scm
+    /// (define <name> <value>)
+    /// ```
+    pub fn define_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [Expr::Symbol(name), value] => Ok((
+                value.clone(),
+                Node::Define(Define {
+                    name: name.clone(),
+                    env: env.clone(),
+                    next: next,
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    /// Construct `Node::Set` from `args`.
+    ///
+    /// Returns the current `Expr` to eval, and the next `Node`.
+    ///
+    /// Expectes the form:
+    /// ```scm
+    /// (set <name> <value>)
+    /// ```
+    pub fn set_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [Expr::Symbol(name), value] => Ok((
+                value.clone(),
+                Node::Set(Set {
+                    name: name.clone(),
+                    env: env.clone(),
+                    next: next,
+                }),
+            )),
+            _ => return Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn quote_from(args: &[Expr]) -> Result<Expr, Error> {
+        match args {
+            [expr] => Ok(expr.clone()),
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn quasiquote_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        match args {
+            [arg] => Ok((
+                arg.clone(),
+                Node::Quasiquote(Quasiquote {
+                    state: QState::Inspect,
+                    env: env.clone(),
+                    next,
+                }),
+            )),
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn lambda_from(args: &[Expr], env: EnvRef) -> Result<Expr, Error> {
+        match args {
+            // expected format:
+            // params  body
+            // (x y) (+ x y)
+            [Expr::Pair(parameters), body @ ..] => {
+                let param_string = parameters
+                    .iter()
+                    .map(|p| {
+                        let Expr::Symbol(s) = p else {
+                            return Err(Error::new("expected string"));
+                        };
+                        Ok(s)
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?;
+                let cl = types::Closure::init(env.clone(), param_string, body.to_vec());
+                Ok(Expr::Closure(Rc::new(cl)))
+            }
+            _ => Err(Error::new("ill-formed special form")),
+        }
+    }
+
+    pub fn begin_from(args: &[Expr], env: EnvRef, next: Cont) -> Result<(Expr, Node), Error> {
+        let first = args[0].clone();
+        let b = Begin {
+            body_expr: args[1..].to_vec(),
+            env: env.clone(),
+            next: next,
+        };
+        Ok((first, Node::Begin(b)))
+    }
+}
 
 /// Parse s-expression, evaluate it, and return result.
 pub fn parse_and_eval(expr: String, env: EnvRef) -> Result<Expr, Error> {
     let tokens = tokenize(expr);
     let (parsed_exp, _) = parse(&tokens)?;
-    let evaled_exp = eval(&parsed_exp, env)?;
+    let evaled_exp = eval(&parsed_exp, env.clone())?;
     Ok(evaled_exp)
 }
 
-/// Evaluate an s-expression.
-pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
-    match expr {
-        Expr::Number(_)
-        | Expr::String(_)
-        | Expr::Char(_)
-        | Expr::Boolean(_)
-        | Expr::Vector(_)
-        | Expr::ByteVector(_)
-        | Expr::Procedure(_)
-        | Expr::Closure(_)
-        | Expr::Port(_)
-        | Expr::Parameter(_) => Ok(expr.clone()),
-        Expr::Symbol(k) => env
-            .borrow()
-            .find_value(k)
-            .ok_or(Error::Message(format!("unbound symbol '{}'", k))),
-        Expr::Pair(pair) => {
-            let list_elements: Vec<Expr> = pair.iter().collect();
+// Evaluation
 
-            // Return empty list if there are no args.
-            let [first, args @ ..] = list_elements.as_slice() else {
-                return Ok(Expr::Null);
+pub fn eval(expr: &Expr, env: EnvRef) -> Result<Expr, Error> {
+    let mut state = State::Eval(expr.clone(), env.clone(), None);
+    loop {
+        state = match state {
+            State::Eval(expr, env, next) => match expr {
+                Expr::Number(_)
+                | Expr::String(_)
+                | Expr::Char(_)
+                | Expr::Boolean(_)
+                | Expr::Vector(_)
+                | Expr::ByteVector(_)
+                | Expr::Procedure(_)
+                | Expr::Closure(_)
+                | Expr::Port(_)
+                | Expr::Parameter(_) => State::Return(expr.clone(), next),
+                Expr::Symbol(k) => {
+                    let value = env
+                        .borrow()
+                        .find_value(&k)
+                        .ok_or(Error::Message(format!("unbound symbol '{}'", k)))?;
+                    State::Return(value, next)
+                }
+                Expr::Pair(pair) => {
+                    let list_elements: Vec<Expr> = pair.iter().collect();
+
+                    let [first, args @ ..] = list_elements.as_slice() else {
+                        return Ok(Expr::Null);
+                    };
+
+                    eval_pair(first, args, env, next)?
+                }
+                Expr::Null => State::Return(Expr::Null, next),
+                Expr::Eof => State::Return(Expr::Eof, next),
+                Expr::Void() => State::Return(Expr::Void(), next),
+            },
+            State::Return(value, Some(cont)) => match cont.as_ref() {
+                Node::Application(app) => eval_apply(app, value)?,
+                Node::If(if_node) => eval_if(if_node, value),
+                Node::Define(define) => eval_define(define, value)?,
+                Node::Set(set) => eval_set(set, value)?,
+                Node::Quasiquote(qq) => eval_quasiquote(qq, value)?,
+                Node::Begin(b) => eval_begin(b, value)?,
+            },
+            State::Return(value, None) => return Ok(value),
+        };
+    }
+}
+
+fn eval_pair(first: &Expr, args: &[Expr], env: EnvRef, next: Cont) -> Result<State, Error> {
+    if let Expr::Symbol(s) = first {
+        match s.as_str() {
+            "if" => {
+                let (expr, node) = Node::if_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env.clone(), node));
+            }
+            "define" => {
+                let (expr, node) = Node::define_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, node));
+            }
+            "set!" => {
+                let (expr, node) = Node::set_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, node));
+            }
+            "quote" => {
+                let expr = Node::quote_from(args)?;
+                return Ok(State::Return(expr.clone(), next));
+            }
+            "quasiquote" => {
+                let (expr, node) = Node::quasiquote_from(args, env.clone(), next)?;
+                return Ok(State::Return(expr.clone(), Some(Rc::new(node))));
+            }
+            "lambda" => {
+                let closure = Node::lambda_from(args, env)?;
+                return Ok(State::Return(closure.clone(), next));
+            }
+            "begin" => {
+                let (expr, begin_node) = Node::begin_from(args, env.clone(), next)?;
+                return Ok(State::new_eval(expr.clone(), env, begin_node));
+            }
+            _ => {}
+        }
+    }
+
+    let apply_frame = Application {
+        done: vec![],
+        pending: args.to_vec(),
+        env: env.clone(),
+        next,
+    };
+
+    Ok(State::Eval(
+        first.clone(),
+        env.clone(),
+        Some(Rc::new(Node::Application(apply_frame))),
+    ))
+}
+
+fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
+    let mut updated_done = app.done.clone();
+    updated_done.push(expr);
+
+    let state = match app.pending.as_slice() {
+        // If there are any pending expressions,
+        // evaluate them before we evaluate the application node.
+        [first, rest @ ..] => {
+            let new_frame = Application {
+                done: updated_done,
+                pending: rest.to_vec(),
+                env: app.env.clone(),
+                next: app.next.clone(),
+            };
+            State::Eval(
+                first.clone(),
+                app.env.clone(),
+                Some(Rc::new(Node::Application(new_frame))),
+            )
+        }
+        // All pending expressions are evaluated,
+        // now we can perform the application.
+        _ => {
+            let (first, args) = match updated_done.as_slice() {
+                [first, args @ ..] => (first, args),
+                _ => return Err(Error::new("empty application")),
             };
 
-            // Check for special forms (like define).
-            if let Expr::Symbol(s) = first {
-                match s.as_str() {
-                    "define" => return macros::define(args, env),
-                    "set!" => return macros::set(args, env),
-                    "begin" => return macros::begin(args, env),
-                    "lambda" => return macros::lambda(args, env),
-                    "quote" => return macros::quote(args, env),
-                    "quasiquote" => return macros::quasiquote(args, env),
-                    "if" => return macros::if_statement(args, env),
-                    "cond" => return macros::cond(args, env),
-                    "and" => return macros::and(args, env),
-                    "or" => return macros::or(args, env),
-                    "when" => return macros::when(args, env),
-                    "unless" => return macros::unless(args, env),
-                    "parameterize" => return macros::parameterize(args, env),
-                    "let" => return macros::let_binding(args, env),
-                    "let*" => return macros::let_star_binding(args, env),
-                    "letrec" | "letrec*" => return macros::letrec_binding(args, env),
-                    _ => {}
+            let result = match first {
+                Expr::Procedure(p) => p(args, app.env.clone())?,
+                Expr::Closure(cl) => {
+                    if args.len() != cl.parameters.len() {
+                        return Err(Error::Message(format!(
+                            "wrong number of arguments passed to procedure"
+                        )));
+                    }
+
+                    let new_env = crate::env::Env::local_env(cl.env.clone());
+
+                    {
+                        let mut env_mut = new_env.borrow_mut();
+                        for (param, arg) in cl.parameters.iter().zip(args.into_iter()) {
+                            env_mut.data.insert(param.clone(), arg.clone());
+                        }
+                    }
+
+                    match cl.body.first() {
+                        Some(expr) => {
+                            let begin_node = Node::Begin(Begin {
+                                body_expr: cl.body.iter().skip(1).map(|e| e.clone()).collect(),
+                                env: new_env.clone(),
+                                next: app.next.clone(),
+                            });
+                            return Ok(State::Eval(
+                                expr.clone(),
+                                new_env,
+                                Some(Rc::new(begin_node)),
+                            ));
+                        }
+                        None => {
+                            return Err(Error::new("unexpected empty closure"));
+                        }
+                    }
                 }
-            }
-
-            let func_val = eval(first, env.clone())?;
-
-            let arg_vals = args
-                .iter()
-                .map(|x| eval(x, env.clone()))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            match func_val {
-                Expr::Procedure(f) => f(&arg_vals, env),
-                Expr::Closure(c) => macros::apply_lambda(&c, arg_vals),
-                Expr::Parameter(p) => apply_parameter(&p, arg_vals, env),
                 e => {
-                    let msg = format!("not a function: {}", e);
-                    Err(Error::Message(msg))
+                    return Err(Error::new(&format!("not a function: {}", e)));
                 }
+            };
+
+            State::Return(result, app.next.clone())
+        }
+    };
+
+    Ok(state)
+}
+
+fn eval_if(if_node: &If, case: Expr) -> State {
+    match case {
+        Expr::Boolean(false) => {
+            if let Some(expr) = if_node.else_branch.clone() {
+                State::Eval(expr, if_node.env.clone(), if_node.next.clone())
+            } else {
+                State::Return(Expr::Void(), None)
             }
         }
-        Expr::Void() => Ok(Expr::Void()),
-        Expr::Eof => Ok(Expr::Eof),
-        Expr::Null => Ok(Expr::Null),
+        _ => State::Eval(
+            if_node.if_branch.clone(),
+            if_node.env.clone(),
+            if_node.next.clone(),
+        ),
     }
+}
+
+fn eval_define(define: &Define, value: Expr) -> Result<State, Error> {
+    let mut borrowed_env = define
+        .env
+        .try_borrow_mut()
+        .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+    borrowed_env.data.insert(define.name.clone(), value);
+    Ok(State::Return(Expr::Void(), define.next.clone()))
+}
+
+fn eval_set(set: &Set, value: Expr) -> Result<State, Error> {
+    let mut borrowed_env = set
+        .env
+        .try_borrow_mut()
+        .map_err(|_| Error::new("unable to borrow runtime environment"))?;
+
+    if !borrowed_env.set_expr(&set.name, &value)? {
+        return Err(Error::new(&format!("unbound variable: {}", &set.name)));
+    }
+
+    Ok(State::Return(Expr::Void(), set.next.clone()))
+}
+
+fn eval_quasiquote(qq: &Quasiquote, expr: Expr) -> Result<State, Error> {
+    let state = match &qq.state {
+        QState::Inspect => match expr {
+            Expr::Pair(p) => match p.car() {
+                Expr::Symbol(s) if s == "unquote" => {
+                    let args = p.iter().skip(1).collect::<Vec<Expr>>();
+                    let [arg] = args.as_slice() else {
+                        return Err(Error::new("ill-formed special form"));
+                    };
+                    State::Eval(arg.clone(), qq.env.clone(), qq.next.clone())
+                }
+                _ => {
+                    let elements = p.iter().collect::<Vec<Expr>>();
+                    collect_next(qq, ContainerType::List, vec![], &elements)
+                }
+            },
+            Expr::Vector(v) => {
+                let elements = v.iter().collect::<Vec<Expr>>();
+                collect_next(qq, ContainerType::Vector, vec![], &elements)
+            }
+            _ => State::Return(expr, qq.next.clone()),
+        },
+        QState::Collect(collect) => {
+            let mut done = collect.done.clone();
+            done.push(expr);
+            collect_next(qq, collect.cont_type.clone(), done, &collect.pending)
+        }
+    };
+
+    Ok(state)
+}
+
+fn eval_begin(b: &Begin, expr: Expr) -> Result<State, Error> {
+    let state = if !b.body_expr.is_empty() {
+        let next_expr = b.body_expr[0].clone();
+        let next_begin = Node::Begin(Begin {
+            body_expr: b.body_expr.iter().skip(1).map(|e| e.clone()).collect(),
+            env: b.env.clone(),
+            next: b.next.clone(),
+        });
+        State::Eval(next_expr, b.env.clone(), Some(Rc::new(next_begin)))
+    } else {
+        State::Eval(expr, b.env.clone(), b.next.clone())
+    };
+    Ok(state)
+}
+
+/// Inspect the next pending element, or finish the container if none remain.
+fn collect_next(
+    qq: &Quasiquote,
+    cont_type: ContainerType,
+    done: Vec<Expr>,
+    pending: &[Expr],
+) -> State {
+    match pending {
+        [first, rest @ ..] => {
+            let collect_frame = Quasiquote {
+                state: QState::Collect(Collect {
+                    cont_type,
+                    done,
+                    pending: rest.to_vec(),
+                }),
+                env: qq.env.clone(),
+                next: qq.next.clone(),
+            };
+            let inspect_frame = Quasiquote {
+                state: QState::Inspect,
+                env: qq.env.clone(),
+                next: Some(Rc::new(Node::Quasiquote(collect_frame))),
+            };
+            State::Return(
+                first.clone(),
+                Some(Rc::new(Node::Quasiquote(inspect_frame))),
+            )
+        }
+        [] => collect_quasiquote_elem(&cont_type, &done, qq.next.clone()),
+    }
+}
+
+fn collect_quasiquote_elem(cont_type: &ContainerType, done: &[Expr], next: Cont) -> State {
+    let result = match cont_type {
+        ContainerType::List => Pair::list(done),
+        ContainerType::Vector => Expr::Vector(Vector::from(done)),
+    };
+
+    State::Return(result, next)
 }
 
 /// Apply a parameter object.
@@ -121,6 +572,8 @@ fn apply_parameter(param: &Parameter, args: Vec<Expr>, env: EnvRef) -> Result<Ex
     }
 }
 
+// Parser
+
 /// Parse tokenized s-expressions.
 pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     if tokens.is_empty() {
@@ -144,12 +597,17 @@ pub fn parse(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
             let slice = vec![Expr::Symbol("quasiquote".to_string()), quasiquoted_expr];
             Ok((Pair::list(slice.as_slice()), remaining))
         }
+        "," => {
+            let (unquoted_expr, remaining) = parse(right_expr)?;
+            let slice = vec![Expr::Symbol("unquote".to_string()), unquoted_expr];
+            Ok((Pair::list(slice.as_slice()), remaining))
+        }
         "#(" => {
-            let (vector_expr, remaining) = parse_literal(right_expr, "vector".to_string())?;
+            let (vector_expr, remaining) = parse_literal(right_expr, VectorType::Vector)?;
             Ok((vector_expr, remaining))
         }
         "#u8(" => {
-            let (bytevector_expr, remaining) = parse_literal(right_expr, "bytevector".to_string())?;
+            let (bytevector_expr, remaining) = parse_literal(right_expr, VectorType::ByteVector)?;
             Ok((bytevector_expr, remaining))
         }
         "#!eof" => Ok((Expr::Eof, right_expr)),
@@ -177,8 +635,14 @@ pub fn parse_right_expr(tokens: &[String]) -> Result<(Expr, &[String]), Error> {
     }
 }
 
-/// Parse a literal. Primarily used to parse `Vector` and `ByteVector` literals.
-pub fn parse_literal(tokens: &[String], constructor: String) -> Result<(Expr, &[String]), Error> {
+/// Used in `parse_literal`
+pub enum VectorType {
+    Vector,
+    ByteVector,
+}
+
+/// Parse a literal `Vector` or `ByteVector`.
+pub fn parse_literal(tokens: &[String], vec_type: VectorType) -> Result<(Expr, &[String]), Error> {
     let mut expressions: Vec<Expr> = vec![];
     let mut tokens_copy = tokens;
     loop {
@@ -186,9 +650,14 @@ pub fn parse_literal(tokens: &[String], constructor: String) -> Result<(Expr, &[
             .split_first()
             .ok_or(Error::new("unable to parse literal"))?;
         if car == ")" {
-            let mut vector_form = vec![Expr::Symbol(constructor.to_string())];
-            vector_form.extend(expressions);
-            return Ok((Pair::list(vector_form.as_slice()), cdr));
+            let vec = match vec_type {
+                VectorType::Vector => Expr::Vector(types::Vector::from(&expressions)),
+                VectorType::ByteVector => {
+                    Expr::ByteVector(types::ByteVector::from_expr(&expressions)?)
+                }
+            };
+
+            return Ok((vec, cdr));
         }
         let (expr, new_copy) = parse(&tokens_copy)?;
         expressions.push(expr);
@@ -270,6 +739,8 @@ pub fn parse_number(expr: &Expr) -> Result<Number, Error> {
     }
 }
 
+// Tokenizer
+
 /// Tokenize a string s-expression.
 pub fn tokenize(expression: String) -> Vec<String> {
     let chars: Vec<char> = expression.chars().collect();
@@ -312,6 +783,10 @@ pub fn tokenize(expression: String) -> Vec<String> {
                 tokens.push("`".to_string());
                 i += 1;
             }
+            ',' => {
+                tokens.push(",".to_string());
+                i += 1;
+            }
             '#' => {
                 // Vector literal: '#('.
                 if i + 1 < chars.len() && chars[i + 1] == '(' {
@@ -350,8 +825,8 @@ pub fn tokenize(expression: String) -> Vec<String> {
 /// Check if s-expression has been closed with a parenthesis.
 pub fn expression_closed(buf: &str) -> bool {
     let expression = buf.trim();
-    let mut open_paren = 0;
-    let mut close_paren = 0;
+    let mut open_paren_count = 0;
+    let mut close_paren_count = 0;
 
     for line in expression
         .lines()
@@ -359,8 +834,8 @@ pub fn expression_closed(buf: &str) -> bool {
     {
         for e in line.chars() {
             match e {
-                '(' => open_paren += 1,
-                ')' => close_paren += 1,
+                '(' => open_paren_count += 1,
+                ')' => close_paren_count += 1,
                 _ => {}
             }
         }
@@ -369,6 +844,6 @@ pub fn expression_closed(buf: &str) -> bool {
     // Not a symbolic expression. Covers edge case when an atom contains parentheses.
     // For example, "example string (with parentheses)".
     let not_an_expression = !expression.starts_with('(') && !expression.ends_with(')');
-    let paren_are_equal = open_paren == close_paren;
+    let paren_are_equal = open_paren_count == close_paren_count;
     not_an_expression || paren_are_equal
 }

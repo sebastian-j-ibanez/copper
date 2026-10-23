@@ -1031,17 +1031,7 @@ pub fn vector_append(args: &[Expr], _: EnvRef) -> Result {
 
 /// Return a newly allocated `ByteVector` filled with all `u8` arguments.
 pub fn new_bytevector(args: &[Expr], _: EnvRef) -> Result {
-    let vector = ByteVector::new(args.len());
-    for (i, arg) in args.iter().enumerate() {
-        match arg {
-            Expr::Number(n) if n.is_byte() => {
-                let byte = n.to_u8().expect("value should have been converted to byte");
-                vector.set(i, byte).expect("index should be in bounds");
-            }
-            _ => return Err(Error::new("expected byte")),
-        }
-    }
-    Ok(Expr::ByteVector(vector))
+    Ok(Expr::ByteVector(ByteVector::from_expr(args)?))
 }
 
 /// Return a newly allocated `ByteVector` of a given size and an optional value. Defaults to 0 if no value is provided.
