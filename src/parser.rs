@@ -205,7 +205,7 @@ impl Node {
                 let param_string = parameters
                     .iter()
                     .map(|p| {
-                        let Expr::String(s) = p else {
+                        let Expr::Symbol(s) = p else {
                             return Err(Error::new("expected string"));
                         };
                         Ok(s)
@@ -341,6 +341,8 @@ fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
     updated_done.push(expr);
 
     let state = match app.pending.as_slice() {
+        // If there are any pending expressions,
+        // evaluate them before we evaluate the application node.
         [first, rest @ ..] => {
             let new_frame = Application {
                 done: updated_done,
@@ -354,6 +356,8 @@ fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
                 Some(Rc::new(Node::Application(new_frame))),
             )
         }
+        // All pending expressions are evaluated,
+        // now we can perform the application.
         _ => {
             let (first, args) = match updated_done.as_slice() {
                 [first, args @ ..] => (first, args),
@@ -362,6 +366,40 @@ fn eval_apply(app: &Application, expr: Expr) -> Result<State, Error> {
 
             let result = match first {
                 Expr::Procedure(p) => p(args, app.env.clone())?,
+                Expr::Closure(cl) => {
+                    if args.len() != cl.parameters.len() {
+                        return Err(Error::Message(format!(
+                            "wrong number of arguments passed to procedure"
+                        )));
+                    }
+
+                    let new_env = crate::env::Env::local_env(cl.env.clone());
+
+                    {
+                        let mut env_mut = new_env.borrow_mut();
+                        for (param, arg) in cl.parameters.iter().zip(args.into_iter()) {
+                            env_mut.data.insert(param.clone(), arg.clone());
+                        }
+                    }
+
+                    match cl.body.first() {
+                        Some(expr) => {
+                            let begin_node = Node::Begin(Begin {
+                                body_expr: cl.body.iter().skip(1).map(|e| e.clone()).collect(),
+                                env: new_env.clone(),
+                                next: app.next.clone(),
+                            });
+                            return Ok(State::Eval(
+                                expr.clone(),
+                                new_env,
+                                Some(Rc::new(begin_node)),
+                            ));
+                        }
+                        None => {
+                            return Err(Error::new("unexpected empty closure"));
+                        }
+                    }
+                }
                 e => {
                     return Err(Error::new(&format!("not a function: {}", e)));
                 }
